@@ -1,7 +1,7 @@
 *truth-table.txt*  Generate and manipulate markdown truth tables
 
 Author:  cds-amal
-License: same terms as Neovim
+License: MIT (see LICENSE.md)
 
 ==============================================================================
 CONTENTS                                                  *truth-table-contents*
