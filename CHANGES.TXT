@@ -1,0 +1,21 @@
+truth-table.nvim changes
+========================
+
+Unreleased
+----------
+- Initial extraction from the single-file Neovim config modules
+  (lua/plugins/truth-table.lua + lua/truth-table-core.lua). Behavior preserved;
+  structure reworked for testability:
+  - Split into a pure core (lua/truth-table/core.lua, no vim dependency) and a
+    vim-coupled layer (lua/truth-table/init.lua).
+  - Removed vim.trim usage from the core (local trim) and made display-width
+    measurement injectable: core.display_width defaults to a pure UTF-8
+    codepoint count; setup() injects vim.fn.strdisplaywidth.
+  - Extracted pure core.expand (predicate parse/validate/eval -> new
+    headers+rows) and core.toggle_cells, so the command handlers are thin.
+  - Consolidated the command handlers through a shared with_table() helper.
+  - setup() registers the same commands, keymaps, and which-key labels as the
+    original config.
+- Added a busted spec for the core (spec/core_spec.lua), 37 cases.
+- Added plugin entry point, vim help (doc/truth-table.txt), Makefile (test/lint),
+  selene config, and README.

@@ -1,0 +1,5 @@
+---
+base: lua51  # or whatever Lua version you're using
+globals:
+  vim:
+    any: true

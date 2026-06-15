@@ -1,0 +1,166 @@
+*truth-table.txt*  Generate and manipulate markdown truth tables
+
+Author:  cds-amal
+License: same terms as Neovim
+
+==============================================================================
+CONTENTS                                                  *truth-table-contents*
+
+  1. Introduction ............................. |truth-table-introduction|
+  2. Requirements ............................. |truth-table-requirements|
+  3. Installation ............................. |truth-table-installation|
+  4. Commands ................................. |truth-table-commands|
+  5. Predicate language ....................... |truth-table-predicates|
+  6. Keymaps .................................. |truth-table-keymaps|
+  7. Configuration ............................ |truth-table-configuration|
+  8. Architecture ............................. |truth-table-architecture|
+
+==============================================================================
+1. INTRODUCTION                                      *truth-table-introduction*
+
+truth-table.nvim generates markdown truth tables and edits the one under your
+cursor. Given a set of boolean variables it writes every combination of their
+values; given a logical predicate it appends a computed column. It also toggles
+between 0/1 and F/T notation and drops rows or columns.
+
+Tables are plain GitHub-flavored markdown (centered, with a `:---:` separator
+row), so they render anywhere markdown does. Example: >
+
+    |  A  |  B  | A ∧ B |
+    |:---:|:---:|:-----:|
+    |  0  |  0  |   0   |
+    |  0  |  1  |   0   |
+    |  1  |  0  |   0   |
+    |  1  |  1  |   1   |
+<
+==============================================================================
+2. REQUIREMENTS                                      *truth-table-requirements*
+
+- Neovim (uses `vim.api`, `vim.keymap`, `vim.fn.strdisplaywidth`).
+- Optional: which-key.nvim (a `<leader>tt` group label is registered if it is
+  installed; absence is handled gracefully).
+
+==============================================================================
+3. INSTALLATION                                      *truth-table-installation*
+
+With lazy.nvim, pointing at the local clone: >
+
+    { dir = "~/dev/nvim-plugins/truth-table.nvim" }
+<
+The plugin self-registers on load (plugin/truth-table.lua calls `setup()`), so
+no further configuration is required. See |truth-table-configuration| for
+calling `setup()` yourself.
+
+==============================================================================
+4. COMMANDS                                              *truth-table-commands*
+
+                                                                  *:TruthTable*
+:TruthTable {arg}
+    Insert a new truth table at the cursor. {arg} is either an integer N
+    (1..10), which produces N variables named A, B, C, ..., or an explicit
+    space-separated list of variable names (each matching
+    `[A-Za-z_][A-Za-z0-9_]*`, no duplicates, at most 10). The table has one
+    row per combination of values, counted MSB-first. Examples: >
+
+        :TruthTable 3
+        :TruthTable p q r
+<
+                                                            *:TruthTableExpand*
+:TruthTableExpand {predicates}
+    With the cursor inside a table, append one computed column per predicate.
+    {predicates} is a comma-separated list of expressions in the predicate
+    language (see |truth-table-predicates|). The column heading is the
+    predicate rendered with logic symbols (e.g. `A ∧ B`). Unknown column names
+    or parse errors are reported and leave the table unchanged. Example: >
+
+        :TruthTableExpand A and B, A xor B
+<
+                                                           *:TruthTableToggle*
+:TruthTableToggle
+    With the cursor inside a table, toggle every data cell between 0/1 and F/T.
+    The direction is chosen from the first data cell (0/1 -> F/T, or T/F ->
+    0/1). Non-boolean cells are left untouched.
+
+                                                          *:TruthTableDropRow*
+:TruthTableDropRow
+    Drop the data row under the cursor. Refuses to drop the heading or
+    separator row.
+
+                                                       *:TruthTableDropColumn*
+:TruthTableDropColumn
+    Drop the column under the cursor (determined by counting `|` characters to
+    the left of the cursor). Refuses to drop the only remaining column.
+
+==============================================================================
+5. PREDICATE LANGUAGE                                   *truth-table-predicates*
+
+|:TruthTableExpand| evaluates a small boolean expression language over the
+table's existing columns.
+
+Operands:
+    - column names (must match an existing header)
+    - literals `0` and `1`
+
+Operators, from tightest binding to loosest:
+
+    not  !          unary negation                  rendered  ¬
+    and             conjunction                     rendered  ∧
+    or              disjunction                     rendered  ∨
+    xor             exclusive or                    rendered  ⊕
+    implies  ->     material implication            rendered  →
+
+Parentheses `( )` override precedence. Whitespace is insignificant.
+
+Examples: >
+
+    A and B
+    !A or B
+    (A or B) and !C
+    A -> B
+    A xor B xor C
+<
+==============================================================================
+6. KEYMAPS                                                *truth-table-keymaps*
+
+`setup()` registers these normal-mode keymaps by default:
+
+    <leader>ttn   prefill `:TruthTable `        (new table)
+    <leader>tte   prefill `:TruthTableExpand `  (expand)
+    <leader>ttt   |:TruthTableToggle|
+    <leader>ttr   |:TruthTableDropRow|
+    <leader>ttc   |:TruthTableDropColumn|
+
+The first two leave you in command-line mode so you can type the argument.
+
+==============================================================================
+7. CONFIGURATION                                    *truth-table-configuration*
+
+                                                          *truth-table.setup()*
+require("truth-table").setup()
+    Registers the commands, keymaps, and which-key labels, and injects
+    `vim.fn.strdisplaywidth` for terminal-accurate column widths. It is called
+    automatically by plugin/truth-table.lua; call it yourself only if you load
+    the module manually. It is idempotent.
+
+There are currently no options; the keymaps above are fixed. To use different
+keys, skip the bundled ones (do not source the plugin file, require the module
+and call your own |vim.keymap.set| against the commands) or open an issue.
+
+==============================================================================
+8. ARCHITECTURE                                        *truth-table-architecture*
+
+The code is split along one line: Neovim or not.
+
+- `lua/truth-table/core.lua` is pure: parsing, evaluation, and table formatting
+  as plain functions over strings and tables, with no `vim.*`. The one
+  contextual dependency, display-width measurement, is injectable
+  (`core.display_width`); `setup()` swaps in `vim.fn.strdisplaywidth`, while the
+  pure default counts UTF-8 codepoints.
+- `lua/truth-table/init.lua` holds the Neovim-facing pieces: locating the table
+  under the cursor, the user commands, keymaps, and `setup()`.
+
+The pure core is covered by a busted spec under `spec/`; run it with `make
+test`. The vim-coupled layer is verified by loading the plugin and exercising
+the commands.
+
+ vim:tw=78:ts=8:ft=help:norl:

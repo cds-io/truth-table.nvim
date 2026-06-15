@@ -1,0 +1,14 @@
+# Lua / luarocks
+*.o
+*.so
+.luarocks/
+lua_modules/
+
+# Editor / OS
+*.swp
+.DS_Store
+
+# Test coverage
+luacov.*.out
+luacov.stats.out
+luacov.report.out

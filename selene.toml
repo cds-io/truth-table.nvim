@@ -1,0 +1,18 @@
+std = "lua51+neovim"
+
+[config]
+globals = [
+    "vim",
+    "describe",
+    "it",
+    "before_each",
+    "after_each",
+    "assert",
+]
+
+[lints]
+undefined_variable = "deny"
+unused_variable = "warn"
+shadowing = "warn"
+mixed_table = "warn"
+multiple_statements = "warn"
