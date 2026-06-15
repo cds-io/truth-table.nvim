@@ -1,8 +1,8 @@
 truth-table.nvim changes
 ========================
 
-Unreleased
-----------
+0.1.0 - 2026-06-15
+------------------
 - Initial extraction from the single-file Neovim config modules
   (lua/plugins/truth-table.lua + lua/truth-table-core.lua). Behavior preserved;
   structure reworked for testability:
