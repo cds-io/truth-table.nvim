@@ -15,6 +15,9 @@ vim.api.nvim_create_autocmd('VimEnter', {
             local tbl = assert(core.parse_model(vim.api.nvim_buf_get_lines(0, 0, 4, false)))
             assert(vim.deep_equal(tbl.rows, { { 0 }, { 1 } }))
             assert(tbl.encoding == 'tf')
+            vim.cmd('help truth-table-predicates')
+            assert(vim.bo.filetype == 'help')
+            assert(vim.api.nvim_buf_get_name(0):match('doc/truth%-table%.txt$'))
         end)
         if not ok then
             io.stderr:write(tostring(err) .. '\n')

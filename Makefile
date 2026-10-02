@@ -1,11 +1,12 @@
-# Override if your `busted` is not the one on PATH. On this machine the Homebrew
-# `busted` launcher points at a removed lua5.4; the working one lives in the
-# user rocks tree:  make test BUSTED=$(HOME)/.luarocks/bin/busted
-BUSTED ?= busted
+# Prefer the user LuaRocks launcher when present; otherwise resolve from PATH.
+# BUSTED can still be set explicitly on the command line or in the environment.
+BUSTED ?= $(if $(wildcard $(HOME)/.luarocks/bin/busted),$(HOME)/.luarocks/bin/busted,busted)
 SELENE ?= selene
 NVIM ?= nvim
 
-.PHONY: test test-integration lint
+.PHONY: check test test-integration lint
+
+check: test test-integration lint
 
 test:
 	$(BUSTED)

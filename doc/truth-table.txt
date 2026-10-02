@@ -220,7 +220,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - core.lua composes construction/expansion and exposes compatibility adapters.
 - predicate.lua owns parsing, binding, evaluation, and heading rendering.
 - table_model.lua owns numeric Boolean cells, display encoding, and pure edits.
-- markdown.lua parses/renders tables and handles escaped pipes/backslashes.
+- markdown.lua parses/renders tables and escapes pipes, backslashes, and
+  backticks so displayed headings retain their literal reference names.
 - result.lua composes value, error results through bind and traverse.
 - init.lua locates tables and applies successful semantic pipelines to buffers.
 
@@ -232,7 +233,8 @@ headings; malformed/non-Boolean tables and empty expressions are rejected.
 Computed columns retain stored values when source variable columns are dropped.
 An empty table loses its display encoding when serialized to Markdown.
 
-Run make test for the pure specs and make test-integration for headless Neovim
-command checks. make lint checks the source modules with selene.
+Run make check for the complete local check (requires Busted, Neovim, and Selene).
+make test runs pure specs; make test-integration runs headless command checks and
+verifies automatic plugin loading during startup. make lint checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:

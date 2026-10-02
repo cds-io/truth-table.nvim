@@ -167,20 +167,26 @@ uses bits.
 
 ## Testing
 
-The pure core is covered by a [busted](https://lunarmodules.github.io/busted/)
-spec in `spec/`:
+Run the complete local check (requires Busted, Neovim, and Selene):
+
+```sh
+make check
+```
+
+The pure core is covered by [busted](https://lunarmodules.github.io/busted/)
+specs in `spec/`:
 
 ```sh
 make test
 ```
 
-If your `busted` launcher is broken (a common symptom of a Homebrew Lua version
-bump: it hard-codes a now-missing `lua5.4`), install busted into your user rocks
-tree and point the target at it:
+The Makefile prefers `~/.luarocks/bin/busted` when present, then falls back to
+`busted` on PATH. This avoids stale Homebrew launchers after Lua upgrades.
+If needed, install a user launcher or select one explicitly:
 
 ```sh
 luarocks --local install busted
-make test BUSTED=$HOME/.luarocks/bin/busted
+make check BUSTED=/path/to/busted
 ```
 
 Run `make test-integration` for headless Neovim command checks, malformed-table
