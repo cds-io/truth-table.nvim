@@ -59,7 +59,7 @@ local function symbol_op_at(input, pos)
 end
 
 function M.tokenize(input)
-    local tokens = {}
+    local tokens, spans = {}, {}
     local pos = 1
     local len = #input
 
@@ -72,17 +72,18 @@ function M.tokenize(input)
             break
         end
 
+        local token_start = pos
         local ch = input:sub(pos, pos)
         local symbol_op, symbol_len = symbol_op_at(input, pos)
 
         if ch == "`" then
             local close = input:find("`", pos + 1, true)
             if not close then
-                return nil, "Unclosed column reference at position " .. pos
+                return nil, "Unclosed column reference at byte " .. pos
             end
             local name = input:sub(pos + 1, close - 1)
             if name == "" then
-                return nil, "Empty column reference at position " .. pos
+                return nil, "Empty column reference at byte " .. pos
             end
             tokens[#tokens + 1] = { type = "reference", value = name }
             pos = close + 1
@@ -104,14 +105,17 @@ function M.tokenize(input)
             tokens[#tokens + 1] = { type = "literal", value = ch }
             pos = pos + 1
         else
-            return nil, "Unexpected character: " .. ch .. " at position " .. pos
+            local character = input:match("^[^\128-\191][\128-\191]*", pos) or ch
+            return nil, "Unexpected character: " .. character .. " at byte " .. pos
         end
+        spans[#tokens] = { start_byte = token_start, end_byte = pos - 1 }
     end
 
-    return tokens
+    -- Optional third return keeps token records and value/error callers intact.
+    return tokens, nil, { spans = spans, end_byte = len + 1 }
 end
 
-function M.parse_predicate(tokens)
+function M.parse_predicate(tokens, locations)
     local pos = 1
 
     local function peek()
@@ -124,10 +128,19 @@ function M.parse_predicate(tokens)
         return tok
     end
 
+    local function failure(message)
+        if locations then
+            local span = locations.spans[pos]
+            local byte = span and span.start_byte or locations.end_byte
+            return nil, message .. " at byte " .. byte
+        end
+        return nil, message .. " at token " .. pos
+    end
+
     local function expect(type, value)
         local tok = peek()
         if not tok or tok.type ~= type or (value and tok.value ~= value) then
-            return nil, "Expected " .. (value or type) .. " at token " .. pos
+            return failure("Expected " .. (value or type))
         end
         return consume()
     end
@@ -137,7 +150,7 @@ function M.parse_predicate(tokens)
     local function parse_atom()
         local tok = peek()
         if not tok then
-            return nil, "Unexpected end of expression"
+            return failure("Unexpected end of expression")
         end
 
         if tok.type == "reference" then
@@ -161,7 +174,7 @@ function M.parse_predicate(tokens)
             end
             return { type = "paren", expr = node }
         else
-            return nil, "Unexpected token: " .. tok.value
+            return failure("Unexpected token: " .. tok.value)
         end
     end
 
@@ -210,7 +223,7 @@ function M.parse_predicate(tokens)
     end
 
     if pos <= #tokens then
-        return nil, "Unexpected token after expression: " .. tokens[pos].value
+        return failure("Unexpected token after expression: " .. tokens[pos].value)
     end
 
     return ast
@@ -275,8 +288,10 @@ end
 
 -- Parse source through the tokenizer/parser Result pipeline.
 function M.parse_expression(input)
-    local tokens, err = M.tokenize(trim(input))
-    local ast, parse_err = result.bind(tokens, err, M.parse_predicate)
+    local tokens, err, locations = M.tokenize(input)
+    local ast, parse_err = result.bind(tokens, err, function(values)
+        return M.parse_predicate(values, locations)
+    end)
     if not ast then
         return nil, 'Parse error in "' .. input .. '": ' .. parse_err
     end

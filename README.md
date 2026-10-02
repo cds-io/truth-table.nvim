@@ -80,6 +80,12 @@ Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
 Each operator can be typed as its symbol, so a rendered heading parses back to the expression it came from.
 
+Parse errors identify the offending token or end of input with a one-based byte
+position in the reported expression. Positions count UTF-8 bytes, matching Lua
+5.1 and Neovim buffer column conventions. `tokenize` retains its token records
+and returns optional span metadata as its third result; `parse_predicate` accepts
+that metadata, or falls back to token indices when omitted.
+
 ## Keymaps
 
 `setup()` registers these by default:
@@ -134,6 +140,11 @@ and requires both variable columns. References bind to positions before expansio
 new columns can be referenced in the next command. Backticks cannot occur inside
 a reference, and references are unavailable during new-table construction.
 Commas inside references belong to the label. Empty expressions are rejected.
+
+Discovery isolates adjacent tables at their heading/separator pairs and skips
+backtick/tilde fenced code and indented code. It supports top-level tables with
+uniform indentation of zero to three spaces and preserves that indentation on
+edits. Tables nested in lists or blockquotes are outside this supported subset.
 
 Pipes and backslashes in headings round-trip through Markdown escaping. A table
 with no data rows cannot persist its encoding in Markdown; reading it back

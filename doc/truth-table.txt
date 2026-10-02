@@ -54,6 +54,11 @@ calling `setup()` yourself.
 ==============================================================================
 4. COMMANDS                                              *truth-table-commands*
 
+Editing commands discover top-level tables with zero to three spaces of uniform
+indentation. Edits preserve that indentation. Adjacent heading/separator pairs
+start separate tables. Fenced and indented code are ignored; tables nested in
+lists or blockquotes are not supported.
+
                                                                   *:TruthTable*
 :TruthTable {arg}
     Insert a new truth table at the cursor. {arg} is either an integer N
@@ -162,6 +167,10 @@ Binary operators associate left, including implication. Use parentheses for
 A -> (B -> C). Parentheses `( )` override precedence. Whitespace is insignificant. Each
 operator can be typed as its symbol, so a rendered heading parses back to the
 expression it came from.
+
+Parse errors report a one-based byte position in the displayed expression.
+UTF-8 symbols occupy multiple bytes. Direct parse_predicate callers may pass
+span metadata (the third tokenize result); without it errors use token indices.
 
 Examples: >
 

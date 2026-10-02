@@ -88,3 +88,49 @@ describe("operator-driven rendering", function()
         end
     end)
 end)
+
+describe("predicate source diagnostics", function()
+    it("retains byte spans without changing legacy token records", function()
+        local tokens, err, locations = predicate.tokenize('  A ∧ `B, C`')
+        assert.is_nil(err)
+        assert.are.same({
+            { type = 'ident', value = 'A' },
+            { type = 'op', value = 'and' },
+            { type = 'reference', value = 'B, C' },
+        }, tokens)
+        assert.are.same({
+            { start_byte = 3, end_byte = 3 },
+            { start_byte = 5, end_byte = 7 },
+            { start_byte = 9, end_byte = 14 },
+        }, locations.spans)
+        assert.are.equal(15, locations.end_byte)
+    end)
+
+    it("points to unexpected tokens and end-of-input after multibyte symbols", function()
+        for _, case in ipairs({
+            { '  A ∧ )', 'Unexpected token: ) at byte 9' },
+            { 'A ∧ ', 'Unexpected end of expression at byte 7' },
+            { '(A or B', 'Expected ) at byte 8' },
+            { 'A B', 'Unexpected token after expression: B at byte 3' },
+            { '   ', 'Unexpected end of expression at byte 4' },
+        }) do
+            local ast, err = predicate.parse_expression(case[1])
+            assert.is_nil(ast)
+            assert.is_truthy(err:find(case[2], 1, true), err)
+        end
+    end)
+
+    it("shows complete unexpected Unicode characters and reference positions", function()
+        local _, unicode_err = predicate.parse_expression('A ∧ λ')
+        assert.is_truthy(unicode_err:find('Unexpected character: λ at byte 7', 1, true))
+        local _, reference_err = predicate.parse_expression('  `A')
+        assert.is_truthy(reference_err:find('Unclosed column reference at byte 3', 1, true))
+    end)
+
+    it("falls back to token indices for manually supplied tokens", function()
+        local tokens = assert(predicate.tokenize('A B'))
+        local ast, err = predicate.parse_predicate(tokens)
+        assert.is_nil(ast)
+        assert.are.equal('Unexpected token after expression: B at token 2', err)
+    end)
+end)

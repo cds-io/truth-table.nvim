@@ -64,4 +64,30 @@ local malformed_before = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 notified = false
 vim.cmd('TruthTableToggle')
 assert(notified and vim.deep_equal(malformed_before, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
+vim.api.nvim_buf_set_lines(0, 0, -1, false, { '|A|', '|---|', '|0|', '  |B|', '  |---|', '  |1|' })
+vim.api.nvim_win_set_cursor(0, {6, 4})
+vim.cmd('TruthTableToggle')
+local adjacent = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+assert(adjacent[1] == '|A|' and adjacent[2] == '|---|' and adjacent[3] == '|0|')
+assert(adjacent[4]:sub(1, 2) == '  ' and adjacent[6]:find('T', 1, true))
+for _, code_lines in ipairs({
+    { '```markdown', '|A|', '|---|', '|0|', '```' },
+    { '    |A|', '    |---|', '    |0|' },
+}) do
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, code_lines)
+    vim.api.nvim_win_set_cursor(0, {3, 1})
+    notified = false
+    vim.cmd('TruthTableToggle')
+    assert(notified and vim.deep_equal(code_lines, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
+end
+vim.api.nvim_buf_set_lines(0, 0, -1, false, { '|A|', '|---|', '|0|' })
+vim.api.nvim_win_set_cursor(0, {3, 1})
+local diagnostic_before = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+local diagnostic
+local notify_before = vim.notify
+vim.notify = function(message) diagnostic = message end
+vim.cmd('TruthTableExpand A ∧ )')
+vim.notify = notify_before
+assert(diagnostic and diagnostic:find('at byte 7', 1, true))
+assert(vim.deep_equal(diagnostic_before, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
 print('Neovim integration passed')

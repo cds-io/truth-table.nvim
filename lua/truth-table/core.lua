@@ -91,6 +91,7 @@ M.is_table_line = markdown.is_table_line
 M.is_separator = markdown.is_separator
 M.split_row = markdown.split_row
 M.column_index = markdown.column_index
+M.find_table = markdown.find_table
 function M.parse_table_lines(lines)
     local parsed, err = markdown.parse_table_lines(lines)
     return result.bind(parsed, err, function(tbl)

@@ -11,6 +11,9 @@ Unreleased
 - Validate malformed Markdown and sparse Lua arrays before transformations.
 - Compatibility: toggle_cells no longer mutates input; expansion deduplicates
   headings; non-Boolean/mixed tables and empty expressions are now rejected.
+- Isolate adjacent tables, ignore fenced/indented code, and preserve supported
+  table indentation during edits.
+- Report parser errors with source byte positions and complete Unicode characters.
 - Add pure regression specs and headless Neovim command integration checks.
 
 0.1.0 - 2026-06-15

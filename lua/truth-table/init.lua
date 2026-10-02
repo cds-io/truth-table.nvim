@@ -8,60 +8,17 @@ local result = require("truth-table.result")
 
 local M = {}
 
--- Locate the markdown table the cursor is inside. Returns start_row, end_row
--- (1-based, inclusive) or nil. A valid table needs at least a heading and a
--- separator row, with the separator immediately under the heading.
-local function find_table()
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local cur_row = cursor[1]
-    local total = vim.api.nvim_buf_line_count(0)
-
-    local cur_line = vim.api.nvim_buf_get_lines(0, cur_row - 1, cur_row, false)[1]
-    if not core.is_table_line(cur_line) then
-        return nil
-    end
-
-    local start_row = cur_row
-    for row = cur_row - 1, 1, -1 do
-        local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-        if not core.is_table_line(line) then
-            break
-        end
-        start_row = row
-    end
-
-    local end_row = cur_row
-    for row = cur_row + 1, total do
-        local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-        if not core.is_table_line(line) then
-            break
-        end
-        end_row = row
-    end
-
-    if end_row - start_row < 1 then
-        return nil
-    end
-
-    local sep_line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, false)[1]
-    if not core.is_separator(sep_line) then
-        return nil
-    end
-
-    return start_row, end_row
-end
-
--- Editor locations stay outside the semantic table model.
-local function parse_table(start_line, end_line)
-    return core.parse_model(vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false))
-end
-
 -- Apply only complete successful pipelines; failures leave the buffer untouched.
-local function replace_table(first, last, tbl, err)
+local function replace_table(first, last, tbl, err, indent)
     local lines, format_err = result.bind(tbl, err, core.format_model)
     if not lines then
         vim.notify(format_err, vim.log.levels.WARN)
         return
+    end
+    if indent and indent ~= "" then
+        lines = result.traverse(lines, function(line)
+            return indent .. line
+        end)
     end
     vim.api.nvim_buf_set_lines(0, first, last, false, lines)
 end
@@ -73,16 +30,21 @@ end
 
 -- Compose parse -> transform -> format, using one Result convention throughout.
 local function with_table(fn)
-    local start_line, end_line = find_table()
-    if not start_line then
-        vim.notify("Cursor is not inside a truth table", vim.log.levels.WARN)
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local bounds, find_err = core.find_table(lines, vim.api.nvim_win_get_cursor(0)[1])
+    if not bounds then
+        vim.notify(find_err, vim.log.levels.WARN)
         return
     end
-    local tbl, err = parse_table(start_line, end_line)
+    local selected = {}
+    for row = bounds.start_line, bounds.end_line do
+        selected[#selected + 1] = lines[row]
+    end
+    local tbl, err = core.parse_model(selected)
     local edited, edit_err = result.bind(tbl, err, function(valid)
-        return fn(valid, start_line, end_line)
+        return fn(valid, bounds.start_line, bounds.end_line)
     end)
-    replace_table(start_line - 1, end_line, edited, edit_err)
+    replace_table(bounds.start_line - 1, bounds.end_line, edited, edit_err, bounds.indent)
 end
 
 local function cmd_truth_table(opts)
