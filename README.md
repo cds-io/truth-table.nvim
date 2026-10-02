@@ -44,6 +44,7 @@ group label is registered if it is present).
 |---|---|
 | `:TruthTable {N\|names}` | Insert a new table: `N` variables (A, B, ...) or named ones |
 | `:TruthTable {exprs}` | Insert a new table from expressions separated by `\|` or `,`: the variables they mention, plus a computed column per expression |
+| `:[range]TruthTable` | Same, reading the argument from the selected lines (a line break is one more `\|`) and replacing them with the table |
 | `:TruthTableExpand {preds}` | Append a computed column per comma-separated predicate |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
@@ -85,6 +86,7 @@ as its symbol, so a rendered heading parses back to the expression it came from.
 | Key | Action |
 |---|---|
 | `<leader>ttn` | prefill `:TruthTable ` |
+| `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
 | `<leader>tte` | prefill `:TruthTableExpand ` |
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |

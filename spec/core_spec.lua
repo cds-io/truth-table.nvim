@@ -368,6 +368,23 @@ describe("core.build_truth_table", function()
     end)
 end)
 
+describe("core.args_from_lines", function()
+    it("joins lines with the column delimiter, skipping blank ones", function()
+        assert.are.equal("m | a  | b | m xor a | a and b", core.args_from_lines({ "m | a  | b", "  m xor a ", "", "a and b" }))
+    end)
+
+    it("feeds build_truth_table: a first line of bare variables pins the order", function()
+        local args = core.args_from_lines({ "m | a  | b", "(m ∧  (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) ", "m ⊕ (a ∧ b)" })
+        local headers, rows = core.build_truth_table(args)
+        assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a ∧ b)))", "m ⊕ (a ∧ b)" }, headers)
+        assert.are.equal(8, #rows)
+    end)
+
+    it("leaves a single line as it is, so the classic forms still work", function()
+        assert.are.same({ "p", "q" }, (core.build_truth_table(core.args_from_lines({ "p q" }))))
+    end)
+end)
+
 describe("core.toggle_cells", function()
     it("converts 0/1 to F/T", function()
         local rows = core.toggle_cells({ { "0", "1" }, { "1", "0" } })

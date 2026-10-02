@@ -594,6 +594,19 @@ local function table_from_expressions(input)
     return M.expand({ headers = vars, rows = M.generate_rows(#vars) }, compound)
 end
 
+-- The :TruthTable argument spelled out over several lines (a visual selection):
+-- a line break is one more column delimiter. Blank lines are skipped.
+function M.args_from_lines(lines)
+    local parts = {}
+    for _, line in ipairs(lines) do
+        line = trim(line)
+        if line ~= "" then
+            parts[#parts + 1] = line
+        end
+    end
+    return table.concat(parts, " | ")
+end
+
 -- Headers + rows for any :TruthTable argument: an integer N, a list of names,
 -- or expressions (see M.is_expression_input). Returns nil + an error message
 -- on failure.
