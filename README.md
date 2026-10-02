@@ -19,9 +19,9 @@ toggle between `0/1` and `F/T`, or drop the current row or column.
 ## Status
 
 Personal plugin, extracted from a single-file Neovim config module
-(`truth-table.lua` + `truth-table-core.lua`). Behavior is preserved; the
-extraction reworked the structure into a pure, testable core plus a thin
-Neovim layer.
+(`truth-table.lua` + `truth-table-core.lua`). The current implementation separates
+predicate logic, the table model, Markdown formatting, and Neovim integration.
+See the compatibility changes below for differences from the original module.
 
 An LLM was used to convert a long time personally maintained hack to a plugin
 with testing.
@@ -42,7 +42,7 @@ group label is registered if it is present).
 
 | Command | Effect |
 |---|---|
-| `:TruthTable {N\|names}` | Insert a new table: `N` variables (A, B, ...) or named ones |
+| `:TruthTable {N\|names}` | Insert a new table above the current line: `N` variables (A, B, ...) or named ones |
 | `:TruthTable {exprs}` | Insert a new table from expressions separated by `\|` or `,`: the variables they mention, plus a computed column per expression |
 | `:[range]TruthTable` | Same, reading the argument from the selected lines (a line break is one more `\|`) and replacing them with the table |
 | `:TruthTableExpand {preds}` | Append a computed column per comma-separated predicate |
@@ -80,11 +80,15 @@ are column names and the literals `0` / `1`. Operators, tightest binding first:
 
 Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
-Each operator can be typed as its symbol, so a rendered heading parses back to the expression it came from.
+Each operator can be typed as its symbol, so a decoded heading parses back to
+the expression it came from. Markdown source escapes literal backticks, pipes,
+and backslashes; use the decoded label when referencing a column.
+New-table expressions must mention at least one variable; constant-only
+expressions are supported by expansion of an existing table.
 
 Parse errors identify the offending token or end of input with a one-based byte
-position in the reported expression. Positions count UTF-8 bytes, matching Lua
-5.1 and Neovim buffer column conventions. `tokenize` retains its token records
+position in the reported expression. Positions count UTF-8 bytes, as Lua 5.1 and Neovim do, but diagnostics
+are one-based while Neovim cursor columns are zero-based. `tokenize` retains its token records
 and returns optional span metadata as its third result; `parse_predicate` accepts
 that metadata, or falls back to token indices when omitted.
 
@@ -92,7 +96,7 @@ that metadata, or falls back to token indices when omitted.
 
 Put the cursor on an expression-only line, or anywhere in a truth-table column,
 and run `:TruthTableDeMorgan`. Virtual text shows the rewritten expression; run
-it again to dismiss the preview. `:TruthTableDeMorganApply` replaces the line or
+it again to dismiss the preview, even after moving the cursor. `:TruthTableDeMorganApply` replaces the line or
 selected header. Indentation is preserved. Table separator and data lines remain
 unchanged, and a heading collision is rejected.
 
@@ -108,7 +112,7 @@ Nested-only matches report that no whole-expression rewrite applies. The preview
 is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
 renames its label: update explicit references to the old heading yourself. Stored
 column values remain unchanged. Output uses the predicate language's logic symbols;
-double-negation simplification is a separate operation.
+double negations are retained; there is no automatic simplification.
 
 ## Keymaps
 
@@ -127,7 +131,7 @@ double-negation simplification is a separate operation.
 
 ## Design
 
-All logic is pure Lua 5.1; only the editor adapter uses `vim.*`.
+The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
 
 - `core.lua` composes construction and expansion and preserves the public APIs.
 - `predicate.lua` owns parsing, binding, evaluation, and heading rendering.
@@ -139,7 +143,9 @@ All logic is pure Lua 5.1; only the editor adapter uses `vim.*`.
   explicitly; `core.display_width` retains the existing injection API.
 - `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
   Only `nil` means failure; zero and false remain successful values.
-- `init.lua` reads the buffer, composes parse → transform → render, and applies a
+- `preview.lua` manages per-buffer De Morgan previews, extmarks, invalidation,
+  and applying a rewrite to a line or header.
+- `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
   complete result. Editor line ranges stay outside the table model.
 
 The semantic API is `build_model`, `parse_model`, `expand_model`,
@@ -163,7 +169,8 @@ intact. Backticks explicitly reference an existing column by its exact heading:
 
 This works after A or B is dropped. `not (A and B)` instead evaluates the formula
 and requires both variable columns. References bind to positions before expansion;
-new columns can be referenced in the next command. Double a backtick inside a reference to include it in the column name:
+new columns can be referenced in the next command. Double a backtick inside a
+reference to include it in the column name:
 
 ```vim
 :TruthTableExpand not `¬``A```
@@ -216,7 +223,8 @@ make check BUSTED=/path/to/busted
 ```
 
 Run `make test-integration` for headless Neovim command checks, malformed-table
-buffer preservation, and automatic plugin loading during startup. Lint (optional, requires [selene](https://github.com/Kampfkarren/selene)):
+buffer preservation, De Morgan preview/apply behavior, and automatic startup.
+Lint (optional when running individual checks, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh
 make lint
@@ -224,4 +232,4 @@ make lint
 
 ## Documentation
 
-`:help truth-table` once the plugin is on your runtimepath.
+`:help truth-table.txt` once the plugin is on your runtimepath.
