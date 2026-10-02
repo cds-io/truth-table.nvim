@@ -13,7 +13,8 @@ CONTENTS                                                  *truth-table-contents*
   5. Predicate language ....................... |truth-table-predicates|
   6. Keymaps .................................. |truth-table-keymaps|
   7. Configuration ............................ |truth-table-configuration|
-  8. Architecture ............................. |truth-table-architecture|
+  8. Abbreviations ............................ |truth-table-abbreviations|
+  9. Architecture ............................. |truth-table-architecture|
 
 ==============================================================================
 1. INTRODUCTION                                      *truth-table-introduction*
@@ -47,6 +48,10 @@ With lazy.nvim, pointing at the local clone: >
 
     { dir = "~/dev/nvim-plugins/truth-table.nvim" }
 <
+Load it eagerly (`lazy = false` in lazy.nvim): the insert-mode abbreviations
+in |truth-table-abbreviations| are global, and a plugin lazy-loaded on its
+commands would register them only after the first |:TruthTable|.
+
 The plugin self-registers on load (plugin/truth-table.lua calls `setup()`), so
 no further configuration is required. See |truth-table-configuration| for
 calling `setup()` yourself.
@@ -228,22 +233,88 @@ the argument. Visual-mode ttn immediately executes on the selected lines.
 7. CONFIGURATION                                    *truth-table-configuration*
 
                                                           *truth-table.setup()*
-require("truth-table").setup()
-    Registers the commands, keymaps, and which-key labels, and injects
-    `vim.fn.strdisplaywidth` for terminal-accurate column widths. It is called
-    automatically by plugin/truth-table.lua; call it yourself only if you load
-    the module manually. It is idempotent.
+require("truth-table").setup({opts})
+    Registers the commands, keymaps, insert-mode abbreviations, and which-key
+    labels, and injects `vim.fn.strdisplaywidth` for terminal-accurate column
+    widths. It is called automatically by plugin/truth-table.lua; call it
+    yourself to pass {opts}, or if you load the module manually. It is
+    idempotent: the last call wins.
 
-There are currently no setup options. setup() registers both commands and the
-fixed mappings above. To customize keys, remove unwanted mappings after setup()
-and add replacements, for example: >
+    {opts} is a table with one recognised key:
+
+    abbreviations
+        The insert-mode abbreviations to register. See
+        |truth-table-abbreviations| for the default set and the shapes this
+        option accepts.
+
+The commands and mappings have no options. To customize keys, remove unwanted
+mappings after setup() and add replacements, for example: >
     vim.keymap.del("n", "<leader>ttd")
     vim.keymap.set("n", "<leader>dm", "<cmd>TruthTableDeMorgan<CR>")
 <
 Calling setup() again reinstalls the default mappings.
 
 ==============================================================================
-8. ARCHITECTURE                                        *truth-table-architecture*
+8. ABBREVIATIONS                                    *truth-table-abbreviations*
+
+setup() registers insert-mode abbreviations (|:iabbrev|) for the logic
+symbols, so headings can be typed as words. Each is a word plus a trigger,
+`@` by default. The trigger is a non-keyword character, so `and` in prose
+never expands, while `and@` followed by a space or punctuation becomes `∧`.
+
+    and@      ∧          forall@   ∀
+    or@       ∨          exists@   ∃
+    xor@      ⊕          true@     ⊤
+    not@      ¬          false@    ⊥
+    implies@  →
+    iff@      ⇔
+
+                                                          *truth-table-symbols*
+The word and the symbol come from `require("truth-table.symbols")`, one
+record per symbol with an `ascii` word and a `unicode` character: >
+    AND = { ascii = "and", unicode = "∧" }
+    IFF = { ascii = "iff", unicode = "⇔" }
+<
+The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`)
+and BOTTOM (`false`). The predicate language renders headings from the same
+table (|truth-table-predicates|), so a heading you type and one the plugin
+generates use the same characters. The abbreviations are global: every
+buffer, every filetype.
+
+The `abbreviations` key of |truth-table.setup()| controls the set, with the
+input side and the display side as separate settings:
+
+    nil (omitted)   the defaults above
+    false           none
+    table           `trigger`: the string appended to every word
+                    (default "@")
+                    `symbols`: merged over the defaults, keyed by word; a
+                    `false` value drops that word, a string overrides or
+                    adds one
+
+For example: >
+    require("truth-table").setup({
+      abbreviations = {
+        trigger = ";",          -- and; or; not; ...
+        symbols = {
+          implies = "⇒",        -- override one
+          forall = false,       -- drop one
+          top = "⊤",            -- add one
+        },
+      },
+    })
+    require("truth-table").setup({ abbreviations = false })
+<
+The defaults are exposed as `require("truth-table.abbreviations").defaults`,
+a `{ trigger, symbols }` table. Overriding a symbol here changes what you
+type and nothing else; headings still render from |truth-table-symbols|.
+Each setup() call removes the abbreviations the previous call registered
+before installing its own, so a user call with options takes effect even
+though plugin/truth-table.lua runs a bare setup() first. An abbreviation you
+removed by hand with |:iunabbrev| is skipped rather than reported.
+
+==============================================================================
+9. ARCHITECTURE                                        *truth-table-architecture*
 
 All pure modules support Lua 5.1 and have no vim dependency:
 
@@ -256,6 +327,9 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - preview.lua manages per-buffer extmarks, invalidation, and rewrite application.
 - symbols.lua is the one table of logic symbols (ASCII word plus Unicode
   character); predicate.lua renders from it.
+- abbreviations.lua derives the default insert-mode abbreviations from
+  symbols.lua, merges the setup() option over them, and swaps the registered
+  set on each call.
 - init.lua registers commands/keymaps, locates tables and applies successful semantic pipelines to buffers.
 
 Display width is injectable through core.display_width; setup() uses
@@ -268,6 +342,7 @@ An empty table loses its display encoding when serialized to Markdown.
 
 Run make check for the complete local check (requires Busted, Neovim, and Selene).
 make test runs pure specs; make test-integration runs headless command checks and
-verifies De Morgan previews and automatic plugin loading during startup. make lint checks source modules.
+verifies De Morgan previews, abbreviation setup, and automatic plugin loading
+during startup. make lint checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:

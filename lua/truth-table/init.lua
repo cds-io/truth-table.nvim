@@ -100,10 +100,15 @@ local function cmd_toggle()
     end)
 end
 
--- Register commands, keymaps, and (if present) which-key labels. Also injects
--- vim.fn.strdisplaywidth so column widths are terminal-accurate. Idempotent.
-function M.setup()
+-- Register commands, keymaps, insert-mode abbreviations, and (if present)
+-- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
+-- terminal-accurate. Idempotent: the last call wins, including for the
+-- abbreviations, which plugin/truth-table.lua registers with defaults before
+-- any user call can pass `opts.abbreviations`.
+function M.setup(opts)
+    opts = opts or {}
     core.display_width = vim.fn.strdisplaywidth
+    require("truth-table.abbreviations").register(opts.abbreviations)
 
     vim.api.nvim_create_user_command("TruthTable", cmd_truth_table, {
         nargs = "*",

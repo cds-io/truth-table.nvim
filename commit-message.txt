@@ -1,18 +1,25 @@
-feat: extract truth-table into a standalone, tested, documented plugin
+feat: register logic-symbol insert abbreviations, configurable in setup()
 
-Pull the TruthTable feature out of the single-file Neovim config modules into a
-proper plugin with a pure/impure split, unit tests, and vim help.
+Typing `A ∧ ¬B` into a heading meant hunting for the glyphs, or carrying a
+block of `iabbrev` lines in a personal config next to the plugin that
+renders those same glyphs. The abbreviations now ship with the plugin and
+read from the shared symbol table, so what you type and what the plugin
+generates cannot drift apart.
 
-- lua/truth-table/core.lua: pure predicate tokenizer/parser, evaluator,
-  validation, and markdown formatting. No vim dependency; display-width
-  measurement is injectable (pure UTF-8 default, vim.fn.strdisplaywidth in the
-  plugin). Adds pure core.expand and core.toggle_cells.
-- lua/truth-table/init.lua: vim-coupled layer (cursor table scanning, the
-  :TruthTable* commands routed through a shared with_table helper, keymaps) and
-  the public setup().
-- plugin/truth-table.lua: auto-sourced entry point with a load guard.
-- spec/core_spec.lua: 37-case busted spec over the core.
-- doc/truth-table.txt: vim help with tags.
-- Makefile, selene.toml, README.md, CHANGES.TXT scaffolding.
-
-Behavior is preserved from the original config.
+- Add lua/truth-table/abbreviations.lua: defaults derived from
+  truth-table.symbols (`and@` -> ∧, `iff@` -> ⇔, and so on), resolve() for
+  the option, and register().
+- setup(opts) takes `abbreviations`: nil keeps the defaults, false registers
+  none, a table sets `trigger` (the suffix appended to every word, default
+  `@`) and merges `symbols` over the defaults, with false dropping a word.
+  The option changes only what is typed; rendering stays with symbols.lua.
+- register() removes what the previous call installed before installing its
+  own. plugin/truth-table.lua runs a bare setup() before a user's options
+  arrive, so last call has to win; an abbreviation already removed by hand
+  is skipped.
+- Add spec/abbreviations.lua (headless, through the real entry point)
+  covering each option shape, the trigger, and the swap between calls;
+  assert the defaults in spec/startup.lua; wire the spec into make check.
+- Document the set, the option, and the need to load the plugin eagerly:
+  the abbreviations are global, so a spec lazy-loaded on its commands would
+  register them only after the first :TruthTable.

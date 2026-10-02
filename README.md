@@ -31,12 +31,14 @@ with testing.
 With lazy.nvim:
 
 ```lua
-{ dir = "~/dev/nvim-plugins/truth-table.nvim" }
+{ dir = "~/dev/nvim-plugins/truth-table.nvim", lazy = false }
 ```
 
 The plugin self-registers on load (`plugin/truth-table.lua` calls `setup()`),
 so there is nothing else to wire up. which-key is optional (a `<leader>tt`
-group label is registered if it is present).
+group label is registered if it is present). Load it eagerly: the insert-mode
+abbreviations below are global, and a plugin lazy-loaded on its commands would
+register them only after the first `:TruthTable`.
 
 ## Commands
 
@@ -129,6 +131,51 @@ double negations are retained; there is no automatic simplification.
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
 
+## Abbreviations
+
+`setup()` also registers insert-mode abbreviations for the logic symbols, so
+headings can be typed as words. Each is a word plus a trigger, `@` by default;
+the trigger is what keeps `and` in prose from expanding. Type `and@` and the
+next space or punctuation turns it into `∧`:
+
+| Typed | Inserted | | Typed | Inserted |
+|---|---|---|---|---|
+| `and@` | `∧` | | `forall@` | `∀` |
+| `or@` | `∨` | | `exists@` | `∃` |
+| `xor@` | `⊕` | | `true@` | `⊤` |
+| `not@` | `¬` | | `false@` | `⊥` |
+| `implies@` | `→` | | | |
+| `iff@` | `⇔` | | | |
+
+The word and the symbol come from one table, `require("truth-table.symbols")`,
+which the predicate language renders headings from as well: `AND = { ascii =
+"and", unicode = "∧" }` and so on. A heading you type and a heading the plugin
+generates therefore use the same characters. The abbreviations are global
+(every buffer, every filetype) and configurable through `setup()`, with the
+input side and the display side as separate settings:
+
+```lua
+require("truth-table").setup({
+  abbreviations = {
+    trigger = ";",          -- input: and; or; not; ...
+    symbols = {             -- display, keyed by word
+      implies = "⇒",        -- override one
+      forall = false,       -- drop one
+      top = "⊤",            -- add one
+    },
+  },
+})
+require("truth-table").setup({ abbreviations = false })  -- none at all
+```
+
+`symbols` merges over the defaults, which `require("truth-table.abbreviations").defaults`
+exposes as `{ trigger = "@", symbols = { ... } }`. Overriding a symbol here
+changes what you type, and only that; headings still render from
+`truth-table.symbols`. Each `setup()` call removes the abbreviations the previous
+call registered before installing its own, so the last call wins even though
+`plugin/truth-table.lua` runs a bare `setup()` before your config does. With
+lazy.nvim, `opts = { abbreviations = ... }` is the usual place for this.
+
 ## Design
 
 The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
@@ -147,6 +194,9 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
   and applying a rewrite to a line or header.
 - `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
   Unicode character; `predicate.lua` renders from it.
+- `abbreviations.lua` derives the default insert-mode abbreviations from
+  `symbols.lua`, merges the `setup()` option over them, and swaps the
+  registered set on each call.
 - `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
   complete result. Editor line ranges stay outside the table model.
 

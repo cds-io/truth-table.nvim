@@ -8,6 +8,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
         local ok, err = pcall(function()
             assert(vim.g.loaded_truth_table)
             assert(vim.fn.exists(':TruthTable') == 2)
+            assert(vim.fn.maparg('and@', 'i', true) == '∧')
             vim.cmd('TruthTable A')
             vim.api.nvim_win_set_cursor(0, {3, 1})
             vim.cmd('TruthTableToggle')
