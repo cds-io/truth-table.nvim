@@ -92,17 +92,26 @@ local function with_table(fn)
 end
 
 local function cmd_truth_table(opts)
-    local headers, err = core.parse_truth_table_args(opts.args)
+    -- With a range and no argument, the selected lines are the argument, and
+    -- the table takes their place. Otherwise the table is inserted at the
+    -- cursor, above the current line.
+    local from_range = opts.range > 0 and opts.args == ""
+    local args = opts.args
+    local first = vim.api.nvim_win_get_cursor(0)[1] - 1
+    local last = first
+    if from_range then
+        first, last = opts.line1 - 1, opts.line2
+        args = core.args_from_lines(vim.api.nvim_buf_get_lines(0, first, last, false))
+    end
+
+    local headers, rows = core.build_truth_table(args)
     if not headers then
-        vim.notify(err, vim.log.levels.WARN)
+        -- rows holds the error message in the failure case.
+        vim.notify(rows, vim.log.levels.WARN)
         return
     end
 
-    local rows = core.generate_rows(#headers)
-    local lines = core.format_table(headers, rows)
-
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    vim.api.nvim_buf_set_lines(0, cursor[1] - 1, cursor[1] - 1, false, lines)
+    vim.api.nvim_buf_set_lines(0, first, last, false, core.format_table(headers, rows))
 end
 
 local function cmd_expand(opts)
@@ -169,7 +178,8 @@ function M.setup()
     core.display_width = vim.fn.strdisplaywidth
 
     vim.api.nvim_create_user_command("TruthTable", cmd_truth_table, {
-        nargs = "+",
+        nargs = "*",
+        range = true,
         desc = "Generate a truth table",
     })
     vim.api.nvim_create_user_command("TruthTableExpand", cmd_expand, {
@@ -196,6 +206,7 @@ function M.setup()
     end
 
     vim.keymap.set("n", "<leader>ttn", ":TruthTable ", { desc = "New truth table" })
+    vim.keymap.set("x", "<leader>ttn", ":TruthTable<CR>", { desc = "New truth table from selection" })
     vim.keymap.set("n", "<leader>tte", ":TruthTableExpand ", { desc = "Expand truth table" })
     vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
     vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })

@@ -43,6 +43,8 @@ group label is registered if it is present).
 | Command | Effect |
 |---|---|
 | `:TruthTable {N\|names}` | Insert a new table: `N` variables (A, B, ...) or named ones |
+| `:TruthTable {exprs}` | Insert a new table from expressions separated by `\|` or `,`: the variables they mention, plus a computed column per expression |
+| `:[range]TruthTable` | Same, reading the argument from the selected lines (a line break is one more `\|`) and replacing them with the table |
 | `:TruthTableExpand {preds}` | Append a computed column per comma-separated predicate |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
@@ -51,23 +53,31 @@ group label is registered if it is present).
 ```
 :TruthTable 3
 :TruthTable p q r
+:TruthTable (m ∧ (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) | m ⊕ (a ∧ b)
 :TruthTableExpand A and B, A xor B
 ```
 
+The expression form reads its variables off the expressions, in order of first
+appearance (m, a, b above). A bare variable adds no column, so it can pin the
+order: `:TruthTable b | a | a -> b` puts `b` first. (The operator keywords are
+reserved: `:TruthTable p or q` is the expression `p ∨ q`.)
+
 ## Predicate language
 
-Used by `:TruthTableExpand`. Operands are existing column names and the literals
-`0` / `1`. Operators, tightest binding first:
+Used by `:TruthTableExpand` and the expression form of `:TruthTable`. Operands
+are column names and the literals `0` / `1`. Operators, tightest binding first:
 
 | Operator | Meaning | Rendered |
 |---|---|---|
-| `not` / `!` | negation | `¬` |
-| `and` | conjunction | `∧` |
-| `or` | disjunction | `∨` |
-| `xor` | exclusive or | `⊕` |
-| `implies` / `->` | implication | `→` |
+| `not` / `!` / `¬` | negation | `¬` |
+| `and` / `∧` | conjunction | `∧` |
+| `or` / `∨` | disjunction | `∨` |
+| `xor` / `⊕` | exclusive or | `⊕` |
+| `implies` / `->` / `=>` / `→` / `⇒` | implication | `→` |
+| `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `=` |
 
-Parentheses override precedence: `(A or B) and !C`.
+Parentheses override precedence: `(A or B) and !C`. Each operator can be typed
+as its symbol, so a rendered heading parses back to the expression it came from.
 
 ## Keymaps
 
@@ -76,6 +86,7 @@ Parentheses override precedence: `(A or B) and !C`.
 | Key | Action |
 |---|---|
 | `<leader>ttn` | prefill `:TruthTable ` |
+| `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
 | `<leader>tte` | prefill `:TruthTableExpand ` |
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |

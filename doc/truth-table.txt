@@ -65,7 +65,38 @@ calling `setup()` yourself.
         :TruthTable 3
         :TruthTable p q r
 <
-                                                            *:TruthTableExpand*
+    {arg} can also be a list of expressions in the predicate language (see
+    |truth-table-predicates|), separated by `|` or `,`. The variables are then
+    the names the expressions mention, in order of first appearance, and each
+    compound expression becomes a computed column: >
+
+        :TruthTable (m ∧ (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) | m ⊕ (a ∧ b)
+<
+    produces the variables m, a, b and one column per expression. A bare
+    variable adds no column of its own, so it can pin the variable order
+    (`:TruthTable b | a | a -> b` puts b first). An expression given twice
+    yields one column.
+
+    N.B. {arg} is read as expressions when it contains anything besides names
+    and spaces, or an operator keyword. So `:TruthTable p or q` is the
+    expression p ∨ q; the keywords (and, or, xor, not, implies, iff) are
+    reserved and cannot be variable names.
+
+:[range]TruthTable
+    Without {arg}, read the argument from the lines in [range] (typically a
+    visual selection) and replace those lines with the table. A line break
+    counts as one more `|`, so each expression can sit on its own line: >
+
+        m | a | b
+        (m ∧ (a ⊕ b) ∨ (¬m ∧ (a = b)))
+        m ⊕ (a = b)
+<
+    Select the three lines and run `:'<,'>TruthTable`. The first line of bare
+    variables pins the column order; without it the order is that of first
+    appearance. Blank lines are skipped. On an error the lines are left as
+    they were.
+
+                                                     *:TruthTableExpand*
 :TruthTableExpand {predicates}
     With the cursor inside a table, append one computed column per predicate.
     {predicates} is a comma-separated list of expressions in the predicate
@@ -95,21 +126,25 @@ calling `setup()` yourself.
 5. PREDICATE LANGUAGE                                   *truth-table-predicates*
 
 |:TruthTableExpand| evaluates a small boolean expression language over the
-table's existing columns.
+table's existing columns; |:TruthTable| accepts the same language and derives
+the columns from it.
 
 Operands:
-    - column names (must match an existing header)
+    - column names (for |:TruthTableExpand|, must match an existing header)
     - literals `0` and `1`
 
 Operators, from tightest binding to loosest:
 
-    not  !          unary negation                  rendered  ¬
-    and             conjunction                     rendered  ∧
-    or              disjunction                     rendered  ∨
-    xor             exclusive or                    rendered  ⊕
-    implies  ->     material implication            rendered  →
+    not  !  ¬          unary negation               rendered  ¬
+    and  ∧             conjunction                  rendered  ∧
+    or  ∨              disjunction                  rendered  ∨
+    xor  ⊕             exclusive or                 rendered  ⊕
+    implies  ->  =>  →  ⇒   material implication    rendered  →
+    iff  =  <->  <=>  ⇔  ↔  equivalence             rendered  =
 
-Parentheses `( )` override precedence. Whitespace is insignificant.
+Parentheses `( )` override precedence. Whitespace is insignificant. Each
+operator can be typed as its symbol, so a rendered heading parses back to the
+expression it came from.
 
 Examples: >
 
@@ -125,6 +160,7 @@ Examples: >
 `setup()` registers these normal-mode keymaps by default:
 
     <leader>ttn   prefill `:TruthTable `        (new table)
+    <leader>ttn   (visual) run `:TruthTable` on the selected lines
     <leader>tte   prefill `:TruthTableExpand `  (expand)
     <leader>ttt   |:TruthTableToggle|
     <leader>ttr   |:TruthTableDropRow|

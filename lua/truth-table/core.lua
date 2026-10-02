@@ -160,8 +160,39 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Predicate language: tokenizer -> recursive-descent parser -> AST.
--- Precedence (loosest to tightest): implies, xor, or, and, unary not, atom.
+-- Precedence (loosest to tightest): iff, implies, xor, or, and, unary not, atom.
 -- ---------------------------------------------------------------------------
+
+local KEYWORDS = { ["and"] = true, ["or"] = true, ["xor"] = true, ["not"] = true, ["implies"] = true, ["iff"] = true }
+local BINARY = { ["and"] = true, ["or"] = true, ["xor"] = true, ["implies"] = true, ["iff"] = true }
+
+-- Symbol spellings of the operators, so a rendered heading (or anything pasted
+-- from one) parses back to the AST it was rendered from. Multi-character (or
+-- multibyte), hence matched as whole strings and not through the single-byte
+-- `ch` dispatch. First match wins, so `=>` and `<=>` must precede `=`.
+local SYMBOL_OPS = {
+    { "∧", "and" },
+    { "∨", "or" },
+    { "⊕", "xor" },
+    { "¬", "not" },
+    { "→", "implies" },
+    { "⇒", "implies" },
+    { "=>", "implies" },
+    { "⇔", "iff" },
+    { "↔", "iff" },
+    { "<->", "iff" },
+    { "<=>", "iff" },
+    { "=", "iff" },
+}
+
+local function symbol_op_at(input, pos)
+    for _, entry in ipairs(SYMBOL_OPS) do
+        local symbol = entry[1]
+        if input:sub(pos, pos + #symbol - 1) == symbol then
+            return entry[2], #symbol
+        end
+    end
+end
 
 function M.tokenize(input)
     local tokens = {}
@@ -178,8 +209,12 @@ function M.tokenize(input)
         end
 
         local ch = input:sub(pos, pos)
+        local symbol_op, symbol_len = symbol_op_at(input, pos)
 
-        if ch == "(" or ch == ")" then
+        if symbol_op then
+            tokens[#tokens + 1] = { type = "op", value = symbol_op }
+            pos = pos + symbol_len
+        elseif ch == "(" or ch == ")" then
             tokens[#tokens + 1] = { type = "paren", value = ch }
             pos = pos + 1
         elseif ch == "!" then
@@ -187,7 +222,7 @@ function M.tokenize(input)
             pos = pos + 1
         elseif ch:match("[A-Za-z_]") then
             local ident = input:match("^[A-Za-z_][A-Za-z0-9_]*", pos)
-            if ident == "and" or ident == "or" or ident == "xor" or ident == "not" or ident == "implies" then
+            if KEYWORDS[ident] then
                 tokens[#tokens + 1] = { type = "op", value = ident }
             else
                 tokens[#tokens + 1] = { type = "ident", value = ident }
@@ -335,7 +370,23 @@ function M.parse_predicate(tokens)
         return left
     end
 
-    parse_expr = parse_implies
+    local function parse_iff()
+        local left, err = parse_implies()
+        if not left then
+            return nil, err
+        end
+        while peek() and peek().type == "op" and peek().value == "iff" do
+            consume()
+            local right, err2 = parse_implies()
+            if not right then
+                return nil, err2
+            end
+            left = { type = "iff", left = left, right = right }
+        end
+        return left
+    end
+
+    parse_expr = parse_iff
 
     local result, err = parse_expr()
     if not result then
@@ -358,7 +409,7 @@ function M.validate_vars(node, header_set)
         end
     elseif node.type == "not" then
         return M.validate_vars(node.operand, header_set)
-    elseif node.type == "and" or node.type == "or" or node.type == "xor" or node.type == "implies" then
+    elseif BINARY[node.type] then
         local err = M.validate_vars(node.left, header_set)
         if err then
             return err
@@ -375,6 +426,7 @@ M.SYMBOLS = {
     ["not"] = "¬",
     ["!"] = "¬",
     ["implies"] = "→",
+    ["iff"] = "=",
 }
 
 function M.eval_ast(node, ctx)
@@ -394,6 +446,8 @@ function M.eval_ast(node, ctx)
         return M.eval_ast(node.left, ctx) ~= M.eval_ast(node.right, ctx) and 1 or 0
     elseif node.type == "implies" then
         return (M.eval_ast(node.left, ctx) == 0 or M.eval_ast(node.right, ctx) == 1) and 1 or 0
+    elseif node.type == "iff" then
+        return M.eval_ast(node.left, ctx) == M.eval_ast(node.right, ctx) and 1 or 0
     end
 end
 
@@ -406,7 +460,7 @@ function M.ast_to_heading(node)
         return tostring(node.value)
     elseif node.type == "not" then
         return M.SYMBOLS["not"] .. M.ast_to_heading(node.operand)
-    elseif node.type == "and" or node.type == "or" or node.type == "xor" or node.type == "implies" then
+    elseif BINARY[node.type] then
         return M.ast_to_heading(node.left) .. " " .. M.SYMBOLS[node.type] .. " " .. M.ast_to_heading(node.right)
     end
 end
@@ -463,6 +517,109 @@ function M.expand(tbl, predicate_strings)
     end
 
     return new_headers, new_rows
+end
+
+-- Append to `vars` each variable name in the AST that `seen` has not recorded
+-- yet, in order of first appearance (left to right).
+local function collect_vars(node, seen, vars)
+    if node.type == "var" then
+        if not seen[node.name] then
+            seen[node.name] = true
+            vars[#vars + 1] = node.name
+        end
+    elseif node.type == "paren" then
+        collect_vars(node.expr, seen, vars)
+    elseif node.type == "not" then
+        collect_vars(node.operand, seen, vars)
+    elseif BINARY[node.type] then
+        collect_vars(node.left, seen, vars)
+        collect_vars(node.right, seen, vars)
+    end
+end
+
+-- Does the :TruthTable argument use the expression form? The classic forms (an
+-- integer, or a list of names) consist of word characters and spaces only, so
+-- any other character, or an operator keyword among the names, means
+-- expressions. N.B. this reserves the operator keywords: `:TruthTable p or q`
+-- is the expression p ∨ q, where it used to be three variables.
+function M.is_expression_input(args)
+    if args:match("[^%w_%s]") then
+        return true
+    end
+    for word in args:gmatch("%S+") do
+        if KEYWORDS[word] then
+            return true
+        end
+    end
+    return false
+end
+
+-- Build a whole table from expressions separated by `|` or `,`. The variables
+-- are whatever names the expressions mention, in order of first appearance;
+-- each compound expression becomes a computed column. A bare variable adds no
+-- column of its own, which makes it a way to pin the variable order
+-- (`b | a | a -> b`). Returns headers, rows, or nil + an error message.
+local function table_from_expressions(input)
+    local vars, seen = {}, {}
+    local compound, seen_heading = {}, {}
+
+    for pred_str in input:gmatch("[^|,]+") do
+        pred_str = trim(pred_str)
+        if pred_str ~= "" then
+            local tokens, tok_err = M.tokenize(pred_str)
+            if not tokens then
+                return nil, "Parse error: " .. tok_err
+            end
+            local ast, parse_err = M.parse_predicate(tokens)
+            if not ast then
+                return nil, 'Parse error in "' .. pred_str .. '": ' .. parse_err
+            end
+            collect_vars(ast, seen, vars)
+
+            local heading = M.ast_to_heading(ast)
+            if ast.type ~= "var" and not seen_heading[heading] then
+                seen_heading[heading] = true
+                compound[#compound + 1] = pred_str
+            end
+        end
+    end
+
+    if #vars == 0 then
+        return nil, "No variables in: " .. trim(input)
+    end
+    if #vars > 10 then
+        return nil, "Too many variables (max 10)"
+    end
+
+    return M.expand({ headers = vars, rows = M.generate_rows(#vars) }, compound)
+end
+
+-- The :TruthTable argument spelled out over several lines (a visual selection):
+-- a line break is one more column delimiter. Blank lines are skipped.
+function M.args_from_lines(lines)
+    local parts = {}
+    for _, line in ipairs(lines) do
+        line = trim(line)
+        if line ~= "" then
+            parts[#parts + 1] = line
+        end
+    end
+    return table.concat(parts, " | ")
+end
+
+-- Headers + rows for any :TruthTable argument: an integer N, a list of names,
+-- or expressions (see M.is_expression_input). Returns nil + an error message
+-- on failure.
+function M.build_truth_table(args)
+    if M.is_expression_input(args) then
+        return table_from_expressions(args)
+    end
+
+    local headers, err = M.parse_truth_table_args(args)
+    if not headers then
+        return nil, err
+    end
+    return headers, M.generate_rows(#headers)
 end
 
 -- Toggle every cell between 0/1 and F/T, in place. The direction is decided by
