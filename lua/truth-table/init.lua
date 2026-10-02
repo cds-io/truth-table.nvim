@@ -92,13 +92,13 @@ local function with_table(fn)
 end
 
 local function cmd_truth_table(opts)
-    local headers, err = core.parse_truth_table_args(opts.args)
+    local headers, rows = core.build_truth_table(opts.args)
     if not headers then
-        vim.notify(err, vim.log.levels.WARN)
+        -- rows holds the error message in the failure case.
+        vim.notify(rows, vim.log.levels.WARN)
         return
     end
 
-    local rows = core.generate_rows(#headers)
     local lines = core.format_table(headers, rows)
 
     local cursor = vim.api.nvim_win_get_cursor(0)

@@ -126,6 +126,22 @@ describe("core.tokenize", function()
         assert.is_nil(toks)
         assert.is_truthy(err:match("Unexpected character"))
     end)
+
+    it("accepts the logic symbols the headings are rendered with", function()
+        local toks = assert(core.tokenize("¬A ∧ B ∨ C ⊕ D → E"))
+        local ops = {}
+        for _, tok in ipairs(toks) do
+            if tok.type == "op" then
+                ops[#ops + 1] = tok.value
+            end
+        end
+        assert.are.same({ "not", "and", "or", "xor", "implies" }, ops)
+    end)
+
+    it("maps ⇒ to implies", function()
+        local toks = assert(core.tokenize("A ⇒ B"))
+        assert.are.same({ type = "op", value = "implies" }, toks[2])
+    end)
 end)
 
 describe("predicate parsing + evaluation", function()
@@ -142,6 +158,27 @@ describe("predicate parsing + evaluation", function()
         assert.are.equal(0, eval("A xor B", { A = 1, B = 1 }))
         assert.are.equal(0, eval("A -> B", { A = 1, B = 0 }))
         assert.are.equal(1, eval("A -> B", { A = 0, B = 0 }))
+    end)
+
+    it("evaluates iff in each of its spellings", function()
+        for _, op in ipairs({ "iff", "=", "<->", "<=>", "⇔", "↔" }) do
+            assert.are.equal(1, eval("A " .. op .. " B", { A = 0, B = 0 }))
+            assert.are.equal(0, eval("A " .. op .. " B", { A = 0, B = 1 }))
+            assert.are.equal(0, eval("A " .. op .. " B", { A = 1, B = 0 }))
+            assert.are.equal(1, eval("A " .. op .. " B", { A = 1, B = 1 }))
+        end
+    end)
+
+    it("reads => as implies, and = without spaces", function()
+        assert.are.equal(0, eval("A => B", { A = 1, B = 0 }))
+        assert.are.equal(1, eval("A=B", { A = 0, B = 0 }))
+    end)
+
+    it("binds iff loosest of all", function()
+        -- A = (B -> C), where (A = B) -> C would give 1.
+        assert.are.equal(0, eval("A = B -> C", { A = 0, B = 0, C = 0 }))
+        -- (A xor B) = C, where A xor (B = C) would give 1.
+        assert.are.equal(0, eval("A xor B = C", { A = 1, B = 1, C = 1 }))
     end)
 
     it("honors precedence: and binds tighter than or", function()
@@ -200,6 +237,7 @@ describe("core.ast_to_heading", function()
         assert.are.equal("A ⊕ B", heading("A xor B"))
         assert.are.equal("¬A", heading("!A"))
         assert.are.equal("A → B", heading("A -> B"))
+        assert.are.equal("A = B", heading("A iff B"))
         assert.are.equal("(A ∨ B) ∧ C", heading("(A or B) and C"))
     end)
 end)
@@ -243,6 +281,90 @@ describe("core.expand", function()
         assert.are.same({ "A", "B" }, tbl.headers)
         assert.are.equal(4, #tbl.rows)
         assert.are.equal(2, #tbl.rows[1])
+    end)
+end)
+
+describe("core.is_expression_input", function()
+    it("treats an integer or a plain name list as the classic form", function()
+        assert.is_false(core.is_expression_input("3"))
+        assert.is_false(core.is_expression_input("p q r"))
+    end)
+
+    it("detects operators, symbols, parens, and separators", function()
+        assert.is_true(core.is_expression_input("p and q"))
+        assert.is_true(core.is_expression_input("p ∧ q"))
+        assert.is_true(core.is_expression_input("!p"))
+        assert.is_true(core.is_expression_input("(p)"))
+        assert.is_true(core.is_expression_input("p | q"))
+        assert.is_true(core.is_expression_input("p, q"))
+    end)
+end)
+
+describe("core.build_truth_table", function()
+    it("keeps the integer and name-list forms", function()
+        local headers, rows = core.build_truth_table("2")
+        assert.are.same({ "A", "B" }, headers)
+        assert.are.same({ { "0", "0" }, { "0", "1" }, { "1", "0" }, { "1", "1" } }, rows)
+
+        headers, rows = core.build_truth_table("p q r")
+        assert.are.same({ "p", "q", "r" }, headers)
+        assert.are.equal(8, #rows)
+    end)
+
+    it("derives the variables from |-separated expressions, in order of first appearance", function()
+        local headers, rows = core.build_truth_table("(m ∧  (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) | m ⊕ (a ∧ b)")
+        assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a ∧ b)))", "m ⊕ (a ∧ b)" }, headers)
+        assert.are.same({
+            { "0", "0", "0", "0", "0" },
+            { "0", "0", "1", "0", "0" },
+            { "0", "1", "0", "0", "0" },
+            { "0", "1", "1", "1", "1" },
+            { "1", "0", "0", "0", "1" },
+            { "1", "0", "1", "1", "1" },
+            { "1", "1", "0", "1", "1" },
+            { "1", "1", "1", "0", "0" },
+        }, rows)
+    end)
+
+    it("accepts commas and the keyword operators too", function()
+        local headers = core.build_truth_table("p and q, p xor r")
+        assert.are.same({ "p", "q", "r", "p ∧ q", "p ⊕ r" }, headers)
+    end)
+
+    it("lets a bare variable fix the column order without adding a column", function()
+        local headers = core.build_truth_table("b | a | a -> b")
+        assert.are.same({ "b", "a", "a → b" }, headers)
+    end)
+
+    it("emits a repeated expression once", function()
+        local headers = core.build_truth_table("a and b | a ∧ b")
+        assert.are.same({ "a", "b", "a ∧ b" }, headers)
+    end)
+
+    it("returns nil + message for a parse error", function()
+        local headers, err = core.build_truth_table("a and | b")
+        assert.is_nil(headers)
+        assert.is_truthy(err:match("Parse error"))
+    end)
+
+    it("returns nil + message when no expression names a variable", function()
+        local headers, err = core.build_truth_table("1 or 0")
+        assert.is_nil(headers)
+        assert.is_truthy(err:match("No variables"))
+    end)
+
+    it("shows the two selector forms agree once the inner operator is iff", function()
+        local headers, rows = core.build_truth_table("(m ∧ (a ⊕ b) ∨ (¬m ∧ (a=b))) | m ⊕ (a=b)")
+        assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a = b)))", "m ⊕ (a = b)" }, headers)
+        for _, row in ipairs(rows) do
+            assert.are.equal(row[4], row[5])
+        end
+    end)
+
+    it("returns nil + message past 10 variables", function()
+        local headers, err = core.build_truth_table("a and b and c and d and e and f and g and h and i and j and k")
+        assert.is_nil(headers)
+        assert.is_truthy(err:match("Too many variables"))
     end)
 end)
 
