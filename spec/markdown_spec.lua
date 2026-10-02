@@ -117,3 +117,13 @@ describe("table discovery", function()
         assert.are.equal(1, markdown.column_index(line, 0))
     end)
 end)
+
+describe("literal reference heading rendering", function()
+    it("escapes backticks so displayed labels retain their reference syntax", function()
+        local tbl = { headers = { '¬`A`', 'p | `q`' }, rows = { { 0, 1 } }, encoding = 'bits' }
+        local lines = assert(markdown.format(tbl))
+        assert.are.equal('| ¬\\`A\\` | p \\| \\`q\\` |', lines[1])
+        assert.are.same(tbl, markdown.parse_table_lines(lines))
+        assert.are.same({ '¬`A`', 'p | `q`' }, markdown.split_row(lines[1]))
+    end)
+end)

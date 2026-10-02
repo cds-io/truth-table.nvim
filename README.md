@@ -152,7 +152,8 @@ backtick/tilde fenced code and indented code. It supports top-level tables with
 uniform indentation of zero to three spaces and preserves that indentation on
 edits. Tables nested in lists or blockquotes are outside this supported subset.
 
-Pipes and backslashes in headings round-trip through Markdown escaping. A table
+Pipes, backslashes, and backticks in headings round-trip through Markdown
+escaping, preserving literal reference labels in rendered tables. A table
 with no data rows cannot persist its encoding in Markdown; reading it back
 uses bits.
 
@@ -182,8 +183,8 @@ luarocks --local install busted
 make test BUSTED=$HOME/.luarocks/bin/busted
 ```
 
-Run `make test-integration` for headless Neovim checks of toggle/expand and
-malformed-table buffer preservation. Lint (optional, requires [selene](https://github.com/Kampfkarren/selene)):
+Run `make test-integration` for headless Neovim command checks, malformed-table
+buffer preservation, and automatic plugin loading during startup. Lint (optional, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh
 make lint

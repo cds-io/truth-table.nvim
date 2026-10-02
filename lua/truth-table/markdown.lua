@@ -81,7 +81,7 @@ local function scan(line, on_pipe, on_character)
     local pos = 1
     while pos <= #line do
         local ch, next_ch = line:sub(pos, pos), line:sub(pos + 1, pos + 1)
-        if ch == "\\" and (next_ch == "|" or next_ch == "\\") then
+        if ch == "\\" and (next_ch == "|" or next_ch == "\\" or next_ch == "`") then
             on_character(next_ch)
             pos = pos + 2
         else
@@ -220,7 +220,7 @@ function M.format(tbl, display_width)
     local normalized, err = model.normalize(tbl)
     return result.bind(normalized, err, function(valid)
         local headers = result.traverse(valid.headers, function(header)
-            return (header:gsub("\\", "\\\\"):gsub("|", "\\|"))
+            return (header:gsub("\\", "\\\\"):gsub("|", "\\|"):gsub("`", "\\`"))
         end)
         return format_valid(headers, model.render_rows(valid), display_width or M.display_width)
     end)

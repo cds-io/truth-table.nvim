@@ -16,6 +16,8 @@ Unreleased
 - Report parser errors with source byte positions and complete Unicode characters.
 - Support doubled backticks inside references to generated column headings.
 - Verify plugin entry-point loading and repeated setup without which-key.
+- Escape literal backticks in Markdown headings so rendered labels match stored
+  reference names; verify automatic Neovim startup with a real init file.
 - Add pure regression specs and headless Neovim command integration checks.
 
 0.1.0 - 2026-06-15
