@@ -420,3 +420,268 @@ describe("core.format_table", function()
         assert.are.equal("|  0  |  1   |", lines[3])
     end)
 end)
+
+describe("validated table pipeline", function()
+    it("expands toggled tables correctly and preserves F/T presentation", function()
+        local headers, rows = core.build_truth_table("A B")
+        local toggled = core.toggle_cells(rows)
+        local _, expanded = core.expand({ headers = headers, rows = toggled }, { "not A", "A iff B" })
+        assert.are.same({
+            { "F", "F", "T", "T" }, { "F", "T", "T", "F" },
+            { "T", "F", "F", "F" }, { "T", "T", "F", "T" },
+        }, expanded)
+        assert.are.same({ { "0", "0" }, { "0", "1" }, { "1", "0" }, { "1", "1" } }, rows)
+        assert.are.same(rows, core.toggle_cells(toggled))
+    end)
+
+    it("rejects ragged rows, duplicate headings, and invalid cells", function()
+        for _, tbl in ipairs({
+            { headers = { "A", "B" }, rows = { { "1" } } },
+            { headers = { "A" }, rows = { { "1", "0" } } },
+            { headers = { "A", "A" }, rows = { { "0", "1" } } },
+            { headers = { "A" }, rows = { { "x" } } },
+            { headers = { "A", "B" }, rows = { { "F", "1" } } },
+        }) do
+            local value, err = core.expand(tbl, { "A" })
+            assert.is_nil(value)
+            assert.is_string(err)
+        end
+    end)
+
+    it("validates the Markdown boundary before editing", function()
+        assert.is_nil(core.parse_table_lines({ "|A|", "not a separator", "|0|" }))
+        assert.is_nil(core.parse_table_lines({ "|A|", "|---|---|", "|0|" }))
+        assert.is_nil(core.parse_table_lines({ "|A|", "|---|", "|0|1|" }))
+        assert.is_nil(core.parse_table_lines({ "|A|", "|---|", "|x|" }))
+    end)
+
+    it("does not duplicate computed columns on repeated expansion", function()
+        local headers, rows = core.build_truth_table("A and B")
+        local h, r = core.expand({ headers = headers, rows = rows }, { "A ∧ B", "A and B" })
+        assert.are.same(headers, h)
+        assert.are.same(rows, r)
+    end)
+
+    it("parses each construction expression once", function()
+        local original, calls = core.parse_expression, 0
+        core.parse_expression = function(input)
+            calls = calls + 1
+            return original(input)
+        end
+        local ok, headers = pcall(core.build_truth_table, "A and B | not A")
+        core.parse_expression = original
+        assert.is_true(ok)
+        assert.is_table(headers)
+        assert.are.equal(2, calls)
+    end)
+end)
+
+describe("result composition", function()
+    local result = require("truth-table.result")
+    it("preserves false and zero successes and short-circuits errors", function()
+        assert.is_false(result.bind(false, nil, function(value) return value end))
+        assert.are.equal(0, result.bind(0, nil, function(value) return value end))
+        local value, err = result.bind(nil, "failure", function() error("must not run") end)
+        assert.is_nil(value)
+        assert.are.equal("failure", err)
+        local calls = 0
+        value, err = result.traverse({ 1, 2, 3 }, function(n)
+            calls = calls + 1
+            if n == 2 then return nil, "stop" end
+            return n
+        end)
+        assert.is_nil(value)
+        assert.are.equal("stop", err)
+        assert.are.equal(2, calls)
+    end)
+end)
+
+describe("stored column references", function()
+    it("uses stored values after source columns have been dropped", function()
+        local tbl = { headers = { "B", "A ∧ B" }, rows = { { "0", "0" }, { "1", "1" } } }
+        local headers, rows = core.expand(tbl, { "not `A ∧ B`" })
+        assert.are.same({ "B", "A ∧ B", "¬`A ∧ B`" }, headers)
+        assert.are.same({ { "0", "0", "1" }, { "1", "1", "0" } }, rows)
+        assert.is_nil(core.expand(tbl, { "not (A and B)" }))
+    end)
+
+    it("distinguishes a stored value from recomputing its displayed formula", function()
+        local tbl = { headers = { "A", "B", "A ∧ B" }, rows = { { "1", "1", "0" } } }
+        local _, rows = core.expand(tbl, { "not `A ∧ B`", "not (A and B)" })
+        assert.are.same({ { "1", "1", "0", "1", "0" } }, rows)
+    end)
+
+    it("binds names to positions without mutating the parsed tree", function()
+        local ast = assert(core.parse_expression("not `A ∧ B`"))
+        local bound = assert(core.bind_columns(ast, { ["A ∧ B"] = 2 }))
+        assert.are.equal(1, core.eval_ast(bound, { 1, 0 }))
+        assert.are.equal("reference", ast.operand.type)
+        assert.are.equal("column", bound.operand.type)
+        assert.are.equal("¬`A ∧ B`", core.ast_to_heading(ast))
+    end)
+
+    it("round-trips reference headings and handles comma-bearing labels", function()
+        local input = "not `p, q`"
+        local ast = assert(core.parse_expression(input))
+        local heading = core.ast_to_heading(ast)
+        assert.are.same(ast, core.parse_expression(heading))
+        assert.are.same({ "not `p, q`", "A" }, core.split_expressions(input .. ", A", ","))
+        local _, rows = core.expand({ headers = { "p, q" }, rows = { { "T" } } }, { input })
+        assert.are.same({ { "T", "F" } }, rows)
+    end)
+
+    it("rejects invalid references and references during table creation", function()
+        for _, input in ipairs({ "``", "`A", "not `A" }) do
+            assert.is_nil(core.parse_expression(input))
+        end
+        assert.is_nil(core.expand({ headers = { "A" }, rows = { { "0" } } }, { "`missing`" }))
+        local headers, err = core.build_truth_table("A and `B`")
+        assert.is_nil(headers)
+        assert.are.equal("Column references require an existing table", err)
+        for _, input in ipairs({ "A,,B", "A|", "|A", "A,`B" }) do
+            assert.is_nil(core.split_expressions(input, "|,"))
+        end
+    end)
+end)
+
+describe("pure model edits", function()
+    local model = require("truth-table.table_model")
+
+    it("composes normalized edits while retaining F/T encoding", function()
+        local original = { headers = { "A", "B" }, rows = { { "F", "T" }, { "T", "F" } } }
+        local normalized = assert(model.normalize(original))
+        assert.are.same(normalized, model.normalize(normalized))
+        local dropped = assert(model.drop_column(normalized, 1))
+        assert.are.same({ { "T" }, { "F" } }, model.render_rows(dropped))
+        local remaining = assert(model.drop_row(dropped, 1))
+        assert.are.same({ { "F" } }, model.render_rows(remaining))
+        local toggled = assert(model.toggle(remaining))
+        assert.are.same({ { "0" } }, model.render_rows(toggled))
+        assert.are.same(remaining, model.toggle(toggled))
+        assert.are.same({ { "F", "T" }, { "T", "F" } }, original.rows)
+        assert.are.same({ { 0, 1 }, { 1, 0 } }, normalized.rows)
+    end)
+
+    it("returns fresh nested arrays without sharing input rows", function()
+        local original = { headers = { "A", "B" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "tf" }
+        for _, edited in ipairs({ model.drop_row(original, 1), model.drop_column(original, 1), model.toggle(original) }) do
+            edited.headers[1] = "changed"
+            edited.rows[1][1] = 9
+        end
+        assert.are.same({ headers = { "A", "B" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "tf" }, original)
+    end)
+
+    it("preserves the mode when the last data row is dropped", function()
+        local empty = assert(model.drop_row({ headers = { "A" }, rows = { { "T" } } }, 1))
+        assert.are.equal("tf", empty.encoding)
+        assert.are.same({}, empty.rows)
+        assert.are.equal("bits", assert(model.toggle(empty)).encoding)
+    end)
+
+    it("rejects invalid indices, modes, and dropping the only column", function()
+        local tbl = { headers = { "A", "B" }, rows = { { "0", "1" } } }
+        for _, index in ipairs({ 0, -1, 3, 1.5, "1" }) do
+            assert.is_nil(model.drop_row(tbl, index))
+            assert.is_nil(model.drop_column(tbl, index))
+        end
+        assert.is_nil(model.drop_column({ headers = { "A" }, rows = {} }, 1))
+        assert.is_nil(model.normalize({ headers = { "A" }, rows = {}, encoding = "bad" }))
+        assert.is_nil(model.normalize({ headers = { "A" }, rows = { { "T" } }, encoding = "bits" }))
+    end)
+end)
+
+describe("semantic core pipeline", function()
+    it("composes all edits using numeric cells until the Markdown boundary", function()
+        local tbl = assert(core.build_model("A and B"))
+        assert.are.same({ 1, 1, 1 }, tbl.rows[4])
+        local toggled = assert(core.toggle_model(tbl))
+        local dropped = assert(core.drop_model_column(toggled, 1))
+        local expanded = assert(core.expand_model(dropped, { "not `A ∧ B`" }))
+        assert.are.equal("tf", expanded.encoding)
+        assert.are.same({ 1, 1, 0 }, expanded.rows[4])
+        local edited = assert(core.drop_model_row(expanded, 1))
+        assert.are.same(edited, core.parse_model(assert(core.format_model(edited))))
+        assert.are.equal("bits", tbl.encoding)
+        assert.are.same({ 1, 1, 1 }, tbl.rows[4])
+    end)
+
+    it("keeps semantic and legacy construction behavior aligned", function()
+        for _, input in ipairs({ "2", "p q", "B | A | A implies B" }) do
+            local semantic = assert(core.build_model(input))
+            local headers, rows = core.build_truth_table(input)
+            assert.are.same(headers, semantic.headers)
+            assert.are.same(core.format_table(headers, rows), core.format_model(semantic))
+        end
+        assert.is_nil(core.build_model(""))
+        local tbl = assert(core.build_model("A"))
+        local expanded, err = core.expand_model(tbl, { "missing" })
+        assert.is_nil(expanded)
+        assert.are.equal("Unknown column: missing", err)
+    end)
+end)
+
+describe("materialized column model", function()
+    local model = require("truth-table.table_model")
+    it("appends columns purely and deduplicates headings in one place", function()
+        local tbl = { headers = { "A" }, rows = { { 0 }, { 1 } }, encoding = "tf" }
+        local columns = {
+            { heading = "¬A", values = { 1, 0 } },
+            { heading = "¬A", values = { 1, 0 } },
+            { heading = "A", values = { 0, 1 } },
+        }
+        local extended = assert(model.append_columns(tbl, columns))
+        assert.are.same({ headers = { "A", "¬A" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "tf" }, extended)
+        extended.rows[1][1] = 1
+        extended.headers[1] = "changed"
+        assert.are.same({ { 0 }, { 1 } }, tbl.rows)
+        assert.are.same({ "A" }, tbl.headers)
+        assert.are.same({ 1, 0 }, columns[1].values)
+    end)
+
+    it("rejects malformed materialized columns before returning a table", function()
+        local tbl = { headers = { "A" }, rows = { { 0 }, { 1 } } }
+        for _, column in ipairs({
+            { heading = "B", values = { 1 } },
+            { heading = "B", values = { 1, 0, 1 } },
+            { heading = "B", values = { 1, 2 } },
+            { heading = " B", values = { 1, 0 } },
+        }) do
+            local value, err = model.append_columns(tbl, { column })
+            assert.is_nil(value)
+            assert.is_string(err)
+        end
+        assert.are.same({ { 0 }, { 1 } }, tbl.rows)
+    end)
+end)
+
+describe("public table shape validation", function()
+    local model = require("truth-table.table_model")
+    it("rejects sparse arrays and wrong types without throwing", function()
+        for _, tbl in ipairs({
+            false, {}, { headers = "A", rows = {} },
+            { headers = { [1] = "A", [3] = "B" }, rows = {} },
+            { headers = { "A" }, rows = { [2] = { 0 } } },
+            { headers = { "A", "B" }, rows = { { [1] = 0, [3] = 1 } } },
+            { headers = { "A" }, rows = { "0" } },
+            { headers = { "A", extra = "B" }, rows = {} },
+        }) do
+            local ok, value, err = pcall(model.normalize, tbl)
+            assert.is_true(ok)
+            assert.is_nil(value)
+            assert.is_string(err)
+        end
+    end)
+
+    it("rejects sparse or malformed materialized column arrays", function()
+        local tbl = { headers = { "A" }, rows = { { 0 } } }
+        for _, columns in ipairs({
+            { false }, { {} }, { { heading = "B", values = { [2] = 1 } } },
+            { [2] = { heading = "B", values = { 1 } } },
+        }) do
+            local ok, value, err = pcall(model.append_columns, tbl, columns)
+            assert.is_true(ok)
+            assert.is_nil(value)
+            assert.is_string(err)
+        end
+    end)
+end)

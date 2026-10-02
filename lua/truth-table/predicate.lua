@@ -1,0 +1,395 @@
+-- Predicate language: source -> AST -> bound AST -> Boolean value.
+-- No table rendering or editor dependencies. Fallible operations use value, error.
+local result = require("truth-table.result")
+local M = {}
+
+local function trim(s)
+    return (s:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+-- ---------------------------------------------------------------------------
+-- Predicate language: tokenizer -> recursive-descent parser -> AST.
+-- Precedence (loosest to tightest): iff, implies, xor, or, and, unary not, atom.
+-- ---------------------------------------------------------------------------
+
+-- Ordered from tightest to loosest. Every binary operator associates left.
+-- Token aliases, rendering, binding power, and Boolean semantics live together.
+local OPERATORS = {
+    { name = "not", symbol = "¬", aliases = { "¬", "!" }, unary = true,
+        apply = function(a) return a == 0 end },
+    { name = "and", symbol = "∧", aliases = { "∧" },
+        apply = function(a, b) return a == 1 and b == 1 end },
+    { name = "or", symbol = "∨", aliases = { "∨" },
+        apply = function(a, b) return a == 1 or b == 1 end },
+    { name = "xor", symbol = "⊕", aliases = { "⊕" },
+        apply = function(a, b) return a ~= b end },
+    { name = "implies", symbol = "→", aliases = { "→", "⇒", "->", "=>" },
+        apply = function(a, b) return a == 0 or b == 1 end },
+    { name = "iff", symbol = "=", aliases = { "=", "⇔", "↔", "<->", "<=>" },
+        apply = function(a, b) return a == b end },
+}
+local KEYWORDS, BINARY, SYMBOL_OPS, BY_NAME = {}, {}, {}, {}
+M.SYMBOLS = {}
+for index, operator in ipairs(OPERATORS) do
+    KEYWORDS[operator.name] = true
+    BY_NAME[operator.name] = operator
+    operator.precedence = #OPERATORS - index + 1
+    M.SYMBOLS[operator.name] = operator.symbol
+    if not operator.unary then
+        BINARY[operator.name] = true
+    end
+    for _, alias in ipairs(operator.aliases) do
+        -- Preserve the existing tokenizer's public spelling for !.
+        SYMBOL_OPS[#SYMBOL_OPS + 1] = { alias, alias == "!" and "!" or operator.name }
+    end
+end
+M.SYMBOLS["!"] = M.SYMBOLS["not"]
+-- Longest match handles overlapping spellings without order-sensitive aliases.
+table.sort(SYMBOL_OPS, function(a, b)
+    return #a[1] > #b[1]
+end)
+
+local function symbol_op_at(input, pos)
+    for _, entry in ipairs(SYMBOL_OPS) do
+        local symbol = entry[1]
+        if input:sub(pos, pos + #symbol - 1) == symbol then
+            return entry[2], #symbol
+        end
+    end
+end
+
+function M.tokenize(input)
+    local tokens = {}
+    local pos = 1
+    local len = #input
+
+    while pos <= len do
+        local ws = input:match("^%s+", pos)
+        if ws then
+            pos = pos + #ws
+        end
+        if pos > len then
+            break
+        end
+
+        local ch = input:sub(pos, pos)
+        local symbol_op, symbol_len = symbol_op_at(input, pos)
+
+        if ch == "`" then
+            local close = input:find("`", pos + 1, true)
+            if not close then
+                return nil, "Unclosed column reference at position " .. pos
+            end
+            local name = input:sub(pos + 1, close - 1)
+            if name == "" then
+                return nil, "Empty column reference at position " .. pos
+            end
+            tokens[#tokens + 1] = { type = "reference", value = name }
+            pos = close + 1
+        elseif symbol_op then
+            tokens[#tokens + 1] = { type = "op", value = symbol_op }
+            pos = pos + symbol_len
+        elseif ch == "(" or ch == ")" then
+            tokens[#tokens + 1] = { type = "paren", value = ch }
+            pos = pos + 1
+        elseif ch:match("[A-Za-z_]") then
+            local ident = input:match("^[A-Za-z_][A-Za-z0-9_]*", pos)
+            if KEYWORDS[ident] then
+                tokens[#tokens + 1] = { type = "op", value = ident }
+            else
+                tokens[#tokens + 1] = { type = "ident", value = ident }
+            end
+            pos = pos + #ident
+        elseif ch == "0" or ch == "1" then
+            tokens[#tokens + 1] = { type = "literal", value = ch }
+            pos = pos + 1
+        else
+            return nil, "Unexpected character: " .. ch .. " at position " .. pos
+        end
+    end
+
+    return tokens
+end
+
+function M.parse_predicate(tokens)
+    local pos = 1
+
+    local function peek()
+        return tokens[pos]
+    end
+
+    local function consume()
+        local tok = tokens[pos]
+        pos = pos + 1
+        return tok
+    end
+
+    local function expect(type, value)
+        local tok = peek()
+        if not tok or tok.type ~= type or (value and tok.value ~= value) then
+            return nil, "Expected " .. (value or type) .. " at token " .. pos
+        end
+        return consume()
+    end
+
+    local parse_expr
+
+    local function parse_atom()
+        local tok = peek()
+        if not tok then
+            return nil, "Unexpected end of expression"
+        end
+
+        if tok.type == "reference" then
+            consume()
+            return { type = "reference", name = tok.value }
+        elseif tok.type == "ident" then
+            consume()
+            return { type = "var", name = tok.value }
+        elseif tok.type == "literal" then
+            consume()
+            return { type = "literal", value = tonumber(tok.value) }
+        elseif tok.type == "paren" and tok.value == "(" then
+            consume()
+            local node, err = parse_expr()
+            if not node then
+                return nil, err
+            end
+            local ok, err2 = expect("paren", ")")
+            if not ok then
+                return nil, err2 or "Expected closing parenthesis"
+            end
+            return { type = "paren", expr = node }
+        else
+            return nil, "Unexpected token: " .. tok.value
+        end
+    end
+
+    local function parse_unary()
+        local tok = peek()
+        if tok and tok.type == "op" and (tok.value == "not" or tok.value == "!") then
+            consume()
+            local operand, err = parse_unary()
+            if not operand then
+                return nil, err
+            end
+            return { type = "not", operand = operand }
+        end
+        return parse_atom()
+    end
+
+    -- Each precedence level is a left fold over the next tighter parser.
+    local function chain(operand, operator)
+        return function()
+            local left, err = operand()
+            if not left then
+                return nil, err
+            end
+            while peek() and peek().type == "op" and peek().value == operator do
+                consume()
+                local right, right_err = operand()
+                if not right then
+                    return nil, right_err
+                end
+                left = { type = operator, left = left, right = right }
+            end
+            return left
+        end
+    end
+
+    parse_expr = parse_unary
+    for _, operator in ipairs(OPERATORS) do
+        if not operator.unary then
+            parse_expr = chain(parse_expr, operator.name)
+        end
+    end
+
+    local ast, err = parse_expr()
+    if not ast then
+        return nil, err
+    end
+
+    if pos <= #tokens then
+        return nil, "Unexpected token after expression: " .. tokens[pos].value
+    end
+
+    return ast
+end
+
+-- Compatibility adapter: binding owns name validation.
+function M.validate_vars(node, header_set)
+    local _, err = M.bind_columns(node, header_set)
+    return err
+end
+
+function M.eval_ast(node, ctx)
+    if node.type == "paren" then
+        return M.eval_ast(node.expr, ctx)
+    elseif node.type == "column" then
+        return ctx[node.index]
+    elseif node.type == "var" or node.type == "reference" then
+        return ctx[node.name]
+    elseif node.type == "literal" then
+        return node.value
+    elseif BY_NAME[node.type] then
+        local operator = BY_NAME[node.type]
+        local left = M.eval_ast(operator.unary and node.operand or node.left, ctx)
+        local right
+        if not operator.unary then
+            right = M.eval_ast(node.right, ctx)
+        end
+        return operator.apply(left, right) and 1 or 0
+    end
+end
+
+local function precedence(node)
+    local operator = BY_NAME[node.type]
+    return operator and operator.precedence or #OPERATORS + 1
+end
+
+-- Parentheses in the source are preserved; generated trees gain the grouping
+-- needed to parse back with the same meaning, including right-nested chains.
+function M.ast_to_heading(node)
+    local function child_heading(child, right)
+        local heading = M.ast_to_heading(child)
+        if precedence(child) < precedence(node)
+            or (right and precedence(child) == precedence(node)) then
+            return "(" .. heading .. ")"
+        end
+        return heading
+    end
+    if node.type == "paren" then
+        return "(" .. M.ast_to_heading(node.expr) .. ")"
+    elseif node.type == "reference" then
+        return "`" .. node.name .. "`"
+    elseif node.type == "var" then
+        return node.name
+    elseif node.type == "literal" then
+        return tostring(node.value)
+    elseif node.type == "not" then
+        return M.SYMBOLS["not"] .. child_heading(node.operand, false)
+    elseif BINARY[node.type] then
+        return child_heading(node.left, false) .. " " .. M.SYMBOLS[node.type] .. " " .. child_heading(node.right, true)
+    end
+end
+
+-- Parse source through the tokenizer/parser Result pipeline.
+function M.parse_expression(input)
+    local tokens, err = M.tokenize(trim(input))
+    local ast, parse_err = result.bind(tokens, err, M.parse_predicate)
+    if not ast then
+        return nil, 'Parse error in "' .. input .. '": ' .. parse_err
+    end
+    return ast
+end
+
+-- Post-order traversal copies every node before applying a result-producing
+-- transformation. Shared by binding and variable discovery; inputs stay intact.
+function M.transform_ast(node, fn)
+    local copy = { type = node.type }
+    if node.type == "paren" or node.type == "not" then
+        local key = node.type == "paren" and "expr" or "operand"
+        local child, err = M.transform_ast(node[key], fn)
+        return result.bind(child, err, function(mapped)
+            copy[key] = mapped
+            return fn(copy)
+        end)
+    elseif BINARY[node.type] then
+        local left, err = M.transform_ast(node.left, fn)
+        return result.bind(left, err, function(mapped_left)
+            local right, right_err = M.transform_ast(node.right, fn)
+            return result.bind(right, right_err, function(mapped_right)
+                copy.left, copy.right = mapped_left, mapped_right
+                return fn(copy)
+            end)
+        end)
+    elseif node.type == "var" or node.type == "reference" then
+        copy.name = node.name
+    elseif node.type == "literal" then
+        copy.value = node.value
+    elseif node.type == "column" then
+        copy.index = node.index
+    else
+        return nil, "Unknown AST node: " .. tostring(node.type)
+    end
+    return fn(copy)
+end
+
+-- Resolve surface names once; evaluation uses row positions, never labels.
+function M.bind_columns(node, columns)
+    return M.transform_ast(node, function(copy)
+        if copy.type == "var" or copy.type == "reference" then
+            local index = columns[copy.name]
+            if not index then
+                return nil, "Unknown column: " .. copy.name
+            end
+            return { type = "column", index = index }
+        end
+        return copy
+    end)
+end
+
+-- Delimiters inside explicit column references belong to the name.
+function M.split_expressions(input, delimiters)
+    local parts, start, quoted = {}, 1, false
+    for pos = 1, #input do
+        local ch = input:sub(pos, pos)
+        if ch == "`" then
+            quoted = not quoted
+        elseif not quoted and delimiters:find(ch, 1, true) then
+            local part = trim(input:sub(start, pos - 1))
+            if part == "" then
+                return nil, "Empty expression at position " .. start
+            end
+            parts[#parts + 1] = part
+            start = pos + 1
+        end
+    end
+    if quoted then
+        return nil, "Unclosed column reference"
+    end
+    local last = trim(input:sub(start))
+    if last == "" then
+        return nil, "Empty expression at position " .. start
+    end
+    parts[#parts + 1] = last
+    return parts
+end
+
+-- Variables in order of first appearance. Local accumulators never escape;
+-- the observable operation is pure and reference errors short-circuit traversal.
+function M.variables(node)
+    local vars, seen = {}, {}
+    local mapped, err = M.transform_ast(node, function(copy)
+        if copy.type == "reference" then
+            return nil, "Column references require an existing table"
+        elseif copy.type == "var" and not seen[copy.name] then
+            seen[copy.name] = true
+            vars[#vars + 1] = copy.name
+        end
+        return copy
+    end)
+    return result.bind(mapped, err, function()
+        return vars
+    end)
+end
+
+-- Does the :TruthTable argument use the expression form? The classic forms (an
+-- integer, or a list of names) consist of word characters and spaces only, so
+-- any other character, or an operator keyword among the names, means
+-- expressions. N.B. this reserves the operator keywords: `:TruthTable p or q`
+-- is the expression p ∨ q, where it used to be three variables.
+function M.is_expression_input(args)
+    if args:match("[^%w_%s]") then
+        return true
+    end
+    for word in args:gmatch("%S+") do
+        if KEYWORDS[word] then
+            return true
+        end
+    end
+    return false
+end
+
+
+return M

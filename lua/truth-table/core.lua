@@ -7,76 +7,44 @@
 -- has a pure default, and the vim layer swaps in vim.fn.strdisplaywidth.
 
 local M = {}
+local result = require("truth-table.result")
+local model = require("truth-table.table_model")
+local predicate = require("truth-table.predicate")
+local markdown = require("truth-table.markdown")
 
 local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
--- Pure default: count UTF-8 codepoints (each as one column) by counting bytes
--- that are not continuation bytes. The Neovim layer overrides this with
--- vim.fn.strdisplaywidth for terminal-accurate widths (e.g. East Asian wide
--- characters); for the ASCII names and width-1 logic symbols this tool emits,
--- the two agree.
-function M.display_width(str)
-    local _, count = str:gsub("[^\128-\191]", "")
-    return count
-end
-
+-- Compatibility facade; standalone codecs receive width measurement explicitly.
+M.display_width = markdown.display_width
 function M.center_pad(str, width)
-    local pad = width - M.display_width(str)
-    local left = math.floor(pad / 2)
-    local right = pad - left
-    return string.rep(" ", left) .. str .. string.rep(" ", right)
+    return markdown.center_pad(str, width, M.display_width)
 end
 
 function M.format_table(headers, rows)
-    local widths = {}
-    for i, h in ipairs(headers) do
-        widths[i] = math.max(3, M.display_width(h))
-    end
-    for _, row in ipairs(rows) do
-        for i, cell in ipairs(row) do
-            widths[i] = math.max(widths[i], M.display_width(cell))
-        end
-    end
-
-    local hdr_cells = {}
-    for i, h in ipairs(headers) do
-        hdr_cells[i] = " " .. M.center_pad(h, widths[i]) .. " "
-    end
-    local heading = "|" .. table.concat(hdr_cells, "|") .. "|"
-
-    local sep_cells = {}
-    for i = 1, #headers do
-        sep_cells[i] = ":" .. string.rep("-", widths[i]) .. ":"
-    end
-    local separator = "|" .. table.concat(sep_cells, "|") .. "|"
-
-    local lines = { heading, separator }
-    for _, row in ipairs(rows) do
-        local cells = {}
-        for i, cell in ipairs(row) do
-            cells[i] = " " .. M.center_pad(cell, widths[i]) .. " "
-        end
-        lines[#lines + 1] = "|" .. table.concat(cells, "|") .. "|"
-    end
-
-    return lines
+    return markdown.format({ headers = headers, rows = rows }, M.display_width)
 end
 
--- All 2^n rows of bits for n variables, MSB-first (col 1 is the high bit).
+-- Legacy string-cell generation is an adapter over semantic row generation.
 function M.generate_rows(n)
-    local total = 2 ^ n
-    local rows = {}
-    for i = 0, total - 1 do
-        local row = {}
-        for col = 1, n do
-            local bit = math.floor(i / (2 ^ (n - col))) % 2
-            row[col] = tostring(bit)
-        end
-        rows[#rows + 1] = row
+    return model.render_rows({ rows = model.generate_rows(n), encoding = "bits" })
+end
+
+-- Semantic API: every fallible operation returns one table, or nil and an error.
+M.parse_model = markdown.parse_table_lines
+M.drop_model_row = model.drop_row
+M.drop_model_column = model.drop_column
+M.toggle_model = model.toggle
+function M.format_model(tbl)
+    return markdown.format(tbl, M.display_width)
+end
+
+local function legacy_parts(tbl, err)
+    if not tbl then
+        return nil, err
     end
-    return rows
+    return tbl.headers, model.render_rows(tbl)
 end
 
 -- Parse the :TruthTable argument: either an integer N (-> headers A, B, C, ...)
@@ -119,439 +87,63 @@ function M.parse_truth_table_args(args)
     return headers
 end
 
-function M.is_table_line(line)
-    return line:match("^%s*|.*|%s*$") ~= nil
-end
-
-function M.is_separator(line)
-    local inner = line:match("^%s*|(.+)|%s*$")
-    if not inner then
-        return false
-    end
-    for cell in (inner .. "|"):gmatch("(.-)%|") do
-        if not cell:match("^%s*:?%-+:?%s*$") then
-            return false
-        end
-    end
-    return true
-end
-
-function M.split_row(line)
-    local cells = {}
-    local inner = line:match("^%s*|(.+)|%s*$")
-    if not inner then
-        return cells
-    end
-    for cell in (inner .. "|"):gmatch("(.-)%|") do
-        cells[#cells + 1] = trim(cell)
-    end
-    return cells
-end
-
--- Parse a markdown table (heading, separator, data rows) into its parts.
+M.is_table_line = markdown.is_table_line
+M.is_separator = markdown.is_separator
+M.split_row = markdown.split_row
+M.column_index = markdown.column_index
 function M.parse_table_lines(lines)
-    local headers = M.split_row(lines[1])
-    local rows = {}
-    for i = 3, #lines do
-        rows[#rows + 1] = M.split_row(lines[i])
-    end
-    return { headers = headers, rows = rows }
+    local parsed, err = markdown.parse_table_lines(lines)
+    return result.bind(parsed, err, function(tbl)
+        return { headers = tbl.headers, rows = model.render_rows(tbl), encoding = tbl.encoding }
+    end)
 end
 
--- ---------------------------------------------------------------------------
--- Predicate language: tokenizer -> recursive-descent parser -> AST.
--- Precedence (loosest to tightest): iff, implies, xor, or, and, unary not, atom.
--- ---------------------------------------------------------------------------
+-- Compatibility facade for the standalone predicate language.
+M.tokenize = predicate.tokenize
+M.parse_predicate = predicate.parse_predicate
+M.validate_vars = predicate.validate_vars
+M.eval_ast = predicate.eval_ast
+M.ast_to_heading = predicate.ast_to_heading
+M.parse_expression = predicate.parse_expression
+M.bind_columns = predicate.bind_columns
+M.split_expressions = predicate.split_expressions
+M.is_expression_input = predicate.is_expression_input
+M.SYMBOLS = predicate.SYMBOLS
 
-local KEYWORDS = { ["and"] = true, ["or"] = true, ["xor"] = true, ["not"] = true, ["implies"] = true, ["iff"] = true }
-local BINARY = { ["and"] = true, ["or"] = true, ["xor"] = true, ["implies"] = true, ["iff"] = true }
-
--- Symbol spellings of the operators, so a rendered heading (or anything pasted
--- from one) parses back to the AST it was rendered from. Multi-character (or
--- multibyte), hence matched as whole strings and not through the single-byte
--- `ch` dispatch. First match wins, so `=>` and `<=>` must precede `=`.
-local SYMBOL_OPS = {
-    { "∧", "and" },
-    { "∨", "or" },
-    { "⊕", "xor" },
-    { "¬", "not" },
-    { "→", "implies" },
-    { "⇒", "implies" },
-    { "=>", "implies" },
-    { "⇔", "iff" },
-    { "↔", "iff" },
-    { "<->", "iff" },
-    { "<=>", "iff" },
-    { "=", "iff" },
-}
-
-local function symbol_op_at(input, pos)
-    for _, entry in ipairs(SYMBOL_OPS) do
-        local symbol = entry[1]
-        if input:sub(pos, pos + #symbol - 1) == symbol then
-            return entry[2], #symbol
+local function expand_asts(tbl, asts)
+    local normalized, err = model.normalize(tbl)
+    return result.bind(normalized, err, function(valid)
+        local indices = {}
+        for i, heading in ipairs(valid.headers) do
+            indices[heading] = i
         end
-    end
+        local columns, column_err = result.traverse(asts, function(ast)
+            local bound, bind_err = M.bind_columns(ast, indices)
+            return result.bind(bound, bind_err, function(expression)
+                return {
+                    heading = M.ast_to_heading(ast),
+                    values = result.traverse(valid.rows, function(row)
+                        return M.eval_ast(expression, row)
+                    end),
+                }
+            end)
+        end)
+        return result.bind(columns, column_err, function(computed)
+            return model.append_columns(valid, computed)
+        end)
+    end)
 end
 
-function M.tokenize(input)
-    local tokens = {}
-    local pos = 1
-    local len = #input
-
-    while pos <= len do
-        local ws = input:match("^%s+", pos)
-        if ws then
-            pos = pos + #ws
-        end
-        if pos > len then
-            break
-        end
-
-        local ch = input:sub(pos, pos)
-        local symbol_op, symbol_len = symbol_op_at(input, pos)
-
-        if symbol_op then
-            tokens[#tokens + 1] = { type = "op", value = symbol_op }
-            pos = pos + symbol_len
-        elseif ch == "(" or ch == ")" then
-            tokens[#tokens + 1] = { type = "paren", value = ch }
-            pos = pos + 1
-        elseif ch == "!" then
-            tokens[#tokens + 1] = { type = "op", value = "!" }
-            pos = pos + 1
-        elseif ch:match("[A-Za-z_]") then
-            local ident = input:match("^[A-Za-z_][A-Za-z0-9_]*", pos)
-            if KEYWORDS[ident] then
-                tokens[#tokens + 1] = { type = "op", value = ident }
-            else
-                tokens[#tokens + 1] = { type = "ident", value = ident }
-            end
-            pos = pos + #ident
-        elseif ch == "-" and input:sub(pos, pos + 1) == "->" then
-            tokens[#tokens + 1] = { type = "op", value = "implies" }
-            pos = pos + 2
-        elseif ch == "0" or ch == "1" then
-            tokens[#tokens + 1] = { type = "literal", value = ch }
-            pos = pos + 1
-        else
-            return nil, "Unexpected character: " .. ch .. " at position " .. pos
-        end
-    end
-
-    return tokens
-end
-
-function M.parse_predicate(tokens)
-    local pos = 1
-
-    local function peek()
-        return tokens[pos]
-    end
-
-    local function consume()
-        local tok = tokens[pos]
-        pos = pos + 1
-        return tok
-    end
-
-    local function expect(type, value)
-        local tok = peek()
-        if not tok or tok.type ~= type or (value and tok.value ~= value) then
-            return nil, "Expected " .. (value or type) .. " at token " .. pos
-        end
-        return consume()
-    end
-
-    local parse_expr
-
-    local function parse_atom()
-        local tok = peek()
-        if not tok then
-            return nil, "Unexpected end of expression"
-        end
-
-        if tok.type == "ident" then
-            consume()
-            return { type = "var", name = tok.value }
-        elseif tok.type == "literal" then
-            consume()
-            return { type = "literal", value = tonumber(tok.value) }
-        elseif tok.type == "paren" and tok.value == "(" then
-            consume()
-            local node, err = parse_expr()
-            if not node then
-                return nil, err
-            end
-            local ok, err2 = expect("paren", ")")
-            if not ok then
-                return nil, err2 or "Expected closing parenthesis"
-            end
-            return { type = "paren", expr = node }
-        else
-            return nil, "Unexpected token: " .. tok.value
-        end
-    end
-
-    local function parse_unary()
-        local tok = peek()
-        if tok and tok.type == "op" and (tok.value == "not" or tok.value == "!") then
-            consume()
-            local operand, err = parse_unary()
-            if not operand then
-                return nil, err
-            end
-            return { type = "not", operand = operand }
-        end
-        return parse_atom()
-    end
-
-    local function parse_and()
-        local left, err = parse_unary()
-        if not left then
-            return nil, err
-        end
-        while peek() and peek().type == "op" and peek().value == "and" do
-            consume()
-            local right, err2 = parse_unary()
-            if not right then
-                return nil, err2
-            end
-            left = { type = "and", left = left, right = right }
-        end
-        return left
-    end
-
-    local function parse_or()
-        local left, err = parse_and()
-        if not left then
-            return nil, err
-        end
-        while peek() and peek().type == "op" and peek().value == "or" do
-            consume()
-            local right, err2 = parse_and()
-            if not right then
-                return nil, err2
-            end
-            left = { type = "or", left = left, right = right }
-        end
-        return left
-    end
-
-    local function parse_xor()
-        local left, err = parse_or()
-        if not left then
-            return nil, err
-        end
-        while peek() and peek().type == "op" and peek().value == "xor" do
-            consume()
-            local right, err2 = parse_or()
-            if not right then
-                return nil, err2
-            end
-            left = { type = "xor", left = left, right = right }
-        end
-        return left
-    end
-
-    local function parse_implies()
-        local left, err = parse_xor()
-        if not left then
-            return nil, err
-        end
-        while peek() and peek().type == "op" and peek().value == "implies" do
-            consume()
-            local right, err2 = parse_xor()
-            if not right then
-                return nil, err2
-            end
-            left = { type = "implies", left = left, right = right }
-        end
-        return left
-    end
-
-    local function parse_iff()
-        local left, err = parse_implies()
-        if not left then
-            return nil, err
-        end
-        while peek() and peek().type == "op" and peek().value == "iff" do
-            consume()
-            local right, err2 = parse_implies()
-            if not right then
-                return nil, err2
-            end
-            left = { type = "iff", left = left, right = right }
-        end
-        return left
-    end
-
-    parse_expr = parse_iff
-
-    local result, err = parse_expr()
-    if not result then
+function M.expand_model(tbl, predicate_strings)
+    local asts, err = result.traverse(predicate_strings, M.parse_expression)
+    if not asts then
         return nil, err
     end
-
-    if pos <= #tokens then
-        return nil, "Unexpected token after expression: " .. tokens[pos].value
-    end
-
-    return result
+    return expand_asts(tbl, asts)
 end
 
-function M.validate_vars(node, header_set)
-    if node.type == "paren" then
-        return M.validate_vars(node.expr, header_set)
-    elseif node.type == "var" then
-        if not header_set[node.name] then
-            return "Unknown column: " .. node.name
-        end
-    elseif node.type == "not" then
-        return M.validate_vars(node.operand, header_set)
-    elseif BINARY[node.type] then
-        local err = M.validate_vars(node.left, header_set)
-        if err then
-            return err
-        end
-        return M.validate_vars(node.right, header_set)
-    end
-    return nil
-end
-
-M.SYMBOLS = {
-    ["and"] = "∧",
-    ["or"] = "∨",
-    ["xor"] = "⊕",
-    ["not"] = "¬",
-    ["!"] = "¬",
-    ["implies"] = "→",
-    ["iff"] = "=",
-}
-
-function M.eval_ast(node, ctx)
-    if node.type == "paren" then
-        return M.eval_ast(node.expr, ctx)
-    elseif node.type == "var" then
-        return ctx[node.name]
-    elseif node.type == "literal" then
-        return node.value
-    elseif node.type == "not" then
-        return M.eval_ast(node.operand, ctx) == 0 and 1 or 0
-    elseif node.type == "and" then
-        return (M.eval_ast(node.left, ctx) == 1 and M.eval_ast(node.right, ctx) == 1) and 1 or 0
-    elseif node.type == "or" then
-        return (M.eval_ast(node.left, ctx) == 1 or M.eval_ast(node.right, ctx) == 1) and 1 or 0
-    elseif node.type == "xor" then
-        return M.eval_ast(node.left, ctx) ~= M.eval_ast(node.right, ctx) and 1 or 0
-    elseif node.type == "implies" then
-        return (M.eval_ast(node.left, ctx) == 0 or M.eval_ast(node.right, ctx) == 1) and 1 or 0
-    elseif node.type == "iff" then
-        return M.eval_ast(node.left, ctx) == M.eval_ast(node.right, ctx) and 1 or 0
-    end
-end
-
-function M.ast_to_heading(node)
-    if node.type == "paren" then
-        return "(" .. M.ast_to_heading(node.expr) .. ")"
-    elseif node.type == "var" then
-        return node.name
-    elseif node.type == "literal" then
-        return tostring(node.value)
-    elseif node.type == "not" then
-        return M.SYMBOLS["not"] .. M.ast_to_heading(node.operand)
-    elseif BINARY[node.type] then
-        return M.ast_to_heading(node.left) .. " " .. M.SYMBOLS[node.type] .. " " .. M.ast_to_heading(node.right)
-    end
-end
-
--- Compute new headers + rows for `tbl` extended with one column per predicate
--- string. Pure: parsing, validation, and evaluation only. Returns
--- new_headers, new_rows on success, or nil + an error message on failure.
 function M.expand(tbl, predicate_strings)
-    local header_set = {}
-    for _, h in ipairs(tbl.headers) do
-        header_set[h] = true
-    end
-
-    local parsed = {}
-    for _, pred_str in ipairs(predicate_strings) do
-        pred_str = trim(pred_str)
-        local tokens, tok_err = M.tokenize(pred_str)
-        if not tokens then
-            return nil, "Parse error: " .. tok_err
-        end
-        local ast, parse_err = M.parse_predicate(tokens)
-        if not ast then
-            return nil, 'Parse error in "' .. pred_str .. '": ' .. parse_err
-        end
-        local var_err = M.validate_vars(ast, header_set)
-        if var_err then
-            return nil, var_err
-        end
-        parsed[#parsed + 1] = { ast = ast, heading = M.ast_to_heading(ast) }
-    end
-
-    local new_headers = {}
-    for _, h in ipairs(tbl.headers) do
-        new_headers[#new_headers + 1] = h
-    end
-    for _, p in ipairs(parsed) do
-        new_headers[#new_headers + 1] = p.heading
-    end
-
-    local new_rows = {}
-    for _, row in ipairs(tbl.rows) do
-        local ctx = {}
-        for i, h in ipairs(tbl.headers) do
-            ctx[h] = tonumber(row[i])
-        end
-        local new_row = {}
-        for _, cell in ipairs(row) do
-            new_row[#new_row + 1] = cell
-        end
-        for _, p in ipairs(parsed) do
-            new_row[#new_row + 1] = tostring(M.eval_ast(p.ast, ctx))
-        end
-        new_rows[#new_rows + 1] = new_row
-    end
-
-    return new_headers, new_rows
-end
-
--- Append to `vars` each variable name in the AST that `seen` has not recorded
--- yet, in order of first appearance (left to right).
-local function collect_vars(node, seen, vars)
-    if node.type == "var" then
-        if not seen[node.name] then
-            seen[node.name] = true
-            vars[#vars + 1] = node.name
-        end
-    elseif node.type == "paren" then
-        collect_vars(node.expr, seen, vars)
-    elseif node.type == "not" then
-        collect_vars(node.operand, seen, vars)
-    elseif BINARY[node.type] then
-        collect_vars(node.left, seen, vars)
-        collect_vars(node.right, seen, vars)
-    end
-end
-
--- Does the :TruthTable argument use the expression form? The classic forms (an
--- integer, or a list of names) consist of word characters and spaces only, so
--- any other character, or an operator keyword among the names, means
--- expressions. N.B. this reserves the operator keywords: `:TruthTable p or q`
--- is the expression p ∨ q, where it used to be three variables.
-function M.is_expression_input(args)
-    if args:match("[^%w_%s]") then
-        return true
-    end
-    for word in args:gmatch("%S+") do
-        if KEYWORDS[word] then
-            return true
-        end
-    end
-    return false
+    return legacy_parts(M.expand_model(tbl, predicate_strings))
 end
 
 -- Build a whole table from expressions separated by `|` or `,`. The variables
@@ -560,27 +152,27 @@ end
 -- column of its own, which makes it a way to pin the variable order
 -- (`b | a | a -> b`). Returns headers, rows, or nil + an error message.
 local function table_from_expressions(input)
-    local vars, seen = {}, {}
-    local compound, seen_heading = {}, {}
-
-    for pred_str in input:gmatch("[^|,]+") do
-        pred_str = trim(pred_str)
-        if pred_str ~= "" then
-            local tokens, tok_err = M.tokenize(pred_str)
-            if not tokens then
-                return nil, "Parse error: " .. tok_err
+    local parts, split_err = M.split_expressions(input, "|,")
+    local asts, parse_err = result.bind(parts, split_err, function(expressions)
+        return result.traverse(expressions, M.parse_expression)
+    end)
+    if not asts then
+        return nil, parse_err
+    end
+    local vars, seen, compound = {}, {}, {}
+    local discovered, discover_err = result.traverse(asts, predicate.variables)
+    if not discovered then
+        return nil, discover_err
+    end
+    for i, names in ipairs(discovered) do
+        for _, name in ipairs(names) do
+            if not seen[name] then
+                seen[name] = true
+                vars[#vars + 1] = name
             end
-            local ast, parse_err = M.parse_predicate(tokens)
-            if not ast then
-                return nil, 'Parse error in "' .. pred_str .. '": ' .. parse_err
-            end
-            collect_vars(ast, seen, vars)
-
-            local heading = M.ast_to_heading(ast)
-            if ast.type ~= "var" and not seen_heading[heading] then
-                seen_heading[heading] = true
-                compound[#compound + 1] = pred_str
-            end
+        end
+        if asts[i].type ~= "var" then
+            compound[#compound + 1] = asts[i]
         end
     end
 
@@ -591,7 +183,7 @@ local function table_from_expressions(input)
         return nil, "Too many variables (max 10)"
     end
 
-    return M.expand({ headers = vars, rows = M.generate_rows(#vars) }, compound)
+    return expand_asts({ headers = vars, rows = model.generate_rows(#vars) }, compound)
 end
 
 -- The :TruthTable argument spelled out over several lines (a visual selection):
@@ -610,7 +202,7 @@ end
 -- Headers + rows for any :TruthTable argument: an integer N, a list of names,
 -- or expressions (see M.is_expression_input). Returns nil + an error message
 -- on failure.
-function M.build_truth_table(args)
+function M.build_model(args)
     if M.is_expression_input(args) then
         return table_from_expressions(args)
     end
@@ -619,10 +211,31 @@ function M.build_truth_table(args)
     if not headers then
         return nil, err
     end
-    return headers, M.generate_rows(#headers)
+    return { headers = headers, rows = model.generate_rows(#headers), encoding = "bits" }
 end
 
--- Toggle every cell between 0/1 and F/T, in place. The direction is decided by
+function M.build_truth_table(args)
+    return legacy_parts(M.build_model(args))
+end
+
+-- The compatibility adapters are the only edit paths that encode string cells.
+local function edit_table(transform, tbl, index)
+    return legacy_parts(transform(tbl, index))
+end
+
+function M.drop_row(tbl, index)
+    return edit_table(model.drop_row, tbl, index)
+end
+
+function M.drop_column(tbl, index)
+    return edit_table(model.drop_column, tbl, index)
+end
+
+function M.toggle_table(tbl)
+    return edit_table(model.toggle, tbl)
+end
+
+-- Toggle every cell between 0/1 and F/T, returning fresh rows. The direction is decided by
 -- the first data cell: T/F -> 0/1, otherwise 0/1 -> T/F. Returns the rows.
 function M.toggle_cells(rows)
     local uses_tf = false
@@ -631,25 +244,12 @@ function M.toggle_cells(rows)
         uses_tf = (first == "T" or first == "F")
     end
 
-    for _, row in ipairs(rows) do
-        for i, cell in ipairs(row) do
-            if uses_tf then
-                if cell == "T" then
-                    row[i] = "1"
-                elseif cell == "F" then
-                    row[i] = "0"
-                end
-            else
-                if cell == "1" then
-                    row[i] = "T"
-                elseif cell == "0" then
-                    row[i] = "F"
-                end
-            end
-        end
-    end
-
-    return rows
+    local replacements = uses_tf and { T = "1", F = "0" } or { ["1"] = "T", ["0"] = "F" }
+    return result.traverse(rows, function(row)
+        return result.traverse(row, function(cell)
+            return replacements[cell] or cell
+        end)
+    end)
 end
 
 return M
