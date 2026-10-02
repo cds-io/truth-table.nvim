@@ -135,8 +135,9 @@ double negations are retained; there is no automatic simplification.
 
 `setup()` also registers insert-mode abbreviations for the logic symbols, so
 headings can be typed as words. Each is a word plus a trigger, `@` by default;
-the trigger is what keeps `and` in prose from expanding. Type `and@` and the
-next space or punctuation turns it into `∧`:
+the trigger is what keeps `and` in prose from expanding. Type `and@` followed
+by a space to expand it to `∧`. `Ctrl-]` explicitly expands without inserting
+an extra character:
 
 | Typed | Inserted | | Typed | Inserted |
 |---|---|---|---|---|
@@ -171,9 +172,13 @@ require("truth-table").setup({ abbreviations = false })  -- none at all
 `symbols` merges over the defaults, which `require("truth-table.abbreviations").defaults`
 exposes as `{ trigger = "@", symbols = { ... } }`. Overriding a symbol here
 changes what you type, and only that; headings still render from
-`truth-table.symbols`. Each `setup()` call removes the abbreviations the previous
-call registered before installing its own, so the last call wins even though
-`plugin/truth-table.lua` runs a bare `setup()` before your config does. With
+`truth-table.symbols`. Explicit `setup()` calls replace the plugin-owned abbreviations. Automatic plugin
+loading preserves configuration already supplied in your init file. Disabling or
+reconfiguring restores displaced global abbreviations and leaves user replacements
+made after setup intact. Options are validated before abbreviations are changed.
+The trigger must be a single ASCII punctuation character other than backslash,
+`|`, `<`, or `>`. Symbol keys must be ASCII identifiers; values must be `false`
+or nonempty single-line strings without surrounding whitespace. With
 lazy.nvim, `opts = { abbreviations = ... }` is the usual place for this.
 
 ## Design

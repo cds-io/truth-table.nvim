@@ -1,6 +1,10 @@
 -- Real startup: Neovim loads plugin/ itself after evaluating this init file.
 vim.opt.rtp:append(vim.fn.getcwd())
 vim.opt.swapfile = false
+local customized = vim.env.TRUTH_TABLE_TEST_CUSTOM == '1'
+if customized then
+    require('truth-table').setup({ abbreviations = false })
+end
 package.preload['which-key'] = function() error('which-key intentionally absent') end
 vim.api.nvim_create_autocmd('VimEnter', {
     once = true,
@@ -8,7 +12,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
         local ok, err = pcall(function()
             assert(vim.g.loaded_truth_table)
             assert(vim.fn.exists(':TruthTable') == 2)
-            assert(vim.fn.maparg('and@', 'i', true) == '∧')
+            assert(vim.fn.maparg('and@', 'i', true) == (customized and '' or '∧'))
             vim.cmd('TruthTable A')
             vim.api.nvim_win_set_cursor(0, {3, 1})
             vim.cmd('TruthTableToggle')

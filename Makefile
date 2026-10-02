@@ -14,6 +14,7 @@ test:
 test-integration:
 	$(NVIM) --headless -u NONE -i NONE -l spec/integration.lua
 	$(NVIM) --headless -u spec/startup.lua -i NONE
+	TRUTH_TABLE_TEST_CUSTOM=1 $(NVIM) --headless -u spec/startup.lua -i NONE
 	$(NVIM) --headless -u NONE -i NONE -l spec/preview.lua
 	$(NVIM) --headless -u NONE -i NONE -l spec/abbreviations.lua
 

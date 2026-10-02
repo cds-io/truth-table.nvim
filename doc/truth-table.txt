@@ -260,7 +260,8 @@ Calling setup() again reinstalls the default mappings.
 setup() registers insert-mode abbreviations (|:iabbrev|) for the logic
 symbols, so headings can be typed as words. Each is a word plus a trigger,
 `@` by default. The trigger is a non-keyword character, so `and` in prose
-never expands, while `and@` followed by a space or punctuation becomes `∧`.
+never expands. Type `and@` followed by a space to insert `∧` and the space.
+CTRL-] explicitly expands the abbreviation without inserting an extra character.
 
     and@      ∧          forall@   ∀
     or@       ∨          exists@   ∃
@@ -286,11 +287,12 @@ input side and the display side as separate settings:
 
     nil (omitted)   the defaults above
     false           none
-    table           `trigger`: the string appended to every word
-                    (default "@")
-                    `symbols`: merged over the defaults, keyed by word; a
+    table           `trigger`: one ASCII punctuation character appended to each word
+                    (default "@"; excludes backslash, |, <, and >)
+                    `symbols`: merged over defaults, keyed by ASCII identifier; a
                     `false` value drops that word, a string overrides or
-                    adds one
+                    adds one. Strings must be nonempty, single-line, and
+                    have no surrounding whitespace.
 
 For example: >
     require("truth-table").setup({
@@ -305,13 +307,16 @@ For example: >
     })
     require("truth-table").setup({ abbreviations = false })
 <
+Automatic plugin loading preserves any setup() configuration already supplied
+in your init file. Explicit later setup() calls replace the plugin-owned set.
+Cleanup restores displaced global abbreviations and leaves user replacements
+made after setup intact. Invalid options fail before abbreviations are changed.
+
 The defaults are exposed as `require("truth-table.abbreviations").defaults`,
 a `{ trigger, symbols }` table. Overriding a symbol here changes what you
 type and nothing else; headings still render from |truth-table-symbols|.
-Each setup() call removes the abbreviations the previous call registered
-before installing its own, so a user call with options takes effect even
-though plugin/truth-table.lua runs a bare setup() first. An abbreviation you
-removed by hand with |:iunabbrev| is skipped rather than reported.
+An abbreviation removed by hand with |:iunabbrev| is left removed during cleanup;
+an explicit later setup() can install it again.
 
 ==============================================================================
 9. ARCHITECTURE                                        *truth-table-architecture*
