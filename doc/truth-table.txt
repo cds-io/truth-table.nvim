@@ -114,6 +114,24 @@ lists or blockquotes are not supported.
 
         :TruthTableExpand A and B, A xor B
 <
+                                                       *:TruthTableDeMorgan*
+:TruthTableDeMorgan
+    Toggle a virtual-text preview for the entire expression-only line or the
+    current table column's header. A cursor on a data or separator row selects
+    the same column in the header. Only a root De Morgan rewrite applies:
+    not (A and B) <-> not A or not B
+    not (A or B)  <-> not A and not B
+    Surrounding parentheses are transparent; nested-only matches are rejected.
+    Run again to dismiss. Buffer edits invalidate the preview.
+
+                                                  *:TruthTableDeMorganApply*
+:TruthTableDeMorganApply
+    Apply the pending preview in this buffer. Preserve line indentation; for
+    tables, replace only the selected header cell, leaving separators and stored
+    data values untouched. Duplicate headings are rejected. Explicit references
+    to the old header label must be updated by the user after renaming.
+    Output uses logic symbols and does not simplify double negation.
+
                                                            *:TruthTableToggle*
 :TruthTableToggle
     With the cursor inside a table, toggle every data cell between 0/1 and F/T.
@@ -192,6 +210,8 @@ Examples: >
     <leader>ttn   prefill `:TruthTable `        (new table)
     <leader>ttn   (visual) run `:TruthTable` on the selected lines
     <leader>tte   prefill `:TruthTableExpand `  (expand)
+    <leader>ttd   |:TruthTableDeMorgan|
+    <leader>tta   |:TruthTableDeMorganApply|
     <leader>ttt   |:TruthTableToggle|
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|

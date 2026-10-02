@@ -216,11 +216,35 @@ function M.find_table(lines, cursor_row)
     return nil, "Cursor is not inside a truth table"
 end
 
+function M.escape_heading(header)
+    return (header:gsub("\\", "\\\\"):gsub("|", "\\|"):gsub("`", "\\`"))
+end
+
+-- Replace one header cell without rewriting separators or stored data rows.
+function M.replace_heading(line, index, heading)
+    local headers, err = read_row(line)
+    if not headers then
+        return nil, err
+    end
+    if not headers[index] then
+        return nil, "Invalid column index"
+    end
+    headers[index] = heading
+    local valid, validation_err = model.normalize({ headers = headers, rows = {} })
+    return result.bind(valid, validation_err, function()
+        local pipes = {}
+        scan(line, function(pos)
+            pipes[#pipes + 1] = pos
+        end, function() end)
+        return line:sub(1, pipes[index]) .. " " .. M.escape_heading(heading) .. " " .. line:sub(pipes[index + 1])
+    end)
+end
+
 function M.format(tbl, display_width)
     local normalized, err = model.normalize(tbl)
     return result.bind(normalized, err, function(valid)
         local headers = result.traverse(valid.headers, function(header)
-            return (header:gsub("\\", "\\\\"):gsub("|", "\\|"):gsub("`", "\\`"))
+            return M.escape_heading(header)
         end)
         return format_valid(headers, model.render_rows(valid), display_width or M.display_width)
     end)

@@ -432,4 +432,48 @@ function M.is_expression_input(args)
 end
 
 
+local function unparen(node)
+    while node.type == "paren" do
+        node = node.expr
+    end
+    return node
+end
+
+-- Root-only De Morgan rewrite, returning an independent tree. No automatic
+-- double-negation simplification: that is a separate refactoring operation.
+function M.de_morgan(node)
+    local root = unparen(node)
+    local rewritten
+    if root.type == "not" then
+        local operand = unparen(root.operand)
+        if operand.type == "and" or operand.type == "or" then
+            rewritten = {
+                type = operand.type == "and" and "or" or "and",
+                left = { type = "not", operand = operand.left },
+                right = { type = "not", operand = operand.right },
+            }
+        end
+    elseif root.type == "and" or root.type == "or" then
+        local left, right = unparen(root.left), unparen(root.right)
+        if left.type == "not" and right.type == "not" then
+            rewritten = { type = "not", operand = {
+                type = root.type == "and" and "or" or "and",
+                left = left.operand, right = right.operand,
+            } }
+        end
+    end
+    if not rewritten then
+        return nil, "No De Morgan rewrite applies to the whole expression"
+    end
+    return M.transform_ast(rewritten, function(copy)
+        return copy
+    end)
+end
+
+function M.de_morgan_expression(input)
+    local ast, err = M.parse_expression(input)
+    local rewritten, rewrite_err = result.bind(ast, err, M.de_morgan)
+    return result.bind(rewritten, rewrite_err, M.ast_to_heading)
+end
+
 return M

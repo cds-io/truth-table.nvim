@@ -3,6 +3,8 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add toggled De Morgan virtual-text previews and explicit apply commands for
+  whole expression lines and table headers; invalidate previews after edits.
 - Separate predicate language, semantic table model, Markdown codec, and Result
   composition while preserving the string-cell core API through adapters.
 - Fix expansion of F/T tables; preserve encoding through semantic operations.

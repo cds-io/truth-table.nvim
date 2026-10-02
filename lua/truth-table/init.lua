@@ -124,6 +124,14 @@ function M.setup()
         desc = "Toggle truth table between 0/1 and F/T",
     })
 
+    local preview = require("truth-table.preview")
+    vim.api.nvim_create_user_command("TruthTableDeMorgan", preview.toggle, {
+        desc = "Toggle a whole-expression De Morgan preview",
+    })
+    vim.api.nvim_create_user_command("TruthTableDeMorganApply", preview.apply, {
+        desc = "Apply the current De Morgan preview",
+    })
+
     local ok, wk = pcall(require, "which-key")
     if ok then
         -- selene: allow(mixed_table)
@@ -136,6 +144,8 @@ function M.setup()
     vim.keymap.set("n", "<leader>ttn", ":TruthTable ", { desc = "New truth table" })
     vim.keymap.set("x", "<leader>ttn", ":TruthTable<CR>", { desc = "New truth table from selection" })
     vim.keymap.set("n", "<leader>tte", ":TruthTableExpand ", { desc = "Expand truth table" })
+    vim.keymap.set("n", "<leader>ttd", "<cmd>TruthTableDeMorgan<CR>", { desc = "Preview De Morgan rewrite" })
+    vim.keymap.set("n", "<leader>tta", "<cmd>TruthTableDeMorganApply<CR>", { desc = "Apply De Morgan rewrite" })
     vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
     vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })
     vim.keymap.set("n", "<leader>ttc", "<cmd>TruthTableDropColumn<CR>", { desc = "Drop truth table column" })
