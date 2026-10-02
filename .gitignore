@@ -12,3 +12,4 @@ lua_modules/
 luacov.*.out
 luacov.stats.out
 luacov.report.out
+nvim.log
