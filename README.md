@@ -76,8 +76,15 @@ are column names and the literals `0` / `1`. Operators, tightest binding first:
 | `implies` / `->` / `=>` / `→` / `⇒` | implication | `→` |
 | `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `=` |
 
-Parentheses override precedence: `(A or B) and !C`. Each operator can be typed
-as its symbol, so a rendered heading parses back to the expression it came from.
+Binary operators associate to the left, including implication. Use parentheses
+for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
+Each operator can be typed as its symbol, so a rendered heading parses back to the expression it came from.
+
+Parse errors identify the offending token or end of input with a one-based byte
+position in the reported expression. Positions count UTF-8 bytes, matching Lua
+5.1 and Neovim buffer column conventions. `tokenize` retains its token records
+and returns optional span metadata as its third result; `parse_predicate` accepts
+that metadata, or falls back to token indices when omitted.
 
 ## Keymaps
 
@@ -94,39 +101,96 @@ as its symbol, so a rendered heading parses back to the expression it came from.
 
 ## Design
 
-Split along one line, Neovim or not:
+All logic is pure Lua 5.1; only the editor adapter uses `vim.*`.
 
-- `lua/truth-table/core.lua` is **pure**: the predicate tokenizer/parser,
-  evaluator, validation, and markdown formatting, all as plain functions over
-  strings and tables with no `vim.*`. The one contextual dependency,
-  display-width measurement, is injectable: `core.display_width` defaults to a
-  pure UTF-8 codepoint count, and `setup()` swaps in `vim.fn.strdisplaywidth`
-  for terminal-accurate alignment (they agree for the ASCII names and width-1
-  logic symbols this tool emits).
-- `lua/truth-table/init.lua` holds the Neovim-facing pieces (finding the table
-  under the cursor, the commands, keymaps) and the public `setup()`.
-- `plugin/truth-table.lua` is the auto-sourced entry point with a load guard.
+- `core.lua` composes construction and expansion and preserves the public APIs.
+- `predicate.lua` owns parsing, binding, evaluation, and heading rendering.
+  Operator definitions share aliases, precedence, symbols, and Boolean semantics.
+  Binding and variable discovery share a pure post-order AST traversal.
+- `table_model.lua` owns numeric Boolean cells, display encoding, validation, and
+  immutable row/column transformations. Column appending centralizes deduplication.
+- `markdown.lua` parses and renders tables. It accepts display-width measurement
+  explicitly; `core.display_width` retains the existing injection API.
+- `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
+  Only `nil` means failure; zero and false remain successful values.
+- `init.lua` reads the buffer, composes parse → transform → render, and applies a
+  complete result. Editor line ranges stay outside the table model.
+
+The semantic API is `build_model`, `parse_model`, `expand_model`,
+`drop_model_row`, `drop_model_column`, `toggle_model`, and `format_model`.
+Semantic tables carry numeric `0/1` cells and `encoding = "bits"` or `"tf"`.
+Existing string-cell APIs remain compatibility adapters.
+
+## Editing existing tables
+
+Tables must have unique nonempty headings, rectangular rows, and Boolean cells
+in one consistent encoding: `0/1` or `F/T`. Invalid tables produce errors before
+buffer edits. Expansion preserves encoding and skips headings already present;
+it still validates the expressions and their references against the input table.
+
+Computed columns contain stored values. Dropping a variable leaves those values
+intact. Backticks explicitly reference an existing column by its exact heading:
+
+```vim
+:TruthTableExpand not `A ∧ B`
+```
+
+This works after A or B is dropped. `not (A and B)` instead evaluates the formula
+and requires both variable columns. References bind to positions before expansion;
+new columns can be referenced in the next command. Double a backtick inside a reference to include it in the column name:
+
+```vim
+:TruthTableExpand not `¬``A```
+```
+
+This reads the stored column named ¬`A`. Backslashes remain literal inside
+references. References are unavailable during new-table construction.
+Commas inside references belong to the label. Empty expressions are rejected.
+
+Discovery isolates adjacent tables at their heading/separator pairs and skips
+backtick/tilde fenced code and indented code. It supports top-level tables with
+uniform indentation of zero to three spaces and preserves that indentation on
+edits. Tables nested in lists or blockquotes are outside this supported subset.
+
+Pipes, backslashes, and backticks in headings round-trip through Markdown
+escaping, preserving literal reference labels in rendered tables. A table
+with no data rows cannot persist its encoding in Markdown; reading it back
+uses bits.
+
+### Compatibility changes
+
+- `toggle_cells` returns fresh rows instead of mutating its argument.
+- Repeated expansion skips an existing heading instead of appending a duplicate.
+- Parsing, editing, and `format_table` reject malformed/non-Boolean tables with
+  `nil, error`. Headings must be single-line strings without surrounding whitespace.
+- Empty expressions between delimiters now return errors instead of being ignored.
 
 ## Testing
 
-The pure core is covered by a [busted](https://lunarmodules.github.io/busted/)
-spec in `spec/`:
+Run the complete local check (requires Busted, Neovim, and Selene):
+
+```sh
+make check
+```
+
+The pure core is covered by [busted](https://lunarmodules.github.io/busted/)
+specs in `spec/`:
 
 ```sh
 make test
 ```
 
-If your `busted` launcher is broken (a common symptom of a Homebrew Lua version
-bump: it hard-codes a now-missing `lua5.4`), install busted into your user rocks
-tree and point the target at it:
+The Makefile prefers `~/.luarocks/bin/busted` when present, then falls back to
+`busted` on PATH. This avoids stale Homebrew launchers after Lua upgrades.
+If needed, install a user launcher or select one explicitly:
 
 ```sh
 luarocks --local install busted
-make test BUSTED=$HOME/.luarocks/bin/busted
+make check BUSTED=/path/to/busted
 ```
 
-The `vim`-coupled layer is verified by loading the plugin and running the
-commands. Lint (optional, requires [selene](https://github.com/Kampfkarren/selene)):
+Run `make test-integration` for headless Neovim command checks, malformed-table
+buffer preservation, and automatic plugin loading during startup. Lint (optional, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh
 make lint

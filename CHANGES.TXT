@@ -1,6 +1,25 @@
 truth-table.nvim changes
 ========================
 
+Unreleased
+----------
+- Separate predicate language, semantic table model, Markdown codec, and Result
+  composition while preserving the string-cell core API through adapters.
+- Fix expansion of F/T tables; preserve encoding through semantic operations.
+- Add explicit backtick references to stored columns after dropping variables.
+- Round-trip escaped pipes/backslashes; preserve grouping in generated headings.
+- Validate malformed Markdown and sparse Lua arrays before transformations.
+- Compatibility: toggle_cells no longer mutates input; expansion deduplicates
+  headings; non-Boolean/mixed tables and empty expressions are now rejected.
+- Isolate adjacent tables, ignore fenced/indented code, and preserve supported
+  table indentation during edits.
+- Report parser errors with source byte positions and complete Unicode characters.
+- Support doubled backticks inside references to generated column headings.
+- Verify plugin entry-point loading and repeated setup without which-key.
+- Escape literal backticks in Markdown headings so rendered labels match stored
+  reference names; verify automatic Neovim startup with a real init file.
+- Add pure regression specs and headless Neovim command integration checks.
+
 0.1.0 - 2026-06-15
 ------------------
 - Initial extraction from the single-file Neovim config modules

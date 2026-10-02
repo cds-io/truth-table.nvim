@@ -54,6 +54,11 @@ calling `setup()` yourself.
 ==============================================================================
 4. COMMANDS                                              *truth-table-commands*
 
+Editing commands discover top-level tables with zero to three spaces of uniform
+indentation. Edits preserve that indentation. Adjacent heading/separator pairs
+start separate tables. Fenced and indented code are ignored; tables nested in
+lists or blockquotes are not supported.
+
                                                                   *:TruthTable*
 :TruthTable {arg}
     Insert a new truth table at the cursor. {arg} is either an integer N
@@ -99,6 +104,9 @@ calling `setup()` yourself.
                                                      *:TruthTableExpand*
 :TruthTableExpand {predicates}
     With the cursor inside a table, append one computed column per predicate.
+    Existing headings are skipped after validating the expressions. Tables
+    require unique headings, rectangular rows, and consistently encoded Boolean
+    cells. Expansion preserves 0/1 or F/T notation.
     {predicates} is a comma-separated list of expressions in the predicate
     language (see |truth-table-predicates|). The column heading is the
     predicate rendered with logic symbols (e.g. `A ∧ B`). Unknown column names
@@ -109,8 +117,9 @@ calling `setup()` yourself.
                                                            *:TruthTableToggle*
 :TruthTableToggle
     With the cursor inside a table, toggle every data cell between 0/1 and F/T.
-    The direction is chosen from the first data cell (0/1 -> F/T, or T/F ->
-    0/1). Non-boolean cells are left untouched.
+    All cells must use one consistent Boolean encoding. Invalid or mixed
+    encodings are reported and leave the buffer untouched. An empty table
+    defaults to 0/1 notation when read from Markdown.
 
                                                           *:TruthTableDropRow*
 :TruthTableDropRow
@@ -119,8 +128,8 @@ calling `setup()` yourself.
 
                                                        *:TruthTableDropColumn*
 :TruthTableDropColumn
-    Drop the column under the cursor (determined by counting `|` characters to
-    the left of the cursor). Refuses to drop the only remaining column.
+    Drop the column under the cursor, respecting escaped pipes in headings.
+    Refuses to drop the only remaining column.
 
 ==============================================================================
 5. PREDICATE LANGUAGE                                   *truth-table-predicates*
@@ -133,6 +142,22 @@ Operands:
     - column names (for |:TruthTableExpand|, must match an existing header)
     - literals `0` and `1`
 
+Stored column references ~
+
+In :TruthTableExpand, backticks select an existing column by its exact heading:
+>
+    :TruthTableExpand not `A ∧ B`
+<
+This reads stored values even after A or B is dropped. In contrast,
+"not (A and B)" recomputes the formula and requires both variable columns.
+References are resolved against the table before expansion; newly appended
+columns are available on the next command. Double a backtick inside a reference
+to include a literal backtick in its name: >
+    :TruthTableExpand not `¬``A```
+<
+This reads the stored column named ¬`A`. Backslashes remain literal; commas
+inside references belong to the heading.
+
 Operators, from tightest binding to loosest:
 
     not  !  ¬          unary negation               rendered  ¬
@@ -142,9 +167,14 @@ Operators, from tightest binding to loosest:
     implies  ->  =>  →  ⇒   material implication    rendered  →
     iff  =  <->  <=>  ⇔  ↔  equivalence             rendered  =
 
-Parentheses `( )` override precedence. Whitespace is insignificant. Each
+Binary operators associate left, including implication. Use parentheses for
+A -> (B -> C). Parentheses `( )` override precedence. Whitespace is insignificant. Each
 operator can be typed as its symbol, so a rendered heading parses back to the
 expression it came from.
+
+Parse errors report a one-based byte position in the displayed expression.
+UTF-8 symbols occupy multiple bytes. Direct parse_predicate callers may pass
+span metadata (the third tokenize result); without it errors use token indices.
 
 Examples: >
 
@@ -185,18 +215,26 @@ and call your own |vim.keymap.set| against the commands) or open an issue.
 ==============================================================================
 8. ARCHITECTURE                                        *truth-table-architecture*
 
-The code is split along one line: Neovim or not.
+All pure modules support Lua 5.1 and have no vim dependency:
 
-- `lua/truth-table/core.lua` is pure: parsing, evaluation, and table formatting
-  as plain functions over strings and tables, with no `vim.*`. The one
-  contextual dependency, display-width measurement, is injectable
-  (`core.display_width`); `setup()` swaps in `vim.fn.strdisplaywidth`, while the
-  pure default counts UTF-8 codepoints.
-- `lua/truth-table/init.lua` holds the Neovim-facing pieces: locating the table
-  under the cursor, the user commands, keymaps, and `setup()`.
+- core.lua composes construction/expansion and exposes compatibility adapters.
+- predicate.lua owns parsing, binding, evaluation, and heading rendering.
+- table_model.lua owns numeric Boolean cells, display encoding, and pure edits.
+- markdown.lua parses/renders tables and escapes pipes, backslashes, and
+  backticks so displayed headings retain their literal reference names.
+- result.lua composes value, error results through bind and traverse.
+- init.lua locates tables and applies successful semantic pipelines to buffers.
 
-The pure core is covered by a busted spec under `spec/`; run it with `make
-test`. The vim-coupled layer is verified by loading the plugin and exercising
-the commands.
+Display width is injectable through core.display_width; setup() uses
+vim.fn.strdisplaywidth. The default counts UTF-8 codepoints.
+
+Compatibility changes: toggle_cells returns fresh rows; expansion skips existing
+headings; malformed/non-Boolean tables and empty expressions are rejected.
+Computed columns retain stored values when source variable columns are dropped.
+An empty table loses its display encoding when serialized to Markdown.
+
+Run make check for the complete local check (requires Busted, Neovim, and Selene).
+make test runs pure specs; make test-integration runs headless command checks and
+verifies automatic plugin loading during startup. make lint checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:

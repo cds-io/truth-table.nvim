@@ -4,91 +4,47 @@
 -- setup() entry point.
 
 local core = require("truth-table.core")
+local result = require("truth-table.result")
 
 local M = {}
 
--- Locate the markdown table the cursor is inside. Returns start_row, end_row
--- (1-based, inclusive) or nil. A valid table needs at least a heading and a
--- separator row, with the separator immediately under the heading.
-local function find_table()
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local cur_row = cursor[1]
-    local total = vim.api.nvim_buf_line_count(0)
-
-    local cur_line = vim.api.nvim_buf_get_lines(0, cur_row - 1, cur_row, false)[1]
-    if not core.is_table_line(cur_line) then
-        return nil
+-- Apply only complete successful pipelines; failures leave the buffer untouched.
+local function replace_table(first, last, tbl, err, indent)
+    local lines, format_err = result.bind(tbl, err, core.format_model)
+    if not lines then
+        vim.notify(format_err, vim.log.levels.WARN)
+        return
     end
-
-    local start_row = cur_row
-    for row = cur_row - 1, 1, -1 do
-        local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-        if not core.is_table_line(line) then
-            break
-        end
-        start_row = row
+    if indent and indent ~= "" then
+        lines = result.traverse(lines, function(line)
+            return indent .. line
+        end)
     end
-
-    local end_row = cur_row
-    for row = cur_row + 1, total do
-        local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-        if not core.is_table_line(line) then
-            break
-        end
-        end_row = row
-    end
-
-    if end_row - start_row < 1 then
-        return nil
-    end
-
-    local sep_line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, false)[1]
-    if not core.is_separator(sep_line) then
-        return nil
-    end
-
-    return start_row, end_row
-end
-
-local function parse_table(start_line, end_line)
-    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-    local tbl = core.parse_table_lines(lines)
-    tbl.start_line = start_line
-    tbl.end_line = end_line
-    return tbl
+    vim.api.nvim_buf_set_lines(0, first, last, false, lines)
 end
 
 local function get_cursor_column_index()
     local cursor = vim.api.nvim_win_get_cursor(0)
-    local col = cursor[2]
-    local line = vim.api.nvim_get_current_line()
-    local count = 0
-    for i = 1, col + 1 do
-        if line:sub(i, i) == "|" then
-            count = count + 1
-        end
-    end
-    return math.max(1, count)
+    return core.column_index(vim.api.nvim_get_current_line(), cursor[2])
 end
 
--- Run fn with the table under the cursor, replacing the table's lines with fn's
--- returned (headers, rows). fn may return nil to abort silently (it is expected
--- to have notified the user itself). Shared by the editing commands.
+-- Compose parse -> transform -> format, using one Result convention throughout.
 local function with_table(fn)
-    local start_line, end_line = find_table()
-    if not start_line then
-        vim.notify("Cursor is not inside a truth table", vim.log.levels.WARN)
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local bounds, find_err = core.find_table(lines, vim.api.nvim_win_get_cursor(0)[1])
+    if not bounds then
+        vim.notify(find_err, vim.log.levels.WARN)
         return
     end
-
-    local tbl = parse_table(start_line, end_line)
-    local headers, rows = fn(tbl, start_line, end_line)
-    if not headers then
-        return
+    local selected = {}
+    for row = bounds.start_line, bounds.end_line do
+        selected[#selected + 1] = lines[row]
     end
-
-    local lines = core.format_table(headers, rows)
-    vim.api.nvim_buf_set_lines(0, start_line - 1, end_line, false, lines)
+    local tbl, err = core.parse_model(selected)
+    local edited, edit_err = result.bind(tbl, err, function(valid)
+        return fn(valid, bounds.start_line, bounds.end_line)
+    end)
+    replace_table(bounds.start_line - 1, bounds.end_line, edited, edit_err, bounds.indent)
 end
 
 local function cmd_truth_table(opts)
@@ -104,31 +60,18 @@ local function cmd_truth_table(opts)
         args = core.args_from_lines(vim.api.nvim_buf_get_lines(0, first, last, false))
     end
 
-    local headers, rows = core.build_truth_table(args)
-    if not headers then
-        -- rows holds the error message in the failure case.
-        vim.notify(rows, vim.log.levels.WARN)
-        return
-    end
-
-    vim.api.nvim_buf_set_lines(0, first, last, false, core.format_table(headers, rows))
+    replace_table(first, last, core.build_model(args))
 end
 
 local function cmd_expand(opts)
-    local predicates = vim.split(opts.args, ",", { trimempty = true })
-    if #predicates == 0 then
-        vim.notify("Usage: :TruthTableExpand predicate1, predicate2, ...", vim.log.levels.WARN)
+    local predicates, err = core.split_expressions(opts.args, ",")
+    if not predicates then
+        vim.notify(err, vim.log.levels.WARN)
         return
     end
 
     with_table(function(tbl)
-        local new_headers, new_rows = core.expand(tbl, predicates)
-        if not new_headers then
-            -- new_rows holds the error message in the failure case.
-            vim.notify(new_rows, vim.log.levels.ERROR)
-            return nil
-        end
-        return new_headers, new_rows
+        return core.expand_model(tbl, predicates)
     end)
 end
 
@@ -136,39 +79,24 @@ local function cmd_drop_row()
     with_table(function(tbl, start_line)
         local cur_row = vim.api.nvim_win_get_cursor(0)[1]
         if cur_row <= start_line + 1 then
-            vim.notify("Cannot drop heading or separator row", vim.log.levels.WARN)
-            return nil
+            return nil, "Cannot drop heading or separator row"
         end
 
         local row_idx = cur_row - start_line - 1
-        table.remove(tbl.rows, row_idx)
-        return tbl.headers, tbl.rows
+        return core.drop_model_row(tbl, row_idx)
     end)
 end
 
 local function cmd_drop_column()
     with_table(function(tbl)
-        if #tbl.headers <= 1 then
-            vim.notify("Cannot drop the only column", vim.log.levels.WARN)
-            return nil
-        end
-
-        local col_idx = get_cursor_column_index()
-        if col_idx > #tbl.headers then
-            col_idx = #tbl.headers
-        end
-
-        table.remove(tbl.headers, col_idx)
-        for _, row in ipairs(tbl.rows) do
-            table.remove(row, col_idx)
-        end
-        return tbl.headers, tbl.rows
+        local col_idx = math.min(get_cursor_column_index(), #tbl.headers)
+        return core.drop_model_column(tbl, col_idx)
     end)
 end
 
 local function cmd_toggle()
     with_table(function(tbl)
-        return tbl.headers, core.toggle_cells(tbl.rows)
+        return core.toggle_model(tbl)
     end)
 end
 
