@@ -24,7 +24,7 @@ values; given a logical predicate it appends a computed column. It also toggles
 between 0/1 and F/T notation and drops rows or columns.
 
 Tables are plain GitHub-flavored markdown (centered, with a `:---:` separator
-row), so they render anywhere markdown does. Example: >
+row), so they render in Markdown viewers with table support. Example: >
 
     |  A  |  B  | A ∧ B |
     |:---:|:---:|:-----:|
@@ -61,7 +61,7 @@ lists or blockquotes are not supported.
 
                                                                   *:TruthTable*
 :TruthTable {arg}
-    Insert a new truth table at the cursor. {arg} is either an integer N
+    Insert a new truth table above the current line. {arg} is either an integer N
     (1..10), which produces N variables named A, B, C, ..., or an explicit
     space-separated list of variable names (each matching
     `[A-Za-z_][A-Za-z0-9_]*`, no duplicates, at most 10). The table has one
@@ -80,7 +80,8 @@ lists or blockquotes are not supported.
     produces the variables m, a, b and one column per expression. A bare
     variable adds no column of its own, so it can pin the variable order
     (`:TruthTable b | a | a -> b` puts b first). An expression given twice
-    yields one column.
+    yields one column. Expressions must mention at least one variable;
+    constant-only expressions can be used with :TruthTableExpand instead.
 
     N.B. {arg} is read as expressions when it contains anything besides names
     and spaces, or an operator keyword. So `:TruthTable p or q` is the
@@ -122,7 +123,10 @@ lists or blockquotes are not supported.
     not (A and B) <-> not A or not B
     not (A or B)  <-> not A and not B
     Surrounding parentheses are transparent; nested-only matches are rejected.
-    Run again to dismiss. Buffer edits invalidate the preview.
+    The virtual text appears at the end of the expression line or header row,
+    identifying the selected table column. One preview is kept per buffer. Run
+    again to dismiss, even after moving the cursor. Apply acts on the saved
+    target in the current buffer. Buffer edits invalidate the preview.
 
                                                   *:TruthTableDeMorganApply*
 :TruthTableDeMorganApply
@@ -191,7 +195,8 @@ operator can be typed as its symbol, so a rendered heading parses back to the
 expression it came from.
 
 Parse errors report a one-based byte position in the displayed expression.
-UTF-8 symbols occupy multiple bytes. Direct parse_predicate callers may pass
+UTF-8 symbols occupy multiple bytes. Neovim cursor columns are zero-based;
+these diagnostic positions are one-based. Direct parse_predicate callers may pass
 span metadata (the third tokenize result); without it errors use token indices.
 
 Examples: >
@@ -216,7 +221,8 @@ Examples: >
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|
 
-The first two leave you in command-line mode so you can type the argument.
+The normal-mode ttn and tte mappings leave you in command-line mode to type
+the argument. Visual-mode ttn immediately executes on the selected lines.
 
 ==============================================================================
 7. CONFIGURATION                                    *truth-table-configuration*
@@ -228,9 +234,13 @@ require("truth-table").setup()
     automatically by plugin/truth-table.lua; call it yourself only if you load
     the module manually. It is idempotent.
 
-There are currently no options; the keymaps above are fixed. To use different
-keys, skip the bundled ones (do not source the plugin file, require the module
-and call your own |vim.keymap.set| against the commands) or open an issue.
+There are currently no setup options. setup() registers both commands and the
+fixed mappings above. To customize keys, remove unwanted mappings after setup()
+and add replacements, for example: >
+    vim.keymap.del("n", "<leader>ttd")
+    vim.keymap.set("n", "<leader>dm", "<cmd>TruthTableDeMorgan<CR>")
+<
+Calling setup() again reinstalls the default mappings.
 
 ==============================================================================
 8. ARCHITECTURE                                        *truth-table-architecture*
@@ -243,7 +253,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - markdown.lua parses/renders tables and escapes pipes, backslashes, and
   backticks so displayed headings retain their literal reference names.
 - result.lua composes value, error results through bind and traverse.
-- init.lua locates tables and applies successful semantic pipelines to buffers.
+- preview.lua manages per-buffer extmarks, invalidation, and rewrite application.
+- init.lua registers commands/keymaps, locates tables and applies successful semantic pipelines to buffers.
 
 Display width is injectable through core.display_width; setup() uses
 vim.fn.strdisplaywidth. The default counts UTF-8 codepoints.
@@ -255,6 +266,6 @@ An empty table loses its display encoding when serialized to Markdown.
 
 Run make check for the complete local check (requires Busted, Neovim, and Selene).
 make test runs pure specs; make test-integration runs headless command checks and
-verifies automatic plugin loading during startup. make lint checks source modules.
+verifies De Morgan previews and automatic plugin loading during startup. make lint checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:
