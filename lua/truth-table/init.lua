@@ -148,7 +148,15 @@ function M.setup(opts)
         })
     end
 
-    vim.keymap.set("n", "<leader>ttn", ":TruthTable ", { desc = "New truth table" })
+    -- On a nonblank line the line is the argument, so the mapping on
+    -- `A and B` builds its table in place, the same as the visual mapping on
+    -- a selection. A blank line has nothing to read; prefill the command.
+    vim.keymap.set("n", "<leader>ttn", function()
+        if vim.api.nvim_get_current_line():match("^%s*$") then
+            return ":TruthTable "
+        end
+        return ":.TruthTable<CR>"
+    end, { expr = true, desc = "New truth table" })
     vim.keymap.set("x", "<leader>ttn", ":TruthTable<CR>", { desc = "New truth table from selection" })
     vim.keymap.set("n", "<leader>tte", ":TruthTableExpand ", { desc = "Expand truth table" })
     vim.keymap.set("n", "<leader>ttd", "<cmd>TruthTableDeMorgan<CR>", { desc = "Preview De Morgan rewrite" })
