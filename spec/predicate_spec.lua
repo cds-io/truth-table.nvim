@@ -156,3 +156,28 @@ describe("predicate source diagnostics", function()
         assert.are.equal('Unexpected token after expression: B at token 2', err)
     end)
 end)
+
+describe("escaped column references", function()
+    it("decodes doubled backticks while retaining commas and backslashes", function()
+        local input = '`path\\name, ``quoted```'
+        local ast = assert(predicate.parse_expression(input))
+        assert.are.same({ type = 'reference', name = 'path\\name, `quoted`' }, ast)
+        assert.are.equal(input, predicate.ast_to_heading(ast))
+        assert.are.same({ input, 'A' }, predicate.split_expressions(input .. ', A', ','))
+        assert.are.same({ type = 'reference', name = '`' }, predicate.parse_expression('````'))
+    end)
+
+    it("keeps span positions correct across escaped backticks", function()
+        local tokens, err, locations = predicate.tokenize('`a``b` and A')
+        assert.is_nil(err)
+        assert.are.same({ type = 'reference', value = 'a`b' }, tokens[1])
+        assert.are.same({ start_byte = 1, end_byte = 6 }, locations.spans[1])
+        assert.are.same({ start_byte = 8, end_byte = 10 }, locations.spans[2])
+        for _, input in ipairs({ '`a``', '```' }) do
+            local ast, parse_err = predicate.parse_expression(input)
+            assert.is_nil(ast)
+            assert.is_truthy(parse_err:find('Unclosed column reference at byte 1', 1, true))
+            assert.is_nil(predicate.split_expressions(input, ','))
+        end
+    end)
+end)

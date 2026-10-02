@@ -58,6 +58,31 @@ local function symbol_op_at(input, pos)
     end
 end
 
+-- Double a backtick inside a reference to represent a literal backtick.
+-- Shared by tokenization and list splitting so comma-bearing labels stay whole.
+local function read_reference(input, start)
+    local characters, pos = {}, start + 1
+    while pos <= #input do
+        local ch = input:sub(pos, pos)
+        if ch == "`" then
+            if input:sub(pos + 1, pos + 1) == "`" then
+                characters[#characters + 1] = "`"
+                pos = pos + 2
+            else
+                local name = table.concat(characters)
+                if name == "" then
+                    return nil, "Empty column reference at byte " .. start
+                end
+                return name, nil, pos + 1
+            end
+        else
+            characters[#characters + 1] = ch
+            pos = pos + 1
+        end
+    end
+    return nil, "Unclosed column reference at byte " .. start
+end
+
 function M.tokenize(input)
     local tokens, spans = {}, {}
     local pos = 1
@@ -77,16 +102,12 @@ function M.tokenize(input)
         local symbol_op, symbol_len = symbol_op_at(input, pos)
 
         if ch == "`" then
-            local close = input:find("`", pos + 1, true)
-            if not close then
-                return nil, "Unclosed column reference at byte " .. pos
-            end
-            local name = input:sub(pos + 1, close - 1)
-            if name == "" then
-                return nil, "Empty column reference at byte " .. pos
+            local name, err, next_pos = read_reference(input, pos)
+            if not name then
+                return nil, err
             end
             tokens[#tokens + 1] = { type = "reference", value = name }
-            pos = close + 1
+            pos = next_pos
         elseif symbol_op then
             tokens[#tokens + 1] = { type = "op", value = symbol_op }
             pos = pos + symbol_len
@@ -274,7 +295,7 @@ function M.ast_to_heading(node)
     if node.type == "paren" then
         return "(" .. M.ast_to_heading(node.expr) .. ")"
     elseif node.type == "reference" then
-        return "`" .. node.name .. "`"
+        return "`" .. node.name:gsub("`", "``") .. "`"
     elseif node.type == "var" then
         return node.name
     elseif node.type == "literal" then
@@ -346,22 +367,26 @@ end
 
 -- Delimiters inside explicit column references belong to the name.
 function M.split_expressions(input, delimiters)
-    local parts, start, quoted = {}, 1, false
-    for pos = 1, #input do
+    local parts, start, pos = {}, 1, 1
+    while pos <= #input do
         local ch = input:sub(pos, pos)
         if ch == "`" then
-            quoted = not quoted
-        elseif not quoted and delimiters:find(ch, 1, true) then
+            local name, err, next_pos = read_reference(input, pos)
+            if not name then
+                return nil, err
+            end
+            pos = next_pos
+        elseif delimiters:find(ch, 1, true) then
             local part = trim(input:sub(start, pos - 1))
             if part == "" then
                 return nil, "Empty expression at position " .. start
             end
             parts[#parts + 1] = part
-            start = pos + 1
+            pos = pos + 1
+            start = pos
+        else
+            pos = pos + 1
         end
-    end
-    if quoted then
-        return nil, "Unclosed column reference"
     end
     local last = trim(input:sub(start))
     if last == "" then

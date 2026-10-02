@@ -151,8 +151,12 @@ In :TruthTableExpand, backticks select an existing column by its exact heading:
 This reads stored values even after A or B is dropped. In contrast,
 "not (A and B)" recomputes the formula and requires both variable columns.
 References are resolved against the table before expansion; newly appended
-columns are available on the next command. Backticks cannot occur inside a
-reference. Commas inside references belong to the heading.
+columns are available on the next command. Double a backtick inside a reference
+to include a literal backtick in its name: >
+    :TruthTableExpand not `¬``A```
+<
+This reads the stored column named ¬`A`. Backslashes remain literal; commas
+inside references belong to the heading.
 
 Operators, from tightest binding to loosest:
 

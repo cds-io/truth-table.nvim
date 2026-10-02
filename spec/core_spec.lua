@@ -710,3 +710,18 @@ describe("public table shape validation", function()
         end
     end)
 end)
+
+describe("references to reference-generated headings", function()
+    it("chains stored-column operations after source columns are dropped", function()
+        local tbl = { headers = { 'A' }, rows = { { 0 }, { 1 } }, encoding = 'bits' }
+        local first = assert(core.expand_model(tbl, { 'not `A`' }))
+        local dropped = assert(core.drop_model_column(first, 1))
+        local second = assert(core.expand_model(dropped, { 'not `¬``A```' }))
+        assert.are.same({
+            headers = { '¬`A`', '¬`¬``A```' }, rows = { { 1, 0 }, { 0, 1 } }, encoding = 'bits',
+        }, second)
+        local reparsed = assert(core.parse_model(assert(core.format_model(second))))
+        local third = assert(core.expand_model(reparsed, { 'not `¬``¬````A```````' }))
+        assert.are.same({ { 1, 0, 1 }, { 0, 1, 0 } }, third.rows)
+    end)
+end)

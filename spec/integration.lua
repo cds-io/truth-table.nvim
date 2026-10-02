@@ -1,5 +1,15 @@
 vim.opt.rtp:append(vim.fn.getcwd())
+-- Load through the actual plugin entry point, with which-key unavailable.
+package.preload['which-key'] = function() error('which-key intentionally absent') end
+vim.cmd('runtime plugin/truth-table.lua')
+assert(vim.g.loaded_truth_table)
+vim.cmd('runtime plugin/truth-table.lua')
 require('truth-table').setup()
+require('truth-table').setup()
+for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn' }) do
+    assert(vim.api.nvim_get_commands({})[command], command)
+end
+assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
 vim.cmd('TruthTable A B')
 vim.api.nvim_win_set_cursor(0, {3, 3})
 vim.cmd('TruthTableToggle')
@@ -90,4 +100,10 @@ vim.cmd('TruthTableExpand A ∧ )')
 vim.notify = notify_before
 assert(diagnostic and diagnostic:find('at byte 7', 1, true))
 assert(vim.deep_equal(diagnostic_before, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
+vim.api.nvim_buf_set_lines(0, 0, -1, false, { '|A|', '|---|', '|0|', '|1|' })
+vim.api.nvim_win_set_cursor(0, {3, 1})
+vim.cmd('TruthTableExpand not `A`')
+vim.cmd('TruthTableExpand not `¬``A```')
+local chained = assert(core.parse_model(vim.api.nvim_buf_get_lines(0, 0, -1, false)))
+assert(chained.rows[1][3] == 0 and chained.rows[2][3] == 1)
 print('Neovim integration passed')

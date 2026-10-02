@@ -137,8 +137,14 @@ intact. Backticks explicitly reference an existing column by its exact heading:
 
 This works after A or B is dropped. `not (A and B)` instead evaluates the formula
 and requires both variable columns. References bind to positions before expansion;
-new columns can be referenced in the next command. Backticks cannot occur inside
-a reference, and references are unavailable during new-table construction.
+new columns can be referenced in the next command. Double a backtick inside a reference to include it in the column name:
+
+```vim
+:TruthTableExpand not `¬``A```
+```
+
+This reads the stored column named ¬`A`. Backslashes remain literal inside
+references. References are unavailable during new-table construction.
 Commas inside references belong to the label. Empty expressions are rejected.
 
 Discovery isolates adjacent tables at their heading/separator pairs and skips
