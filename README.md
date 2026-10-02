@@ -76,7 +76,7 @@ are column names and the literals `0` / `1`. Operators, tightest binding first:
 | `or` / `∨` | disjunction | `∨` |
 | `xor` / `⊕` | exclusive or | `⊕` |
 | `implies` / `->` / `=>` / `→` / `⇒` | implication | `→` |
-| `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `=` |
+| `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `⇔` |
 
 Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
@@ -145,6 +145,8 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
   Only `nil` means failure; zero and false remain successful values.
 - `preview.lua` manages per-buffer De Morgan previews, extmarks, invalidation,
   and applying a rewrite to a line or header.
+- `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
+  Unicode character; `predicate.lua` renders from it.
 - `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
   complete result. Editor line ranges stay outside the table model.
 
@@ -194,6 +196,8 @@ uses bits.
 
 - `toggle_cells` returns fresh rows instead of mutating its argument.
 - Repeated expansion skips an existing heading instead of appending a duplicate.
+- Equivalence renders as `⇔` in generated headings; `=` is still accepted as
+  an input spelling.
 - Parsing, editing, and `format_table` reject malformed/non-Boolean tables with
   `nil, error`. Headings must be single-line strings without surrounding whitespace.
 - Empty expressions between delimiters now return errors instead of being ignored.

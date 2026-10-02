@@ -187,7 +187,7 @@ Operators, from tightest binding to loosest:
     or  ∨              disjunction                  rendered  ∨
     xor  ⊕             exclusive or                 rendered  ⊕
     implies  ->  =>  →  ⇒   material implication    rendered  →
-    iff  =  <->  <=>  ⇔  ↔  equivalence             rendered  =
+    iff  =  <->  <=>  ⇔  ↔  equivalence             rendered  ⇔
 
 Binary operators associate left, including implication. Use parentheses for
 A -> (B -> C). Parentheses `( )` override precedence. Whitespace is insignificant. Each
@@ -254,6 +254,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
   backticks so displayed headings retain their literal reference names.
 - result.lua composes value, error results through bind and traverse.
 - preview.lua manages per-buffer extmarks, invalidation, and rewrite application.
+- symbols.lua is the one table of logic symbols (ASCII word plus Unicode
+  character); predicate.lua renders from it.
 - init.lua registers commands/keymaps, locates tables and applies successful semantic pipelines to buffers.
 
 Display width is injectable through core.display_width; setup() uses

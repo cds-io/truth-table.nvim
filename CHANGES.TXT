@@ -3,6 +3,10 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add truth-table.symbols, one table of ASCII word plus Unicode character per
+  logic symbol, shared by the predicate renderer and the abbreviations.
+- Render equivalence as ⇔ in generated headings instead of =; `=` remains an
+  accepted input spelling.
 - Add toggled De Morgan virtual-text previews and explicit apply commands for
   whole expression lines and table headers; invalidate previews after edits.
 - Separate predicate language, semantic table model, Markdown codec, and Result

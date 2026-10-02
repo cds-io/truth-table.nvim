@@ -237,7 +237,7 @@ describe("core.ast_to_heading", function()
         assert.are.equal("A ⊕ B", heading("A xor B"))
         assert.are.equal("¬A", heading("!A"))
         assert.are.equal("A → B", heading("A -> B"))
-        assert.are.equal("A = B", heading("A iff B"))
+        assert.are.equal("A ⇔ B", heading("A iff B"))
         assert.are.equal("(A ∨ B) ∧ C", heading("(A or B) and C"))
     end)
 end)
@@ -354,7 +354,7 @@ describe("core.build_truth_table", function()
 
     it("shows the two selector forms agree once the inner operator is iff", function()
         local headers, rows = core.build_truth_table("(m ∧ (a ⊕ b) ∨ (¬m ∧ (a=b))) | m ⊕ (a=b)")
-        assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a = b)))", "m ⊕ (a = b)" }, headers)
+        assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a ⇔ b)))", "m ⊕ (a ⇔ b)" }, headers)
         assert.are.same({
             { "0", "0", "0", "1", "1" }, { "0", "0", "1", "0", "0" },
             { "0", "1", "0", "0", "0" }, { "0", "1", "1", "1", "1" },
