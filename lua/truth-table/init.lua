@@ -100,10 +100,17 @@ local function cmd_toggle()
     end)
 end
 
--- Register commands, keymaps, and (if present) which-key labels. Also injects
--- vim.fn.strdisplaywidth so column widths are terminal-accurate. Idempotent.
-function M.setup()
+-- Register commands, keymaps, insert-mode abbreviations, and (if present)
+-- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
+-- terminal-accurate. Idempotent: the last call wins, including for the
+-- abbreviations. Automatic loading preserves an earlier explicit setup call.
+function M.setup(opts)
+    if opts ~= nil and type(opts) ~= "table" then
+        error("truth-table setup options must be a table", 0)
+    end
+    opts = opts or {}
     core.display_width = vim.fn.strdisplaywidth
+    require("truth-table.abbreviations").register(opts.abbreviations)
 
     vim.api.nvim_create_user_command("TruthTable", cmd_truth_table, {
         nargs = "*",
@@ -149,6 +156,7 @@ function M.setup()
     vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
     vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })
     vim.keymap.set("n", "<leader>ttc", "<cmd>TruthTableDropColumn<CR>", { desc = "Drop truth table column" })
+    M.configured = true
 end
 
 return M

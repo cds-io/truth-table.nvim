@@ -6,4 +6,7 @@ if vim.g.loaded_truth_table then
 end
 vim.g.loaded_truth_table = true
 
-require("truth-table").setup()
+local truth_table = require("truth-table")
+if not truth_table.configured then
+    truth_table.setup()
+end

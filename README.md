@@ -31,12 +31,14 @@ with testing.
 With lazy.nvim:
 
 ```lua
-{ dir = "~/dev/nvim-plugins/truth-table.nvim" }
+{ dir = "~/dev/nvim-plugins/truth-table.nvim", lazy = false }
 ```
 
 The plugin self-registers on load (`plugin/truth-table.lua` calls `setup()`),
 so there is nothing else to wire up. which-key is optional (a `<leader>tt`
-group label is registered if it is present).
+group label is registered if it is present). Load it eagerly: the insert-mode
+abbreviations below are global, and a plugin lazy-loaded on its commands would
+register them only after the first `:TruthTable`.
 
 ## Commands
 
@@ -76,7 +78,7 @@ are column names and the literals `0` / `1`. Operators, tightest binding first:
 | `or` / `∨` | disjunction | `∨` |
 | `xor` / `⊕` | exclusive or | `⊕` |
 | `implies` / `->` / `=>` / `→` / `⇒` | implication | `→` |
-| `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `=` |
+| `iff` / `=` / `<->` / `<=>` / `⇔` / `↔` | equivalence | `⇔` |
 
 Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
@@ -129,6 +131,56 @@ double negations are retained; there is no automatic simplification.
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
 
+## Abbreviations
+
+`setup()` also registers insert-mode abbreviations for the logic symbols, so
+headings can be typed as words. Each is a word plus a trigger, `@` by default;
+the trigger is what keeps `and` in prose from expanding. Type `and@` followed
+by a space to expand it to `∧`. `Ctrl-]` explicitly expands without inserting
+an extra character:
+
+| Typed | Inserted | | Typed | Inserted |
+|---|---|---|---|---|
+| `and@` | `∧` | | `forall@` | `∀` |
+| `or@` | `∨` | | `exists@` | `∃` |
+| `xor@` | `⊕` | | `true@` | `⊤` |
+| `not@` | `¬` | | `false@` | `⊥` |
+| `implies@` | `→` | | | |
+| `iff@` | `⇔` | | | |
+
+The word and the symbol come from one table, `require("truth-table.symbols")`,
+which the predicate language renders headings from as well: `AND = { ascii =
+"and", unicode = "∧" }` and so on. A heading you type and a heading the plugin
+generates therefore use the same characters. The abbreviations are global
+(every buffer, every filetype) and configurable through `setup()`, with the
+input side and the display side as separate settings:
+
+```lua
+require("truth-table").setup({
+  abbreviations = {
+    trigger = ";",          -- input: and; or; not; ...
+    symbols = {             -- display, keyed by word
+      implies = "⇒",        -- override one
+      forall = false,       -- drop one
+      top = "⊤",            -- add one
+    },
+  },
+})
+require("truth-table").setup({ abbreviations = false })  -- none at all
+```
+
+`symbols` merges over the defaults, which `require("truth-table.abbreviations").defaults`
+exposes as `{ trigger = "@", symbols = { ... } }`. Overriding a symbol here
+changes what you type, and only that; headings still render from
+`truth-table.symbols`. Explicit `setup()` calls replace the plugin-owned abbreviations. Automatic plugin
+loading preserves configuration already supplied in your init file. Disabling or
+reconfiguring restores displaced global abbreviations and leaves user replacements
+made after setup intact. Options are validated before abbreviations are changed.
+The trigger must be a single ASCII punctuation character other than backslash,
+`|`, `<`, or `>`. Symbol keys must be ASCII identifiers; values must be `false`
+or nonempty single-line strings without surrounding whitespace. With
+lazy.nvim, `opts = { abbreviations = ... }` is the usual place for this.
+
 ## Design
 
 The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
@@ -145,6 +197,11 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
   Only `nil` means failure; zero and false remain successful values.
 - `preview.lua` manages per-buffer De Morgan previews, extmarks, invalidation,
   and applying a rewrite to a line or header.
+- `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
+  Unicode character; `predicate.lua` renders from it.
+- `abbreviations.lua` derives the default insert-mode abbreviations from
+  `symbols.lua`, merges the `setup()` option over them, and swaps the
+  registered set on each call.
 - `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
   complete result. Editor line ranges stay outside the table model.
 
@@ -194,6 +251,8 @@ uses bits.
 
 - `toggle_cells` returns fresh rows instead of mutating its argument.
 - Repeated expansion skips an existing heading instead of appending a duplicate.
+- Equivalence renders as `⇔` in generated headings; `=` is still accepted as
+  an input spelling.
 - Parsing, editing, and `format_table` reject malformed/non-Boolean tables with
   `nil, error`. Headings must be single-line strings without surrounding whitespace.
 - Empty expressions between delimiters now return errors instead of being ignored.

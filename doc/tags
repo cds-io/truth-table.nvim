@@ -5,6 +5,7 @@
 :TruthTableDropRow	truth-table.txt	/*:TruthTableDropRow*
 :TruthTableExpand	truth-table.txt	/*:TruthTableExpand*
 :TruthTableToggle	truth-table.txt	/*:TruthTableToggle*
+truth-table-abbreviations	truth-table.txt	/*truth-table-abbreviations*
 truth-table-architecture	truth-table.txt	/*truth-table-architecture*
 truth-table-commands	truth-table.txt	/*truth-table-commands*
 truth-table-configuration	truth-table.txt	/*truth-table-configuration*
@@ -14,5 +15,6 @@ truth-table-introduction	truth-table.txt	/*truth-table-introduction*
 truth-table-keymaps	truth-table.txt	/*truth-table-keymaps*
 truth-table-predicates	truth-table.txt	/*truth-table-predicates*
 truth-table-requirements	truth-table.txt	/*truth-table-requirements*
+truth-table-symbols	truth-table.txt	/*truth-table-symbols*
 truth-table.setup()	truth-table.txt	/*truth-table.setup()*
 truth-table.txt	truth-table.txt	/*truth-table.txt*

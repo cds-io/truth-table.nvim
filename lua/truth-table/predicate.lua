@@ -13,19 +13,26 @@ end
 -- ---------------------------------------------------------------------------
 
 -- Ordered from tightest to loosest. Every binary operator associates left.
+local SYMBOLS = require("truth-table.symbols")
+
 -- Token aliases, rendering, binding power, and Boolean semantics live together.
+-- The keyword and rendered symbol come from truth-table.symbols so the
+-- abbreviations stay in step; the aliases are extra spellings the tokenizer
+-- accepts, and each one includes the rendered symbol so headings round-trip.
 local OPERATORS = {
-    { name = "not", symbol = "¬", aliases = { "¬", "!" }, unary = true,
+    { name = SYMBOLS.NOT.ascii, symbol = SYMBOLS.NOT.unicode, aliases = { SYMBOLS.NOT.unicode, "!" }, unary = true,
         apply = function(a) return a == 0 end },
-    { name = "and", symbol = "∧", aliases = { "∧" },
+    { name = SYMBOLS.AND.ascii, symbol = SYMBOLS.AND.unicode, aliases = { SYMBOLS.AND.unicode },
         apply = function(a, b) return a == 1 and b == 1 end },
-    { name = "or", symbol = "∨", aliases = { "∨" },
+    { name = SYMBOLS.OR.ascii, symbol = SYMBOLS.OR.unicode, aliases = { SYMBOLS.OR.unicode },
         apply = function(a, b) return a == 1 or b == 1 end },
-    { name = "xor", symbol = "⊕", aliases = { "⊕" },
+    { name = SYMBOLS.XOR.ascii, symbol = SYMBOLS.XOR.unicode, aliases = { SYMBOLS.XOR.unicode },
         apply = function(a, b) return a ~= b end },
-    { name = "implies", symbol = "→", aliases = { "→", "⇒", "->", "=>" },
+    { name = SYMBOLS.IMPLIES.ascii, symbol = SYMBOLS.IMPLIES.unicode,
+        aliases = { SYMBOLS.IMPLIES.unicode, "⇒", "->", "=>" },
         apply = function(a, b) return a == 0 or b == 1 end },
-    { name = "iff", symbol = "=", aliases = { "=", "⇔", "↔", "<->", "<=>" },
+    { name = SYMBOLS.IFF.ascii, symbol = SYMBOLS.IFF.unicode,
+        aliases = { SYMBOLS.IFF.unicode, "=", "↔", "<->", "<=>" },
         apply = function(a, b) return a == b end },
 }
 local KEYWORDS, BINARY, SYMBOL_OPS, BY_NAME = {}, {}, {}, {}

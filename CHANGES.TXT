@@ -3,6 +3,17 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Preserve explicit setup options during automatic startup; validate abbreviation
+  options before mutation and restore displaced user abbreviations on cleanup.
+- Register insert-mode abbreviations for the logic symbols (and@ -> ∧, or@,
+  xor@, not@, implies@, iff@, forall@, exists@, true@, false@) by default.
+  setup({ abbreviations = { trigger, symbols } }) sets the input suffix and
+  the per-word display symbols, or `false` disables the set; each setup()
+  call replaces what the previous one registered.
+- Add truth-table.symbols, one table of ASCII word plus Unicode character per
+  logic symbol, shared by the predicate renderer and the abbreviations.
+- Render equivalence as ⇔ in generated headings instead of =; `=` remains an
+  accepted input spelling.
 - Add toggled De Morgan virtual-text previews and explicit apply commands for
   whole expression lines and table headers; invalidate previews after edits.
 - Separate predicate language, semantic table model, Markdown codec, and Result
