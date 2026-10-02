@@ -217,7 +217,7 @@ Examples: >
 
 `setup()` registers these normal-mode keymaps by default:
 
-    <leader>ttn   prefill `:TruthTable `        (new table)
+    <leader>ttn   run `:TruthTable` on the current line (new table)
     <leader>ttn   (visual) run `:TruthTable` on the selected lines
     <leader>tte   prefill `:TruthTableExpand `  (expand)
     <leader>ttd   |:TruthTableDeMorgan|
@@ -226,8 +226,10 @@ Examples: >
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|
 
-The normal-mode ttn and tte mappings leave you in command-line mode to type
-the argument. Visual-mode ttn immediately executes on the selected lines.
+Normal-mode ttn reads the current line as the argument and replaces it with
+the table; on a blank line it prefills `:TruthTable ` instead and leaves you
+in command-line mode to type the argument, as tte always does. Visual-mode
+ttn immediately executes on the selected lines.
 
 ==============================================================================
 7. CONFIGURATION                                    *truth-table-configuration*

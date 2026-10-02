@@ -1,25 +1,12 @@
-feat: register logic-symbol insert abbreviations, configurable in setup()
+fix: build the table from the current line on normal-mode <leader>ttn
 
-Typing `A ∧ ¬B` into a heading meant hunting for the glyphs, or carrying a
-block of `iabbrev` lines in a personal config next to the plugin that
-renders those same glyphs. The abbreviations now ship with the plugin and
-read from the shared symbol table, so what you type and what the plugin
-generates cannot drift apart.
+Normal-mode <leader>ttn only prefilled `:TruthTable ` and waited for an
+argument, so an expression already sitting on the line had to be visually
+selected first; pressing Enter on the prefill produced E471.
 
-- Add lua/truth-table/abbreviations.lua: defaults derived from
-  truth-table.symbols (`and@` -> ∧, `iff@` -> ⇔, and so on), resolve() for
-  the option, and register().
-- setup(opts) takes `abbreviations`: nil keeps the defaults, false registers
-  none, a table sets `trigger` (the suffix appended to every word, default
-  `@`) and merges `symbols` over the defaults, with false dropping a word.
-  The option changes only what is typed; rendering stays with symbols.lua.
-- register() removes what the previous call installed before installing its
-  own. plugin/truth-table.lua runs a bare setup() before a user's options
-  arrive, so last call has to win; an abbreviation already removed by hand
-  is skipped.
-- Add spec/abbreviations.lua (headless, through the real entry point)
-  covering each option shape, the trigger, and the swap between calls;
-  assert the defaults in spec/startup.lua; wire the spec into make check.
-- Document the set, the option, and the need to load the plugin eagerly:
-  the abbreviations are global, so a spec lazy-loaded on its commands would
-  register them only after the first :TruthTable.
+- Make the normal-mode mapping an expression mapping: on a nonblank line
+  it runs `:.TruthTable`, replacing the line with its table as the visual
+  mapping does for a selection; on a blank line it prefills as before.
+- Cover both branches in spec/integration.lua: the callback's return on a
+  blank line, and a fed keystroke on `A and B` producing the table.
+- Document the behavior in README.md, doc/truth-table.txt, and CHANGES.TXT.

@@ -3,6 +3,9 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Normal-mode <leader>ttn builds the table from the current line when it is
+  nonblank, matching the visual mapping; a blank line still prefills
+  `:TruthTable `.
 - Preserve explicit setup options during automatic startup; validate abbreviation
   options before mutation and restore displaced user abbreviations on cleanup.
 - Register insert-mode abbreviations for the logic symbols (and@ -> ∧, or@,

@@ -122,7 +122,7 @@ double negations are retained; there is no automatic simplification.
 
 | Key | Action |
 |---|---|
-| `<leader>ttn` | prefill `:TruthTable ` |
+| `<leader>ttn` | run `:TruthTable` on the current line, or prefill `:TruthTable ` when it is blank |
 | `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
 | `<leader>tte` | prefill `:TruthTableExpand ` |
 | `<leader>ttd` | toggle De Morgan preview |
