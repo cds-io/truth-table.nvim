@@ -2,11 +2,18 @@ local predicate = require("truth-table.predicate")
 
 describe("standalone predicate pipeline", function()
     it("parses, discovers variables, binds, and evaluates without the core", function()
-        local ast = assert(predicate.parse_expression("not (B and A) or B"))
+        local ast = assert(predicate.parse_expression("not (B and A) xor B"))
         assert.are.same({ "B", "A" }, predicate.variables(ast))
         local bound = assert(predicate.bind_columns(ast, { A = 1, B = 2 }))
-        assert.are.equal(1, predicate.eval_ast(bound, { 1, 0 }))
-        assert.are.equal("¬(B ∧ A) ∨ B", predicate.ast_to_heading(ast))
+        -- A is row position 1, B is position 2. These inputs distinguish both
+        -- the binding order and a constant evaluator from the intended formula.
+        for _, case in ipairs({
+            { row = { 0, 0 }, expected = 1 }, { row = { 0, 1 }, expected = 0 },
+            { row = { 1, 0 }, expected = 1 }, { row = { 1, 1 }, expected = 1 },
+        }) do
+            assert.are.equal(case.expected, predicate.eval_ast(bound, case.row))
+        end
+        assert.are.equal("¬(B ∧ A) ⊕ B", predicate.ast_to_heading(ast))
     end)
 
     it("copies nested nodes and preserves left-to-right post-order", function()
@@ -42,9 +49,15 @@ describe("operator-driven rendering", function()
 
     it("preserves semantics for every pair of nested binary operators", function()
         local operators = { "and", "or", "xor", "implies", "iff" }
+        -- Independent truth tables, indexed by 00, 01, 10, 11. Neither parser
+        -- nor evaluator supplies the oracle for rendering correctness.
+        local truth = {
+            ["and"] = { 0, 0, 0, 1 }, ["or"] = { 0, 1, 1, 1 },
+            xor = { 0, 1, 1, 0 }, implies = { 1, 1, 0, 1 }, iff = { 1, 0, 0, 1 },
+        }
         for _, outer in ipairs(operators) do
             for _, inner in ipairs(operators) do
-                for _, ast in ipairs({
+                for side, ast in ipairs({
                     binary(outer, binary(inner, variable("A"), variable("B")), variable("C")),
                     binary(outer, variable("A"), binary(inner, variable("B"), variable("C"))),
                 }) do
@@ -54,7 +67,16 @@ describe("operator-driven rendering", function()
                         for b = 0, 1 do
                             for c = 0, 1 do
                                 local ctx = { A = a, B = b, C = c }
-                                assert.are.equal(predicate.eval_ast(ast, ctx), predicate.eval_ast(reparsed, ctx), heading)
+                                local expected
+                                if side == 1 then
+                                    local inner_value = truth[inner][2 * a + b + 1]
+                                    expected = truth[outer][2 * inner_value + c + 1]
+                                else
+                                    local inner_value = truth[inner][2 * b + c + 1]
+                                    expected = truth[outer][2 * a + inner_value + 1]
+                                end
+                                assert.are.equal(expected, predicate.eval_ast(ast, ctx), heading)
+                                assert.are.equal(expected, predicate.eval_ast(reparsed, ctx), heading)
                             end
                         end
                     end

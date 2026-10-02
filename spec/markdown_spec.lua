@@ -5,6 +5,9 @@ describe("Markdown codec", function()
     it("round-trips labels containing pipes and backslashes", function()
         local tbl = { headers = { "p | q", "path\\name", "slash\\|pipe" }, rows = { { 0, 1, 0 } }, encoding = "tf" }
         local lines = assert(markdown.format(tbl))
+        -- Fixed wire spelling prevents matching encoder/decoder bugs from
+        -- making the round-trip assertion pass together.
+        assert.are.equal("| p \\| q | path\\\\name | slash\\\\\\|pipe |", lines[1])
         assert.are.same(tbl, markdown.parse_table_lines(lines))
         local headers, rows = core.expand({ headers = tbl.headers, rows = { { "F", "T", "F" } } }, { "not `p | q`" })
         local reparsed = assert(core.parse_table_lines(assert(core.format_table(headers, rows))))
@@ -20,13 +23,10 @@ describe("Markdown codec", function()
     end)
 
     it("injects display width without changing global defaults", function()
-        local calls = 0
         local lines = assert(markdown.format({ headers = { "界" }, rows = { { 1 } } }, function(s)
-            calls = calls + 1
             return s == "界" and 4 or #s
         end))
-        assert.are.equal("|:----:|", lines[2])
-        assert.is_true(calls > 0)
+        assert.are.same({ "| 界 |", "|:----:|", "|  1   |" }, lines)
         assert.are.equal(1, markdown.display_width("界"))
     end)
 

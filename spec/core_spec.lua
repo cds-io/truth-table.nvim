@@ -277,10 +277,9 @@ describe("core.expand", function()
     end)
 
     it("does not mutate the input table", function()
-        core.expand(tbl, { "A and B" })
+        assert(core.expand(tbl, { "A and B" }))
         assert.are.same({ "A", "B" }, tbl.headers)
-        assert.are.equal(4, #tbl.rows)
-        assert.are.equal(2, #tbl.rows[1])
+        assert.are.same({ { "0", "0" }, { "0", "1" }, { "1", "0" }, { "1", "1" } }, tbl.rows)
     end)
 end)
 
@@ -356,9 +355,12 @@ describe("core.build_truth_table", function()
     it("shows the two selector forms agree once the inner operator is iff", function()
         local headers, rows = core.build_truth_table("(m ∧ (a ⊕ b) ∨ (¬m ∧ (a=b))) | m ⊕ (a=b)")
         assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b) ∨ (¬m ∧ (a = b)))", "m ⊕ (a = b)" }, headers)
-        for _, row in ipairs(rows) do
-            assert.are.equal(row[4], row[5])
-        end
+        assert.are.same({
+            { "0", "0", "0", "1", "1" }, { "0", "0", "1", "0", "0" },
+            { "0", "1", "0", "0", "0" }, { "0", "1", "1", "1", "1" },
+            { "1", "0", "0", "0", "0" }, { "1", "0", "1", "1", "1" },
+            { "1", "1", "0", "1", "1" }, { "1", "1", "1", "0", "0" },
+        }, rows)
     end)
 
     it("returns nil + message past 10 variables", function()
@@ -468,10 +470,14 @@ describe("validated table pipeline", function()
             calls = calls + 1
             return original(input)
         end
-        local ok, headers = pcall(core.build_truth_table, "A and B | not A")
+        local ok, headers, rows = pcall(core.build_truth_table, "A and B | not A")
         core.parse_expression = original
         assert.is_true(ok)
-        assert.is_table(headers)
+        assert.are.same({ "A", "B", "A ∧ B", "¬A" }, headers)
+        assert.are.same({
+            { "0", "0", "0", "1" }, { "0", "1", "0", "1" },
+            { "1", "0", "0", "0" }, { "1", "1", "1", "0" },
+        }, rows)
         assert.are.equal(2, calls)
     end)
 end)
@@ -550,6 +556,7 @@ describe("pure model edits", function()
     it("composes normalized edits while retaining F/T encoding", function()
         local original = { headers = { "A", "B" }, rows = { { "F", "T" }, { "T", "F" } } }
         local normalized = assert(model.normalize(original))
+        assert.are.same({ headers = { "A", "B" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "tf" }, normalized)
         assert.are.same(normalized, model.normalize(normalized))
         local dropped = assert(model.drop_column(normalized, 1))
         assert.are.same({ { "T" }, { "F" } }, model.render_rows(dropped))
@@ -564,7 +571,12 @@ describe("pure model edits", function()
 
     it("returns fresh nested arrays without sharing input rows", function()
         local original = { headers = { "A", "B" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "tf" }
-        for _, edited in ipairs({ model.drop_row(original, 1), model.drop_column(original, 1), model.toggle(original) }) do
+        for _, transform in ipairs({
+            function(tbl) return model.drop_row(tbl, 1) end,
+            function(tbl) return model.drop_column(tbl, 1) end,
+            model.toggle,
+        }) do
+            local edited = assert(transform(original))
             edited.headers[1] = "changed"
             edited.rows[1][1] = 9
         end
@@ -600,17 +612,30 @@ describe("semantic core pipeline", function()
         assert.are.equal("tf", expanded.encoding)
         assert.are.same({ 1, 1, 0 }, expanded.rows[4])
         local edited = assert(core.drop_model_row(expanded, 1))
+        assert.are.same({
+            headers = { "B", "A ∧ B", "¬`A ∧ B`" },
+            rows = { { 1, 0, 1 }, { 0, 0, 1 }, { 1, 1, 0 } }, encoding = "tf",
+        }, edited)
         assert.are.same(edited, core.parse_model(assert(core.format_model(edited))))
         assert.are.equal("bits", tbl.encoding)
         assert.are.same({ 1, 1, 1 }, tbl.rows[4])
     end)
 
-    it("keeps semantic and legacy construction behavior aligned", function()
-        for _, input in ipairs({ "2", "p q", "B | A | A implies B" }) do
-            local semantic = assert(core.build_model(input))
-            local headers, rows = core.build_truth_table(input)
-            assert.are.same(headers, semantic.headers)
-            assert.are.same(core.format_table(headers, rows), core.format_model(semantic))
+    it("checks semantic and legacy construction against fixed outcomes", function()
+        for _, case in ipairs({
+            { input = "2", headers = { "A", "B" }, rows = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+                legacy_rows = { { "0", "0" }, { "0", "1" }, { "1", "0" }, { "1", "1" } } },
+            { input = "p q", headers = { "p", "q" }, rows = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+                legacy_rows = { { "0", "0" }, { "0", "1" }, { "1", "0" }, { "1", "1" } } },
+            { input = "B | A | A implies B", headers = { "B", "A", "A → B" },
+                rows = { { 0, 0, 1 }, { 0, 1, 0 }, { 1, 0, 1 }, { 1, 1, 1 } },
+                legacy_rows = { { "0", "0", "1" }, { "0", "1", "0" }, { "1", "0", "1" }, { "1", "1", "1" } } },
+        }) do
+            local semantic = assert(core.build_model(case.input))
+            assert.are.same({ headers = case.headers, rows = case.rows, encoding = "bits" }, semantic)
+            local headers, rows = core.build_truth_table(case.input)
+            assert.are.same(case.headers, headers)
+            assert.are.same(case.legacy_rows, rows)
         end
         assert.is_nil(core.build_model(""))
         local tbl = assert(core.build_model("A"))
