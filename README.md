@@ -46,6 +46,8 @@ group label is registered if it is present).
 | `:TruthTable {exprs}` | Insert a new table from expressions separated by `\|` or `,`: the variables they mention, plus a computed column per expression |
 | `:[range]TruthTable` | Same, reading the argument from the selected lines (a line break is one more `\|`) and replacing them with the table |
 | `:TruthTableExpand {preds}` | Append a computed column per comma-separated predicate |
+| `:TruthTableDeMorgan` | Toggle virtual-text preview for the whole expression line or current column header |
+| `:TruthTableDeMorganApply` | Apply the pending rewrite |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -86,6 +88,28 @@ position in the reported expression. Positions count UTF-8 bytes, matching Lua
 and returns optional span metadata as its third result; `parse_predicate` accepts
 that metadata, or falls back to token indices when omitted.
 
+## De Morgan refactoring
+
+Put the cursor on an expression-only line, or anywhere in a truth-table column,
+and run `:TruthTableDeMorgan`. Virtual text shows the rewritten expression; run
+it again to dismiss the preview. `:TruthTableDeMorganApply` replaces the line or
+selected header. Indentation is preserved. Table separator and data lines remain
+unchanged, and a heading collision is rejected.
+
+```text
+¬(A ∧ B)  ⇒  ¬A ∨ ¬B
+¬(A ∨ B)  ⇒  ¬A ∧ ¬B
+¬A ∨ ¬B   ⇒  ¬(A ∧ B)
+¬A ∧ ¬B   ⇒  ¬(A ∨ B)
+```
+
+Only the root expression is transformed; surrounding parentheses are transparent.
+Nested-only matches report that no whole-expression rewrite applies. The preview
+is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
+renames its label: update explicit references to the old heading yourself. Stored
+column values remain unchanged. Output uses the predicate language's logic symbols;
+double-negation simplification is a separate operation.
+
 ## Keymaps
 
 `setup()` registers these by default:
@@ -95,6 +119,8 @@ that metadata, or falls back to token indices when omitted.
 | `<leader>ttn` | prefill `:TruthTable ` |
 | `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
 | `<leader>tte` | prefill `:TruthTableExpand ` |
+| `<leader>ttd` | toggle De Morgan preview |
+| `<leader>tta` | apply De Morgan preview |
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |

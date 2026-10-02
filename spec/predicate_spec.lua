@@ -181,3 +181,38 @@ describe("escaped column references", function()
         end
     end)
 end)
+
+describe("whole-expression De Morgan rewrites", function()
+    it("rewrites both directions and agrees with independent Boolean outcomes", function()
+        for _, case in ipairs({
+            { source = 'not (A and B)', heading = '¬A ∨ ¬B', values = { 1, 1, 1, 0 } },
+            { source = 'not (A or B)', heading = '¬A ∧ ¬B', values = { 1, 0, 0, 0 } },
+            { source = 'not A or not B', heading = '¬(A ∧ B)', values = { 1, 1, 1, 0 } },
+            { source = '(not A) and (not B)', heading = '¬(A ∨ B)', values = { 1, 0, 0, 0 } },
+        }) do
+            local ast = assert(predicate.parse_expression(case.source))
+            local before = predicate.ast_to_heading(ast)
+            local rewritten = assert(predicate.de_morgan(ast))
+            assert.are.equal(case.heading, predicate.ast_to_heading(rewritten))
+            for a = 0, 1 do
+                for b = 0, 1 do
+                    local expected = case.values[2 * a + b + 1]
+                    assert.are.equal(expected, predicate.eval_ast(ast, { A = a, B = b }))
+                    assert.are.equal(expected, predicate.eval_ast(rewritten, { A = a, B = b }))
+                end
+            end
+            rewritten.type = 'literal'
+            assert.are.equal(before, predicate.ast_to_heading(ast))
+        end
+    end)
+
+    it("treats root parentheses transparently and preserves necessary nested grouping", function()
+        assert.are.equal('¬A ∨ ¬B', predicate.de_morgan_expression('(not (A and B))'))
+        assert.are.equal('¬(A ∨ B) ∨ ¬C', predicate.de_morgan_expression('not ((A or B) and C)'))
+        assert.are.equal('¬`p, q` ∧ ¬B', predicate.de_morgan_expression('not (`p, q` or B)'))
+        local ast, err = predicate.de_morgan_expression('A or not (B and C)')
+        assert.is_nil(ast)
+        assert.are.equal('No De Morgan rewrite applies to the whole expression', err)
+        assert.is_nil(predicate.de_morgan_expression('A and'))
+    end)
+end)
