@@ -1,4 +1,5 @@
--- Cursor-targeted rewrites of a predicate AST: factor, distribute, commute.
+-- Cursor-targeted rewrites of a predicate AST: factor, distribute, commute,
+-- exclusive-or recognition, and De Morgan.
 -- Pure: trees in, trees out. Inputs come from predicate.parse_located, whose
 -- node spans say where the cursor is; outputs are fresh trees without spans.
 local predicate = require("truth-table.predicate")
@@ -303,6 +304,108 @@ function M.distribute(ast, byte)
         return finish(substitute(ast, slot, fold(dual, products)))
     end
     return finish(substitute(ast, path[chain.top], fold(dual, products)))
+end
+
+-- When one of the two operands is the negation of the other (parentheses
+-- ignored): the un-negated one, and whether `a` was the negated one.
+local function complement(a, b)
+    local x, y = unparen(a), unparen(b)
+    if y.type == "not" and shape(y.operand) == shape(x) then
+        return a, false
+    elseif x.type == "not" and shape(x.operand) == shape(y) then
+        return b, true
+    end
+end
+
+-- Two two-operand terms whose operands are complements pair by pair: the
+-- un-negated operands in the first term's order, and how many of the first
+-- term's operands were the negated ones.
+local function complementary(first, second)
+    for _, order in ipairs({ { 1, 2 }, { 2, 1 } }) do
+        local a, a_negated = complement(first[1], second[order[1]])
+        local b, b_negated = complement(first[2], second[order[2]])
+        if a and b then
+            return a, b, (a_negated and 1 or 0) + (b_negated and 1 or 0)
+        end
+    end
+end
+
+-- Recognise two terms of an outer and/or chain, without changing either tree.
+local function recognise_pair(first, second, op)
+    local inner = DUAL[op]
+    if not inner or unparen(first).type ~= inner or unparen(second).type ~= inner then
+        return nil
+    end
+    local left, right = operands(first, inner), operands(second, inner)
+    if #left ~= 2 or #right ~= 2 then
+        return nil
+    end
+    local a, b, negated = complementary(left, right)
+    if not a then
+        return nil
+    end
+    -- p ∧ q ∨ ¬p ∧ ¬q is p ⇔ q; each negation among the first term's
+    -- operands flips it. The dual starts from ⊕.
+    local odd = negated % 2 == 1
+    local kind = (odd == (op == "or")) and "xor" or "iff"
+    return { type = kind, left = a, right = b }
+end
+
+-- Recognise an exclusive or (or an equivalence) spelled out as two terms:
+-- ¬A ∧ B ∨ A ∧ ¬B becomes A ⊕ B, and A ∧ B ∨ ¬A ∧ ¬B becomes A ⇔ B. The
+-- product-of-sums spellings work the same way with the result flipped:
+-- (A ∨ B) ∧ (¬A ∨ ¬B) is A ⊕ B. The cursor can be anywhere in either term.
+function M.xor(ast, byte)
+    local path, index = locate(ast, byte)
+    if not path then
+        return nil, index
+    end
+    -- From the target outward, the first two-operand term of a dual chain
+    -- that has a complementary partner in that chain.
+    for at = index, 2, -1 do
+        local chain = chain_at(path, at)
+        local inner = chain and DUAL[chain.op]
+        if inner and unparen(path[at]).type == inner then
+            for partner in ipairs(chain.operands) do
+                if partner ~= chain.index then
+                    local low, high = math.min(chain.index, partner), math.max(chain.index, partner)
+                    local recognised = recognise_pair(chain.operands[low], chain.operands[high], chain.op)
+                    if recognised then
+                        local items = chain.operands
+                        items[low] = recognised
+                        table.remove(items, high)
+                        return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+                    end
+                end
+            end
+        end
+    end
+    return nil, "No pair of terms under the cursor forms ⊕ or ⇔"
+end
+
+-- De Morgan at the nearest node, from the cursor outward, where it applies:
+-- ¬(A ∧ B) becomes ¬A ∨ ¬B, and ¬A ∨ ¬B becomes ¬(A ∧ B) (dually for ∨).
+-- Without a cursor inside the expression, only the whole expression is tried.
+function M.de_morgan(ast, byte)
+    local path = byte and path_to(ast, byte) or {}
+    for index = #path, 1, -1 do
+        local rewritten = predicate.de_morgan(path[index])
+        if rewritten then
+            -- A negation binds tightest, so parentheses around the group it
+            -- replaces are dropped with it.
+            local replacement_index = index
+            while rewritten.type == "not" and path[replacement_index - 1]
+                and path[replacement_index - 1].type == "paren" do
+                replacement_index = replacement_index - 1
+            end
+            return finish(substitute(ast, path[replacement_index], rewritten))
+        end
+    end
+    local rewritten = predicate.de_morgan(ast)
+    if not rewritten then
+        return nil, "No De Morgan rewrite applies under the cursor or to the whole expression"
+    end
+    return rewritten
 end
 
 return M

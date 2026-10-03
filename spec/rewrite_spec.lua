@@ -211,6 +211,93 @@ describe("rewrite.distribute", function()
     end)
 end)
 
+describe("rewrite.xor", function()
+    it("recognises an exclusive or written as a sum of two products", function()
+        assert.are.equal("T ⊕ E", run("xor", "¬T ∧ E ∨ T ∧ ¬E", "¬T"))
+        assert.are.equal("R ∧ (T ⊕ E)", run("xor", "R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))", "¬T"))
+    end)
+
+    it("gives the same result from either term, and from a term's operator", function()
+        local source = "R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))"
+        assert.are.equal("R ∧ (T ⊕ E)", run("xor", source, "¬E"))
+        assert.are.equal("R ∧ (T ⊕ E)", run("xor", source, "∧", 3))
+    end)
+
+    it("recognises an equivalence when both operands flip together", function()
+        assert.are.equal("A ⇔ B", run("xor", "A ∧ B ∨ ¬A ∧ ¬B", "A"))
+        assert.are.equal("A ⇔ B", run("xor", "¬A ∧ ¬B ∨ A ∧ B", "B", 2))
+    end)
+
+    it("matches the partner's operands in either order", function()
+        assert.are.equal("A ⊕ B", run("xor", "¬A ∧ B ∨ ¬B ∧ A", "¬A"))
+    end)
+
+    it("leaves the other terms in place and parenthesises the result beside them", function()
+        assert.are.equal("(A ⊕ B) ∨ A ∧ C", run("xor", "¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C", "¬A"))
+        assert.are.equal("X ∨ (A ⊕ B) ∨ Y", run("xor", "X ∨ ¬A ∧ B ∨ Y ∨ A ∧ ¬B", "¬B"))
+    end)
+
+    it("recognises the product-of-sums forms", function()
+        assert.are.equal("A ⊕ B", run("xor", "(A ∨ B) ∧ (¬A ∨ ¬B)", "A"))
+        assert.are.equal("A ⇔ B", run("xor", "(¬A ∨ B) ∧ (A ∨ ¬B)", "B"))
+    end)
+
+    it("treats a compound operand as one operand, parentheses ignored", function()
+        assert.are.equal("(P → Q) ⊕ R", run("xor", "¬(P → Q) ∧ R ∨ (P → Q) ∧ ¬R", "R"))
+    end)
+
+    it("refuses when no pair of two-operand terms are complements of each other", function()
+        for _, case in ipairs({
+            { "A ∧ B ∨ A ∧ C", "A" },
+            { "¬A ∧ B ∨ A ∧ B", "B" },
+            { "¬A ∧ B ∧ R ∨ A ∧ ¬B ∧ R", "R" },
+            { "A ⊕ B", "A" },
+            { "¬A ∧ B", "B" },
+        }) do
+            local out, err = run("xor", case[1], case[2])
+            assert.is_nil(out, case[1])
+            assert.are.equal("No pair of terms under the cursor forms ⊕ or ⇔", err)
+        end
+    end)
+
+    it("needs an operand under the cursor", function()
+        local out, err = run("xor", "¬T ∧ E ∨ T ∧ ¬E", "∨")
+        assert.is_nil(out)
+        assert.are.equal("Put the cursor on an operand", err)
+    end)
+end)
+
+describe("rewrite.de_morgan", function()
+    it("contracts the nearest enclosing pair of negations", function()
+        assert.are.equal("R ∧ (T ∨ E) ∧ ¬(T ∧ E)", run("de_morgan", "R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)", "¬T"))
+        assert.are.equal("¬(A ∧ B) ∨ C", run("de_morgan", "¬A ∨ ¬B ∨ C", "¬A"))
+    end)
+
+    it("expands the nearest enclosing negated group", function()
+        assert.are.equal("A ∨ ¬B ∨ ¬C", run("de_morgan", "A ∨ ¬(B ∧ C)", "¬"))
+        assert.are.equal("A ∧ (¬B ∨ ¬C)", run("de_morgan", "A ∧ ¬(B ∧ C)", "B"))
+    end)
+
+    it("prefers the innermost match, so the cursor chooses between nested ones", function()
+        assert.are.equal("¬¬(A ∧ B)", run("de_morgan", "¬(¬A ∨ ¬B)", "A"))
+        assert.are.equal("¬¬A ∧ ¬¬B", run("de_morgan", "¬(¬A ∨ ¬B)", "¬"))
+    end)
+
+    it("rewrites the whole expression when there is no cursor or it is outside", function()
+        local source = "not (A and B)"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, nil))))
+        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, 0))))
+        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, #source + 5))))
+    end)
+
+    it("refuses when nothing from the cursor up to the root matches", function()
+        local out, err = run("de_morgan", "A ∨ ¬(B ∧ C)", "A")
+        assert.is_nil(out)
+        assert.are.equal("No De Morgan rewrite applies under the cursor or to the whole expression", err)
+    end)
+end)
+
 -- Every rewrite, at every cursor byte of every expression here, either refuses
 -- with a message or returns a tree that means the same, and whose rendered
 -- text (what lands in the buffer) parses back to that same function. The
@@ -230,12 +317,17 @@ describe("rewrite soundness", function()
         "A ∧ A ∧ B ∨ A ∧ C ∨ 1 ∧ A",
         "not (A and B) or not (A and C)",
         ":h1 ∧ A ∨ :h1 ∧ :h2 ∨ 0 ∧ A",
+        "R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))",
+        "(A ∨ B) ∧ (¬A ∨ ¬B) ∧ ¬(C ∧ ¬A)",
+        "A ∧ B ∨ ¬A ∧ ¬B ∨ ¬(¬A ∨ ¬C)",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,
         distribute = function(ast, byte) return rewrite.distribute(ast, byte) end,
         commute = function(ast, byte) return rewrite.commute(ast, byte, false) end,
         commute_back = function(ast, byte) return rewrite.commute(ast, byte, true) end,
+        xor = function(ast, byte) return rewrite.xor(ast, byte) end,
+        de_morgan = function(ast, byte) return rewrite.de_morgan(ast, byte) end,
     }
 
     -- Every input a tree reads: variable names and :hN indices. eval_ast looks
