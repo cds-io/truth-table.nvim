@@ -8,6 +8,7 @@ local M = {}
 -- list. They are the associative, commutative ones, which is what makes the
 -- flat reading sound; implication is neither, so it is always one operand.
 local CHAIN = { ["and"] = true, ["or"] = true, xor = true, iff = true }
+local DUAL = { ["and"] = "or", ["or"] = "and" }
 
 local NO_TARGET = "Put the cursor on an operand"
 
@@ -49,6 +50,21 @@ local function fold(op, items)
         chain = { type = op, left = chain, right = flat[i] }
     end
     return chain
+end
+
+-- Tree identity with every parenthesis ignored; operand order counts.
+local function shape(node)
+    node = unparen(node)
+    if node.type == "var" then
+        return node.name
+    elseif node.type == "literal" then
+        return tostring(node.value)
+    elseif node.type == "reference" then
+        return ":h" .. node.index
+    elseif node.type == "not" then
+        return "not(" .. shape(node.operand) .. ")"
+    end
+    return node.type .. "(" .. shape(node.left) .. "," .. shape(node.right) .. ")"
 end
 
 local function contains(node, byte)
@@ -192,6 +208,55 @@ function M.commute(ast, byte, backward)
     end
     items[from], items[to] = items[to], items[from]
     return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+end
+
+-- Pull the target out of every term of the enclosing dual chain that has it:
+-- A ∧ T ∨ G ∧ T becomes T ∧ (A ∨ G), and dually for ∨ over ∧.
+function M.factor(ast, byte)
+    local path, index = locate(ast, byte)
+    if not path then
+        return nil, index
+    end
+    local target = path[index]
+    local label = predicate.ast_to_heading(target)
+    local inner = chain_at(path, index)
+    local outer = DUAL[inner.op] and chain_at(path, inner.slot)
+    if not outer or outer.op ~= DUAL[inner.op] then
+        return nil, "Nothing to factor " .. label .. " out of"
+    end
+
+    local wanted = shape(target)
+    local terms, remainders, parenthesised, position = {}, {}, false, nil
+    for _, term in ipairs(outer.operands) do
+        local parts = unparen(term).type == inner.op and operands(term, inner.op) or {}
+        local rest, found = {}, false
+        for _, part in ipairs(parts) do
+            -- Only the first occurrence leaves: A ∧ A ∧ B keeps one A.
+            if not found and shape(part) == wanted then
+                found = true
+            else
+                rest[#rest + 1] = part
+            end
+        end
+        if found then
+            remainders[#remainders + 1] = fold(inner.op, rest)
+            parenthesised = parenthesised or term.type == "paren"
+            position = position or #terms + 1
+        else
+            terms[#terms + 1] = term
+        end
+    end
+    if #remainders < 2 then
+        return nil, "Fewer than two terms share " .. label
+    end
+
+    local factored = { type = inner.op, left = target, right = paren(fold(outer.op, remainders)) }
+    -- Beside other terms, the new one keeps the parentheses its sources had.
+    if #terms > 0 and parenthesised then
+        factored = paren(factored)
+    end
+    table.insert(terms, position, factored)
+    return finish(substitute(ast, path[outer.top], fold(outer.op, terms)))
 end
 
 return M

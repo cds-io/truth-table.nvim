@@ -3,6 +3,8 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add rewrite.factor: pull a shared operand out of the terms of a sum or product
+  (A ∧ ¬C ∨ G ∧ ¬C to ¬C ∧ (A ∨ G), and dually for ∨ inside ∧).
 - Add truth-table.rewrite (pure Lua): find the operand under a cursor byte, reading
   a run of ∧, ∨, ⊕ or ⇔ as one flat chain, and commute it with its neighbour.
 - Add predicate.parse_located: parse_expression's tree with a byte span on every

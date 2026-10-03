@@ -106,3 +106,62 @@ describe("rewrite.commute", function()
         assert.are.equal("1 ∧ :h2", run("commute", ":h2 and 1", ":h2"))
     end)
 end)
+
+describe("rewrite.factor", function()
+    it("pulls a shared operand out of the terms that have it", function()
+        assert.are.equal("S ∨ (¬C ∧ (A ∨ G))", run("factor", "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)", "¬C"))
+        assert.are.equal("S ∨ (¬C ∧ (A ∨ G))", run("factor", "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)", "¬C", 2))
+        assert.are.equal("S ∨ ¬C ∧ (A ∨ G)", run("factor", "S ∨ A ∧ ¬C ∨ G ∧ ¬C", "¬C"))
+    end)
+
+    it("factors ∨ out of ∧ as well", function()
+        assert.are.equal("A ∨ (B ∧ C)", run("factor", "(A ∨ B) ∧ (A ∨ C)", "A"))
+    end)
+
+    it("keeps multi-operand remainders together", function()
+        assert.are.equal("¬C ∧ (A ∧ B ∨ G)", run("factor", "A ∧ B ∧ ¬C ∨ G ∧ ¬C", "¬C"))
+    end)
+
+    it("puts the new term where the first participating term was", function()
+        assert.are.equal("X ∨ B ∧ (A ∨ C) ∨ Y", run("factor", "X ∨ A ∧ B ∨ Y ∨ C ∧ B", "B"))
+    end)
+
+    it("removes only the first occurrence within a term", function()
+        assert.are.equal("A ∧ (A ∧ B ∨ C)", run("factor", "A ∧ A ∧ B ∨ A ∧ C", "A"))
+    end)
+
+    it("matches the factor with parentheses ignored", function()
+        assert.are.equal("¬C ∧ (A ∨ G)", run("factor", "A ∧ ¬C ∨ G ∧ ¬(C)", "¬C"))
+    end)
+
+    it("leaves a term that is exactly the factor where it is", function()
+        local out, err = run("factor", "A ∨ A ∧ B", "A", 2)
+        assert.is_nil(out)
+        assert.are.equal("Fewer than two terms share A", err)
+    end)
+
+    it("refuses when only one term has the factor", function()
+        local out, err = run("factor", "S ∨ A ∧ ¬C ∨ G ∧ D", "¬C")
+        assert.is_nil(out)
+        assert.are.equal("Fewer than two terms share ¬C", err)
+    end)
+
+    it("refuses without an inner and outer chain of dual operators", function()
+        for _, case in ipairs({
+            { "S ∨ A ∧ ¬C", "S", "Nothing to factor S out of" },
+            { "A ∧ B", "A", "Nothing to factor A out of" },
+            { "A ∧ B ⊕ A ∧ C", "A", "Nothing to factor A out of" },
+            { "(A ⊕ B) ∨ (A ⊕ C)", "A", "Nothing to factor A out of" },
+        }) do
+            local out, err = run("factor", case[1], case[2])
+            assert.is_nil(out, case[1])
+            assert.are.equal(case[3], err)
+        end
+    end)
+
+    it("is order-sensitive about the factor's own shape", function()
+        local out, err = run("factor", "(A ∨ B) ∧ C ∨ (B ∨ A) ∧ D", "(")
+        assert.is_nil(out)
+        assert.are.equal("Fewer than two terms share (A ∨ B)", err)
+    end)
+end)
