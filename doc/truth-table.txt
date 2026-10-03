@@ -125,10 +125,15 @@ lists or blockquotes are not supported.
     Toggle a virtual-text preview for the expression line under the cursor
     (the side under the cursor, when the line has ≡ separators) or the
     current table column's header. A cursor on a data or separator row selects
-    the same column in the header. Only a root De Morgan rewrite applies:
+    the same column in the header. The rewrite is one of:
     not (A and B) <-> not A or not B
     not (A or B)  <-> not A and not B
-    Surrounding parentheses are transparent; nested-only matches are rejected.
+    It applies at the nearest match around the cursor: the candidates run from
+    the smallest group containing the cursor out to the whole expression, so
+    in `R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)` a cursor on ¬T gives
+    `R ∧ (T ∨ E) ∧ ¬(T ∧ E)`. From a data or separator row the whole heading
+    is the one candidate. Surrounding parentheses are transparent. Each step
+    is binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`.
     The virtual text appears at the end of the expression line or header row,
     identifying the selected table column. One preview is kept per buffer. Run
     again to dismiss, even after moving the cursor. Apply acts on the saved
@@ -155,6 +160,20 @@ lists or blockquotes are not supported.
         ¬C ∧ (A ∨ G)   ⇒   ¬C ∧ A ∨ ¬C ∧ G
 <
     Works for ∧ over ∨ and for ∨ over ∧.
+
+                                                              *:TruthTableXor*
+:TruthTableXor
+    Toggle a preview that recognises an exclusive or, or an equivalence,
+    spelled out as two terms. With the cursor anywhere in either term: >
+
+        R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))   ⇒   R ∧ (T ⊕ E)
+        A ∧ B ∨ ¬A ∧ ¬B             ⇒   A ⇔ B
+        (A ∨ B) ∧ (¬A ∨ ¬B)         ⇒   A ⊕ B
+<
+    Both terms have exactly two operands, each the negation of its
+    counterpart, in either order. Use |:TruthTableFactor| first when the terms
+    share a third operand. Beside other terms the result is parenthesised,
+    since ⊕ and ⇔ bind looser than ∨.
 
                                                           *:TruthTableCommute*
 :TruthTableCommute[!]
@@ -190,7 +209,7 @@ lists or blockquotes are not supported.
 Rewrites and derivations ~
 
 A run of one operator out of ∧, ∨, ⊕, ⇔ is read as a flat list, a chain,
-whatever its parentheses. The factor, distribute and commute commands act on
+whatever its parentheses. The factor, distribute, commute and xor commands act on
 one member of a chain: the smallest one containing the cursor. On `¬C` that is
 `¬C`; on the ∧ or a parenthesis of `(A ∧ ¬C)` it is the whole group. The
 operators of the outermost chain select nothing. In a table, put the cursor on
@@ -305,6 +324,7 @@ Examples: >
     <leader>ttd   |:TruthTableDeMorgan|
     <leader>ttf   |:TruthTableFactor|
     <leader>ttx   |:TruthTableDistribute|
+    <leader>tto   |:TruthTableXor|
     <leader>tts   |:TruthTableCommute|
     <leader>ttS   |:TruthTableCommute| with !
     <leader>tta   |:TruthTableApply|
@@ -420,7 +440,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
   backticks so displayed headings retain their literal reference names.
 - result.lua composes value, error results through bind and traverse.
 - rewrite.lua finds the chain operand under a cursor byte and factors,
-  distributes, or commutes it, returning a fresh tree.
+  distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, and applies
+  De Morgan at the nearest match, returning a fresh tree.
 - derivation.lua splits a line into sides at ≡, replaces one side, and builds
   an aligned step line.
 - preview.lua resolves the expression under the cursor (a side of a line, or
