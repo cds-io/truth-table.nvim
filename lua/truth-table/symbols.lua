@@ -4,7 +4,7 @@
 -- Everything that spells a symbol reads it from here: predicate.lua renders
 -- headings with `unicode`, and abbreviations.lua turns `ascii .. trigger` into
 -- `unicode`. Changing a rendering means changing one line, and typed headings
--- always match generated ones. The last four are not predicate operators;
+-- always match generated ones. The last five are not predicate operators;
 -- they are here for the abbreviations and for anything that later wants them.
 
 return {
@@ -18,4 +18,5 @@ return {
     EXISTS = { ascii = "exists", unicode = "∃" },
     TOP = { ascii = "true", unicode = "⊤" },
     BOTTOM = { ascii = "false", unicode = "⊥" },
+    EQUIV = { ascii = "equiv", unicode = "≡" },
 }

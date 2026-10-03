@@ -167,11 +167,37 @@ function M.setup(opts)
     })
 
     local preview = require("truth-table.preview")
-    vim.api.nvim_create_user_command("TruthTableDeMorgan", preview.toggle, {
+    local function toggles(name)
+        return function()
+            preview.toggle(name)
+        end
+    end
+    vim.api.nvim_create_user_command("TruthTableDeMorgan", toggles("de_morgan"), {
         desc = "Toggle a whole-expression De Morgan preview",
     })
+    vim.api.nvim_create_user_command("TruthTableFactor", toggles("factor"), {
+        desc = "Toggle a preview factoring the operand under the cursor out of its terms",
+    })
+    vim.api.nvim_create_user_command("TruthTableDistribute", toggles("distribute"), {
+        desc = "Toggle a preview distributing the operand under the cursor into the group beside it",
+    })
+    vim.api.nvim_create_user_command("TruthTableXor", toggles("xor"), {
+        desc = "Toggle a preview recognising an exclusive or (or an equivalence) in the terms under the cursor",
+    })
+    vim.api.nvim_create_user_command("TruthTableCommute", function(command)
+        preview.toggle(command.bang and "commute_back" or "commute")
+    end, {
+        bang = true,
+        desc = "Toggle a preview swapping the operand under the cursor with the next one (! for the previous)",
+    })
+    vim.api.nvim_create_user_command("TruthTableApply", preview.apply, {
+        desc = "Apply the current rewrite preview in place",
+    })
     vim.api.nvim_create_user_command("TruthTableDeMorganApply", preview.apply, {
-        desc = "Apply the current De Morgan preview",
+        desc = "Alias of :TruthTableApply",
+    })
+    vim.api.nvim_create_user_command("TruthTableApplyStep", preview.apply_step, {
+        desc = "Insert the current rewrite preview below as a ≡ derivation step",
     })
 
     local ok, wk = pcall(require, "which-key")
@@ -195,7 +221,13 @@ function M.setup(opts)
     vim.keymap.set("x", "<leader>ttn", ":TruthTable<CR>", { desc = "New truth table from selection" })
     vim.keymap.set("n", "<leader>tte", ":TruthTableExpand ", { desc = "Expand truth table" })
     vim.keymap.set("n", "<leader>ttd", "<cmd>TruthTableDeMorgan<CR>", { desc = "Preview De Morgan rewrite" })
-    vim.keymap.set("n", "<leader>tta", "<cmd>TruthTableDeMorganApply<CR>", { desc = "Apply De Morgan rewrite" })
+    vim.keymap.set("n", "<leader>ttf", "<cmd>TruthTableFactor<CR>", { desc = "Preview factoring out operand" })
+    vim.keymap.set("n", "<leader>ttx", "<cmd>TruthTableDistribute<CR>", { desc = "Preview distributing operand" })
+    vim.keymap.set("n", "<leader>tto", "<cmd>TruthTableXor<CR>", { desc = "Preview exclusive-or recognition" })
+    vim.keymap.set("n", "<leader>tts", "<cmd>TruthTableCommute<CR>", { desc = "Preview swap with next operand" })
+    vim.keymap.set("n", "<leader>ttS", "<cmd>TruthTableCommute!<CR>", { desc = "Preview swap with previous operand" })
+    vim.keymap.set("n", "<leader>tta", "<cmd>TruthTableApply<CR>", { desc = "Apply rewrite in place" })
+    vim.keymap.set("n", "<leader>ttA", "<cmd>TruthTableApplyStep<CR>", { desc = "Apply rewrite as a ≡ step" })
     vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
     vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })
     vim.keymap.set("n", "<leader>ttc", "<cmd>TruthTableDropColumn<CR>", { desc = "Drop truth table column" })

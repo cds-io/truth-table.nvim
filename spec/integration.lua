@@ -6,10 +6,16 @@ assert(vim.g.loaded_truth_table)
 vim.cmd('runtime plugin/truth-table.lua')
 require('truth-table').setup()
 require('truth-table').setup()
-for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh' }) do
+for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh',
+    'TruthTableDeMorgan', 'TruthTableDeMorganApply', 'TruthTableFactor', 'TruthTableDistribute', 'TruthTableCommute',
+    'TruthTableApply', 'TruthTableApplyStep', 'TruthTableXor' }) do
     assert(vim.api.nvim_get_commands({})[command], command)
 end
 assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
+for key, command in pairs({ f = 'TruthTableFactor', x = 'TruthTableDistribute', s = 'TruthTableCommute', S = 'TruthTableCommute!',
+    a = 'TruthTableApply', A = 'TruthTableApplyStep', d = 'TruthTableDeMorgan', o = 'TruthTableXor' }) do
+    assert(vim.fn.maparg('<leader>tt' .. key, 'n') == '<Cmd>' .. command .. '<CR>', key)
+end
 vim.cmd('TruthTable A B')
 vim.api.nvim_win_set_cursor(0, {3, 3})
 vim.cmd('TruthTableToggle')
@@ -127,7 +133,7 @@ local karnaugh_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 assert(karnaugh_lines[6] == '  |1|1|1|' and karnaugh_lines[7] == '')
 assert(karnaugh_lines[8] == '  Karnaugh map for A ∧ B:')
 assert(karnaugh_lines[10]:match('^  |') and karnaugh_lines[14]:find('|  1  |  0  |  1  |', 1, true))
-assert(karnaugh_lines[16] == '  A ∧ B = A ∧ B' and karnaugh_lines[17] == 'after')
+assert(karnaugh_lines[16] == '  A ∧ B ≡ A ∧ B' and karnaugh_lines[17] == 'after')
 -- A column its predecessors do not determine is reported and nothing is inserted.
 vim.api.nvim_win_set_cursor(0, {3, 5})
 local karnaugh_before = vim.api.nvim_buf_get_lines(0, 0, -1, false)

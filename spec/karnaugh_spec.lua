@@ -230,7 +230,7 @@ describe("karnaugh.render", function()
             "|  A  |  0  |  0  |  0  |  1  |  1  |",
             "|     |  1  |  1  |  1  |  1  |  0  |",
             "",
-            "F = ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C",
+            "F ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C",
         }, karnaugh.render(analysis))
     end)
 
@@ -244,7 +244,7 @@ describe("karnaugh.render", function()
             "|  A  |  0  |  0  |  0  |",
             "|     |  1  |  0  |  1  |",
         }, { lines[3], lines[4], lines[5], lines[6], lines[7] })
-        assert.are.equal("F = A ∧ B", lines[#lines])
+        assert.are.equal("F ≡ A ∧ B", lines[#lines])
     end)
 
     it("puts two variables on each axis of a 4-variable map", function()
@@ -258,7 +258,7 @@ describe("karnaugh.render", function()
         assert.are.equal("|     | 01  |  0  |  0  |  1  |  0  |", lines[7])
         assert.are.equal("|     | 11  |  0  |  0  |  1  |  0  |", lines[8])
         assert.are.equal("|     | 10  |  1  |  1  |  1  |  1  |", lines[9])
-        assert.are.equal("F = A ∧ ¬B ∨ C ∧ D", lines[#lines])
+        assert.are.equal("F ≡ A ∧ ¬B ∨ C ∧ D", lines[#lines])
     end)
 
     it("marks don't-care cells with X", function()
@@ -289,12 +289,12 @@ describe("karnaugh.render", function()
         local names = { "A", "B", "C", "D", "E" }
         local tbl = table_of(names, "F", function(a) return a end)
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 6))))
-        assert.are.same({ "F = A" }, lines)
+        assert.are.same({ "F ≡ A" }, lines)
     end)
 
     it("omits the map for a single variable", function()
         local tbl = { headers = { "A", "F" }, rows = { { 0, 1 }, { 1, 0 } }, encoding = "bits" }
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 2))))
-        assert.are.same({ "F = ¬A" }, lines)
+        assert.are.same({ "F ≡ ¬A" }, lines)
     end)
 end)

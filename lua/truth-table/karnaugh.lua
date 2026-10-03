@@ -6,6 +6,7 @@ local result = require("truth-table.result")
 local model = require("truth-table.table_model")
 local markdown = require("truth-table.markdown")
 local predicate = require("truth-table.predicate")
+local SYMBOLS = require("truth-table.symbols")
 
 local M = {}
 
@@ -475,7 +476,7 @@ end
 
 -- Lines to insert below the table: the map (when drawable) and the formula.
 function M.render(analysis, display_width)
-    local formula = analysis.target .. " = " .. analysis.formula
+    local formula = analysis.target .. " " .. SYMBOLS.EQUIV.unicode .. " " .. analysis.formula
     local headers, rows = M.map_cells(analysis)
     if not headers then
         return { formula }

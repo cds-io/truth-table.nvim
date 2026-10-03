@@ -3,6 +3,38 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableXor (<leader>tto): recognise an exclusive or or an equivalence
+  spelled out as two terms (¬A ∧ B ∨ A ∧ ¬B to A ⊕ B, A ∧ B ∨ ¬A ∧ ¬B to A ⇔ B,
+  and the product-of-sums forms), with the cursor anywhere in either term.
+- :TruthTableDeMorgan applies at the nearest match around the cursor, so a nested
+  match is reachable by putting the cursor in it. From a table's data rows it
+  still means the whole heading.
+- Add :TruthTableFactor (<leader>ttf), :TruthTableDistribute (<leader>ttx) and
+  :TruthTableCommute[!] (<leader>tts, <leader>ttS): preview a rewrite of the
+  operand under the cursor, on an expression line or on a table's heading row.
+- Add :TruthTableApply (<leader>tta), which replaces in place, and
+  :TruthTableApplyStep (<leader>ttA), which inserts the rewrite below as a `≡`
+  derivation step and moves the cursor to it. Both serve every preview, De
+  Morgan included; :TruthTableDeMorganApply remains as an alias.
+- On a line with `≡` separators a rewrite reads the side under the cursor and
+  keeps the others. Running a pending preview's own command dismisses it; a
+  different rewrite command replaces it.
+- Add markdown.heading_cell: the bytes of a heading cell's content.
+- Add truth-table.derivation (pure Lua): split a line into sides at ≡, replace one
+  side, and build the next `≡` step line, aligned by display column.
+- Add rewrite.distribute: multiply an operand into the group beside it
+  (¬C ∧ (A ∨ G) to ¬C ∧ A ∨ ¬C ∧ G, and dually). A soundness spec checks every
+  rewrite at every cursor byte for truth-table equivalence.
+- Add rewrite.factor: pull a shared operand out of the terms of a sum or product
+  (A ∧ ¬C ∨ G ∧ ¬C to ¬C ∧ (A ∨ G), and dually for ∨ inside ∧).
+- Add truth-table.rewrite (pure Lua): find the operand under a cursor byte, reading
+  a run of ∧, ∨, ⊕ or ⇔ as one flat chain, and commute it with its neighbour.
+- Add predicate.parse_located: parse_expression's tree with a byte span on every
+  node, for cursor-targeted rewrites. parse_expression's output is unchanged.
+- Write the Karnaugh formula line as `target ≡ formula` (it was `target = formula`,
+  which the predicate language reads as one biconditional). Add ≡ to
+  truth-table.symbols and the `equiv@` abbreviation; ≡ stays outside the
+  predicate language.
 - Add :TruthTableKarnaugh (<leader>ttk): insert below the table a Karnaugh map
   of the column under the cursor and a minimal sum-of-products formula for it
   in the predicate language. Inputs are the shortest left-to-right run of

@@ -152,6 +152,19 @@ function M.parse_predicate(tokens, locations)
         return consume()
     end
 
+    -- When the locations ask for it (node_spans), every node records the bytes
+    -- it was read from: first token through last. Evaluation and rendering
+    -- ignore the field.
+    local function located(node, first)
+        if locations and locations.node_spans then
+            node.span = {
+                start_byte = locations.spans[first].start_byte,
+                end_byte = locations.spans[pos - 1].end_byte,
+            }
+        end
+        return node
+    end
+
     local parse_expr
 
     local function parse_atom()
@@ -160,15 +173,16 @@ function M.parse_predicate(tokens, locations)
             return failure("Unexpected end of expression")
         end
 
+        local first = pos
         if tok.type == "reference" then
             consume()
-            return { type = "reference", index = tok.value }
+            return located({ type = "reference", index = tok.value }, first)
         elseif tok.type == "ident" then
             consume()
-            return { type = "var", name = tok.value }
+            return located({ type = "var", name = tok.value }, first)
         elseif tok.type == "literal" then
             consume()
-            return { type = "literal", value = tonumber(tok.value) }
+            return located({ type = "literal", value = tonumber(tok.value) }, first)
         elseif tok.type == "paren" and tok.value == "(" then
             consume()
             local node, err = parse_expr()
@@ -179,7 +193,7 @@ function M.parse_predicate(tokens, locations)
             if not ok then
                 return nil, err2 or "Expected closing parenthesis"
             end
-            return { type = "paren", expr = node }
+            return located({ type = "paren", expr = node }, first)
         else
             return failure("Unexpected token: " .. tok.value)
         end
@@ -188,12 +202,13 @@ function M.parse_predicate(tokens, locations)
     local function parse_unary()
         local tok = peek()
         if tok and tok.type == "op" and (tok.value == "not" or tok.value == "!") then
+            local first = pos
             consume()
             local operand, err = parse_unary()
             if not operand then
                 return nil, err
             end
-            return { type = "not", operand = operand }
+            return located({ type = "not", operand = operand }, first)
         end
         return parse_atom()
     end
@@ -201,6 +216,7 @@ function M.parse_predicate(tokens, locations)
     -- Each precedence level is a left fold over the next tighter parser.
     local function chain(operand, operator)
         return function()
+            local first = pos
             local left, err = operand()
             if not left then
                 return nil, err
@@ -211,7 +227,7 @@ function M.parse_predicate(tokens, locations)
                 if not right then
                     return nil, right_err
                 end
-                left = { type = operator, left = left, right = right }
+                left = located({ type = operator, left = left, right = right }, first)
             end
             return left
         end
@@ -310,15 +326,27 @@ local function ast_to_expression(node)
 end
 
 -- Parse source through the tokenizer/parser Result pipeline.
-function M.parse_expression(input)
+local function parse_source(input, node_spans)
     local tokens, err, locations = M.tokenize(input)
     local ast, parse_err = result.bind(tokens, err, function(values)
+        locations.node_spans = node_spans
         return M.parse_predicate(values, locations)
     end)
     if not ast then
         return nil, 'Parse error in "' .. input .. '": ' .. parse_err
     end
     return ast
+end
+
+function M.parse_expression(input)
+    return parse_source(input, false)
+end
+
+-- The same tree, each node carrying span = { start_byte, end_byte }: the
+-- one-based, inclusive bytes of `input` it was read from. Cursor-targeted
+-- rewrites use the spans to find the node under the cursor.
+function M.parse_located(input)
+    return parse_source(input, true)
 end
 
 -- Post-order traversal copies every node before applying a result-producing

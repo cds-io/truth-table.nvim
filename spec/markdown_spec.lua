@@ -127,3 +127,25 @@ describe("literal reference heading rendering", function()
         assert.are.same({ '¬`A`', 'p | `q`' }, markdown.split_row(lines[1]))
     end)
 end)
+
+describe("markdown.heading_cell", function()
+    it("gives the bytes of a cell's content without its padding", function()
+        local line = "  |  A  | ¬A ∧ B |   |"
+        local first, last = markdown.heading_cell(line, 1)
+        assert.are.equal("A", line:sub(first, last))
+        first, last = markdown.heading_cell(line, 2)
+        assert.are.equal("¬A ∧ B", line:sub(first, last))
+    end)
+
+    it("is nil for a blank cell or a column the line lacks", function()
+        local line = "| A |   |"
+        assert.is_nil(markdown.heading_cell(line, 2))
+        assert.is_nil(markdown.heading_cell(line, 3))
+    end)
+
+    it("does not split a cell at an escaped pipe", function()
+        local line = "| p \\| q | C |"
+        local first, last = markdown.heading_cell(line, 1)
+        assert.are.equal("p \\| q", line:sub(first, last))
+    end)
+end)

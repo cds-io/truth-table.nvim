@@ -1,7 +1,7 @@
 vim.opt.rtp:append(vim.fn.getcwd())
 require('truth-table').setup()
 local core = require('truth-table.core')
-local ns = vim.api.nvim_get_namespaces()['truth-table.de-morgan']
+local ns = vim.api.nvim_get_namespaces()['truth-table.preview']
 local function marks()
     return vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })
 end
@@ -49,4 +49,195 @@ assert(vim.deep_equal(duplicate, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
 set({ 'A or not (B and C)' })
 vim.cmd('TruthTableDeMorgan')
 assert(#marks() == 0 and notified:find('whole expression', 1, true))
-print('De Morgan preview integration passed')
+
+-- Cursor-targeted rewrites. `on` puts the cursor on the first byte of `needle`.
+local function on(needle, row)
+    row = row or 1
+    local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+    vim.api.nvim_win_set_cursor(0, { row, assert(line:find(needle, 1, true)) - 1 })
+end
+local function text()
+    return marks()[1] and marks()[1][4].virt_text[1][1]
+end
+
+-- Factor previews, then applies in place, keeping indentation.
+set({ '  S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)' })
+on('¬C')
+vim.cmd('TruthTableFactor')
+assert(text() == ' ⇒ S ∨ (¬C ∧ (A ∨ G))')
+assert(vim.api.nvim_get_current_line() == '  S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)')
+vim.cmd('TruthTableApply')
+assert(vim.api.nvim_get_current_line() == '  S ∨ (¬C ∧ (A ∨ G))' and #marks() == 0)
+
+-- The same command dismisses; a different one replaces the pending preview.
+on('S')
+vim.cmd('TruthTableCommute')
+assert(text() == ' ⇒ (¬C ∧ (A ∨ G)) ∨ S')
+vim.cmd('TruthTableCommute!')
+assert(#marks() == 0)
+vim.cmd('TruthTableCommute')
+on('¬C')
+vim.cmd('TruthTableDistribute')
+assert(#marks() == 1 and text() == ' ⇒ S ∨ (¬C ∧ A) ∨ (¬C ∧ G)')
+vim.cmd('TruthTableDistribute')
+assert(#marks() == 0)
+
+-- A refusal warns and leaves the buffer and the mark list alone.
+on('∨')
+notified = nil
+vim.cmd('TruthTableFactor')
+assert(#marks() == 0 and notified == 'Put the cursor on an operand')
+
+-- Steps build a derivation under the Karnaugh line; the cursor follows.
+set({ 'S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C' })
+on('¬C ∨ G')
+vim.cmd('TruthTableFactor')
+vim.cmd('TruthTableApplyStep')
+local pad = string.rep(' ', 24)
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
+    'S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C',
+    pad .. '≡ S ∨ ¬C ∧ (A ∨ G)',
+}))
+local cursor = vim.api.nvim_win_get_cursor(0)
+assert(cursor[1] == 2 and cursor[2] == #(pad .. '≡ '))
+vim.cmd('TruthTableCommute')
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
+    'S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C',
+    pad .. '≡ S ∨ ¬C ∧ (A ∨ G)',
+    pad .. '≡ ¬C ∧ (A ∨ G) ∨ S',
+}))
+assert(vim.api.nvim_win_get_cursor(0)[1] == 3 and #marks() == 0)
+
+-- A step lands under the line that was previewed, wherever the cursor went.
+set({ 'A ∧ B', 'unrelated' })
+vim.cmd('TruthTableCommute')
+vim.api.nvim_win_set_cursor(0, { 2, 3 })
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), { 'A ∧ B', '≡ B ∧ A', 'unrelated' }))
+assert(vim.api.nvim_win_get_cursor(0)[1] == 2)
+
+-- A dangling separator has no expression to rewrite.
+set({ 'F ≡ ' }, 1, 3)
+notified = nil
+vim.cmd('TruthTableDeMorgan')
+assert(#marks() == 0 and notified == 'No expression under the cursor')
+
+-- In-place apply on one side keeps the other side and the spacing.
+set({ 'F  ≡  A ∧ B' })
+on('A')
+vim.cmd('TruthTableCommute')
+vim.cmd('TruthTableApply')
+assert(vim.api.nvim_get_current_line() == 'F  ≡  B ∧ A')
+
+-- De Morgan works on the side under the cursor and can be stepped.
+set({ '  ≡ ¬(A ∧ B)' })
+vim.cmd('TruthTableDeMorgan')
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), { '  ≡ ¬(A ∧ B)', '  ≡ ¬A ∨ ¬B' }))
+set({ 'not (A and B)' })
+vim.cmd('TruthTableDeMorgan')
+vim.cmd('TruthTableDeMorganApply')
+assert(vim.api.nvim_get_current_line() == '¬A ∨ ¬B')
+
+-- A stale preview cannot be applied as a step either.
+set({ 'A ∧ B' })
+vim.cmd('TruthTableCommute')
+set({ 'C ∧ D' })
+notified = nil
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), { 'C ∧ D' }))
+assert(notified == 'No current preview; run a rewrite command first')
+vim.wait(100, function() return #marks() == 0 end)
+
+-- A heading rewrites from the heading row, cursor in the cell, in place only.
+local heading_table = assert(core.format_table({ 'A', 'B', 'A ∧ B' }, { { '0', '0', '0' }, { '1', '1', '1' } }))
+set(heading_table)
+on('A ∧')
+vim.cmd('TruthTableCommute')
+assert(text() == ' [column 3] ⇒ B ∧ A')
+notified = nil
+vim.cmd('TruthTableApplyStep')
+assert(notified == 'Steps apply to expression lines; use :TruthTableApply for a heading')
+assert(#marks() == 1 and vim.deep_equal(heading_table, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
+vim.cmd('TruthTableApply')
+local renamed = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+assert(core.split_row(renamed[1])[3] == 'B ∧ A')
+for i = 2, #renamed do assert(renamed[i] == heading_table[i]) end
+
+-- Padding inside the heading cell is not an operand.
+set(heading_table)
+vim.api.nvim_win_set_cursor(0, { 1, assert(heading_table[1]:find('A ∧', 1, true)) - 2 })
+notified = nil
+vim.cmd('TruthTableCommute')
+assert(#marks() == 0 and notified == 'Put the cursor on an operand')
+
+-- From a data row there is no operand to point at.
+set(heading_table, 3, 14)
+notified = nil
+vim.cmd('TruthTableCommute')
+assert(#marks() == 0 and notified == 'Put the cursor on the heading row to choose an operand')
+
+-- A rewrite that would duplicate another heading is refused.
+local clash = assert(core.format_table({ 'A ∧ B', 'B ∧ A' }, { { '1', '1' } }))
+set(clash)
+on('A ∧')
+notified = nil
+vim.cmd('TruthTableCommute')
+assert(#marks() == 0 and notified:find('duplicate', 1, true))
+
+-- Blank lines and trailing cursors refuse without touching the buffer.
+set({ '' })
+notified = nil
+vim.cmd('TruthTableFactor')
+assert(notified == 'No expression under the cursor')
+set({ 'A ∧ B   ' }, 1, 7)
+notified = nil
+vim.cmd('TruthTableCommute')
+assert(notified == 'Put the cursor on an operand' and vim.api.nvim_get_current_line() == 'A ∧ B   ')
+
+-- Xor recognition closes a derivation; the cursor can be anywhere in either term.
+set({ '(T ⊕ E) ∧ R ≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))' })
+on('¬T')
+vim.cmd('TruthTableXor')
+assert(text() == ' ⇒ R ∧ (T ⊕ E)')
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
+    '(T ⊕ E) ∧ R ≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))',
+    '            ≡ R ∧ (T ⊕ E)',
+}))
+
+-- De Morgan reaches the nearest match around the cursor.
+set({ 'R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)' })
+on('¬T')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' ⇒ R ∧ (T ∨ E) ∧ ¬(T ∧ E)')
+vim.cmd('TruthTableDeMorgan')
+set({ 'A or not (B and C)' })
+on('not')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' ⇒ A ∨ ¬B ∨ ¬C')
+vim.cmd('TruthTableApply')
+assert(vim.api.nvim_get_current_line() == 'A ∨ ¬B ∨ ¬C')
+
+-- In a heading the cursor picks a nested match from the heading row; from a
+-- data row De Morgan still means the whole heading.
+local nested = assert(core.format_table({ 'A', 'B', 'A ∧ ¬(A ∧ B)' }, { { '0', '0', '0' }, { '1', '0', '1' } }))
+set(nested)
+on('¬')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' [column 3] ⇒ A ∧ (¬A ∨ ¬B)')
+vim.cmd('TruthTableDeMorgan')
+set(nested, 3, 14)
+notified = nil
+vim.cmd('TruthTableDeMorgan')
+assert(#marks() == 0 and notified:find('whole expression', 1, true))
+
+-- The Lua entry point keeps its no-argument form: a De Morgan preview.
+set({ 'not (A and B)' })
+require('truth-table.preview').toggle()
+assert(text() == ' ⇒ ¬A ∨ ¬B')
+require('truth-table.preview').toggle()
+assert(#marks() == 0)
+
+print('Rewrite preview integration passed')

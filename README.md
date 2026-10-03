@@ -66,10 +66,11 @@ built-in keys:
 | `exists`                   | `∃`                   | Existential quantifier |
 | `true`                     | `⊤`                   | Truth / top            |
 | `false`                    | `⊥`                   | Falsity / bottom       |
+| `equiv`                    | `≡`                   | Derivation separator   |
 
 The same symbol table supplies default abbreviations and generated headings.
-The quantifier and truth symbols are typing aids; the predicate language does
-not accept them as operators or literals.
+The quantifier, truth, and `≡` symbols are typing aids; the predicate language
+does not accept them as operators or literals.
 
 ## Customization
 
@@ -167,8 +168,13 @@ return {
 | `:TruthTable {exprs}` | Insert a new table from expressions separated by `\|` or `,`: the variables they mention, plus a computed column per expression |
 | `:[range]TruthTable` | Same, reading the argument from the selected lines (a line break is one more `\|`) and replacing them with the table |
 | `:TruthTableExpand {preds}` | Append a computed column per comma-separated predicate |
-| `:TruthTableDeMorgan` | Toggle virtual-text preview for the whole expression line or current column header |
-| `:TruthTableDeMorganApply` | Apply the pending rewrite |
+| `:TruthTableDeMorgan` | Toggle a De Morgan preview at the nearest match around the cursor, in an expression or the current column header |
+| `:TruthTableFactor` | Toggle a preview that factors the operand under the cursor out of the terms sharing it |
+| `:TruthTableDistribute` | Toggle a preview that distributes the operand under the cursor into the group beside it |
+| `:TruthTableXor` | Toggle a preview that recognises an exclusive or (or an equivalence) spelled out as the two terms under the cursor |
+| `:TruthTableCommute[!]` | Toggle a preview that swaps the operand under the cursor with the next one (`!`: the previous one) |
+| `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
+| `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -219,8 +225,8 @@ that metadata, or falls back to token indices when omitted.
 
 Put the cursor on an expression-only line, or anywhere in a truth-table column,
 and run `:TruthTableDeMorgan`. Virtual text shows the rewritten expression; run
-it again to dismiss the preview, even after moving the cursor. `:TruthTableDeMorganApply` replaces the line or
-selected header. Indentation is preserved. Table separator and data lines remain
+it again to dismiss the preview, even after moving the cursor. `:TruthTableApply` replaces the expression or
+selected header (`:TruthTableDeMorganApply` is an alias). Indentation is preserved. Table separator and data lines remain
 unchanged, and a heading collision is rejected.
 
 ```text
@@ -230,8 +236,13 @@ unchanged, and a heading collision is rejected.
 ¬A ∧ ¬B   ⇒  ¬(A ∨ B)
 ```
 
-Only the root expression is transformed; surrounding parentheses are transparent.
-Nested-only matches report that no whole-expression rewrite applies. The preview
+Which match is rewritten? The nearest one around the cursor: the candidates run
+from the smallest group containing the cursor out to the whole expression, so in
+`R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)` a cursor on `¬T` gives `R ∧ (T ∨ E) ∧ ¬(T ∧ E)`, and
+in `¬(¬A ∨ ¬B)` the cursor chooses between the inner pair and the outer negation.
+From a table's data rows there is no cursor in the heading, so the whole heading
+is the one candidate. Surrounding parentheses are transparent. Each step is
+binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`. The preview
 is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
 renames its label: update explicit references to the old heading yourself. Stored
 column values remain unchanged. Output uses the predicate language's logic symbols;
@@ -264,7 +275,7 @@ Karnaugh map for F:
 |  A  |  0  |  0  |  0  |  1  |  1  |
 |     |  1  |  1  |  1  |  1  |  0  |
 
-F = ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+F ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
 ```
 
 Which columns are the inputs? The shortest run of columns, starting from the
@@ -284,6 +295,64 @@ sort first with literals before free variables, so the output is stable, but
 your textbook may list a different, equally minimal answer. Input headings that
 are not variable identifiers use positional references (`:hN`) in the formula.
 
+## Rewrites and derivations
+
+`:TruthTableKarnaugh` gives a minimal sum of products, and the form you want in
+code is often one algebra step away from it. Four rewrites take that step on
+the operand under the cursor, each previewed the way De Morgan is:
+
+| Command | Cursor on | Example |
+|---|---|---|
+| `:TruthTableFactor` | an operand several terms share | `S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)` ⇒ `S ∨ (¬C ∧ (A ∨ G))` |
+| `:TruthTableDistribute` | an operand beside a parenthesised group | `¬C ∧ (A ∨ G)` ⇒ `¬C ∧ A ∨ ¬C ∧ G` |
+| `:TruthTableCommute` | any operand | `S ∨ (¬C ∧ (A ∨ G))` ⇒ `(¬C ∧ (A ∨ G)) ∨ S` |
+| `:TruthTableXor` | either of two complementary terms | `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))` ⇒ `R ∧ (T ⊕ E)` |
+
+So, which operand does the cursor pick? A run of one operator out of `∧`, `∨`,
+`⊕`, `⇔` is read as a flat list (a *chain*), whatever its parentheses, and the
+target is the smallest chain member containing the cursor. On `¬C` the target is
+`¬C`; on the `∧` or a parenthesis of `(A ∧ ¬C)` it is that whole group. The
+operators of the outermost chain select nothing, and the command says so. In a
+table, put the cursor on the heading row, inside the cell.
+
+- Factor works for `∧` inside `∨` and for `∨` inside `∧`. The factor goes on the
+  left and the remainders are grouped in parentheses. Terms match by shape,
+  operand order included, so `A ∧ B` and `B ∧ A` need a commute first.
+- Distribute multiplies the target into the group directly to its right, or
+  failing that directly to its left.
+- Commute swaps with the operand to the right; `:TruthTableCommute!` swaps to
+  the left. At the end of a chain the direction flips.
+- Xor reads `¬A ∧ B ∨ A ∧ ¬B` as `A ⊕ B` and `A ∧ B ∨ ¬A ∧ ¬B` as `A ⇔ B`, along
+  with the product-of-sums spellings `(A ∨ B) ∧ (¬A ∨ ¬B)` and
+  `(¬A ∨ B) ∧ (A ∨ ¬B)`. The cursor can be anywhere in either term. Both terms
+  have exactly two operands, so factor a shared operand out first:
+  `¬T ∧ E ∧ R ∨ T ∧ ¬E ∧ R` becomes `R ∧ (¬T ∧ E ∨ T ∧ ¬E)`, then `R ∧ (T ⊕ E)`.
+  Beside other terms the result is parenthesised, since `⊕` and `⇔` bind
+  looser than `∨`: `(A ⊕ B) ∨ A ∧ C`.
+
+A preview can land in two ways. `:TruthTableApply` replaces the expression in
+place. `:TruthTableApplyStep` leaves the line alone and inserts the rewrite below
+it as the next line of a derivation, then moves the cursor there:
+
+```text
+S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C
+                        ≡ S ∨ ¬C ∧ (A ∨ G)
+                        ≡ ¬C ∧ (A ∨ G) ∨ S
+```
+
+`≡` separates the sides of a derivation: a rewrite reads the side under the
+cursor and leaves the others as they are, and a new step lines up under the
+line's last `≡` (or at its indentation when it has none). Type it as `equiv@`.
+`≡` is outside the predicate language, so `=` keeps its one meaning as a
+spelling of `⇔`. Steps apply to expression lines; a heading takes
+`:TruthTableApply` only. Both apply commands serve De Morgan previews too.
+
+N.B. the rewrites rearrange an expression and stop there: simplification
+(absorption, idempotence, double negation) is yours to do. An in-place apply
+re-renders the whole side in logic symbols, as De Morgan does. A formula line
+written by an earlier version, `F = …`, reads as one biconditional; change its
+`=` to `≡` before stepping from it.
+
 ## Keymaps
 
 `setup()` registers these by default:
@@ -294,7 +363,13 @@ are not variable identifiers use positional references (`:hN`) in the formula.
 | `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
 | `<leader>tte` | prefill `:TruthTableExpand ` |
 | `<leader>ttd` | toggle De Morgan preview |
-| `<leader>tta` | apply De Morgan preview |
+| `<leader>ttf` | toggle factor preview |
+| `<leader>ttx` | toggle distribute preview |
+| `<leader>tto` | toggle xor-recognition preview |
+| `<leader>tts` | toggle commute preview (swap with the next operand) |
+| `<leader>ttS` | toggle commute preview (swap with the previous operand) |
+| `<leader>tta` | apply the preview in place |
+| `<leader>ttA` | apply the preview as a `≡` step |
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
@@ -317,8 +392,14 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
   budget, greedy beyond it) and renders the map and the formula.
 - `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
   Only `nil` means failure; zero and false remain successful values.
-- `preview.lua` manages per-buffer De Morgan previews, extmarks, invalidation,
-  and applying a rewrite to a line or header.
+- `rewrite.lua` finds the chain operand under a cursor byte and factors,
+  distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, and
+  applies De Morgan at the nearest match: located trees in, fresh trees out.
+- `derivation.lua` splits a line into sides at `≡`, replaces one side, and
+  builds an aligned step line.
+- `preview.lua` resolves the expression under the cursor (one side of a line,
+  or a heading), runs a rewrite on it, and manages per-buffer previews,
+  extmarks, invalidation, and applying in place or as a step.
 - `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
   Unicode character; `predicate.lua` renders from it.
 - `abbreviations.lua` derives the default insert-mode abbreviations from
@@ -404,7 +485,7 @@ make check BUSTED=/path/to/busted
 ```
 
 Run `make test-integration` for headless Neovim command checks, malformed-table
-buffer preservation, De Morgan preview/apply behavior, and automatic startup.
+buffer preservation, rewrite preview/apply behavior, and automatic startup.
 Lint (optional when running individual checks, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh
