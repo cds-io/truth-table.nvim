@@ -11,6 +11,7 @@
 :TruthTableFactor	truth-table.txt	/*:TruthTableFactor*
 :TruthTableKarnaugh	truth-table.txt	/*:TruthTableKarnaugh*
 :TruthTableToggle	truth-table.txt	/*:TruthTableToggle*
+:TruthTableTutor	truth-table.txt	/*:TruthTableTutor*
 :TruthTableXor	truth-table.txt	/*:TruthTableXor*
 truth-table-abbreviations	truth-table.txt	/*truth-table-abbreviations*
 truth-table-architecture	truth-table.txt	/*truth-table-architecture*

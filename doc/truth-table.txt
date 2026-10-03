@@ -259,6 +259,14 @@ it; running a different rewrite command replaces it.
     Equally small covers are broken toward the terms
     that sort first, literals before free variables, so the output is stable.
 
+                                                            *:TruthTableTutor*
+:TruthTableTutor[!]
+    Open the tutorial in a new tab: a short logic course whose exercises run
+    on its own lines, each followed by what you should see. The buffer is a
+    scratch copy of tutor/truth-table-tutor.md, so edits never reach the
+    shipped file. Running the command again returns to the copy with your
+    work intact; with [!] the copy is replaced by a fresh one.
+
 ==============================================================================
 5. PREDICATE LANGUAGE                                   *truth-table-predicates*
 
@@ -447,6 +455,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - preview.lua resolves the expression under the cursor (a side of a line, or
   a heading), runs a rewrite on it, and manages per-buffer extmarks,
   invalidation, and applying in place or as a step.
+- tutor.lua opens tutor/truth-table-tutor.md as a scratch copy; spec/tutor.lua
+  replays its exercises against the tutorial's own expected blocks.
 - symbols.lua is the one table of logic symbols (ASCII word plus Unicode
   character); predicate.lua renders from it.
 - abbreviations.lua derives the default insert-mode abbreviations from

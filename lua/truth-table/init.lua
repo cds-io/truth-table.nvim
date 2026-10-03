@@ -200,6 +200,13 @@ function M.setup(opts)
         desc = "Insert the current rewrite preview below as a ≡ derivation step",
     })
 
+    vim.api.nvim_create_user_command("TruthTableTutor", function(command)
+        require("truth-table.tutor").open(command.bang)
+    end, {
+        bang = true,
+        desc = "Open the tutorial as a scratch copy (! for a fresh copy)",
+    })
+
     local ok, wk = pcall(require, "which-key")
     if ok then
         -- selene: allow(mixed_table)

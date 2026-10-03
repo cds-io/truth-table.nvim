@@ -18,6 +18,18 @@ toggle between `0/1` and `F/T`, or drop the current row or column.
 |  1  |  1  |   1   |   1   |
 ```
 
+## Tutorial
+
+`:TruthTableTutor` opens a short logic course in a new tab: ten lessons, from
+propositions and truth tables through De Morgan, the distributive laws,
+derivations, and Karnaugh maps, ending with a condition from code refactored
+step by step. Every exercise runs on a line of the tutorial itself, and each is
+followed by what you should see.
+
+It opens as a scratch copy, so edit it freely. Running the command again
+returns to your copy with the work intact; `:TruthTableTutor!` starts a fresh
+one. The text lives in `tutor/truth-table-tutor.md`.
+
 ## Status
 
 Personal plugin, extracted from a single-file Neovim config module
@@ -179,6 +191,7 @@ return {
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
 | `:TruthTableKarnaugh` | Insert, below the table, a Karnaugh map and a minimal sum-of-products formula for the column under the cursor |
+| `:TruthTableTutor[!]` | Open the tutorial as a scratch copy in a new tab (`!` for a fresh copy) |
 
 ```
 :TruthTable 3
@@ -400,6 +413,10 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
 - `preview.lua` resolves the expression under the cursor (one side of a line,
   or a heading), runs a rewrite on it, and manages per-buffer previews,
   extmarks, invalidation, and applying in place or as a step.
+- `tutor.lua` opens `tutor/truth-table-tutor.md` as a scratch copy.
+  `spec/tutor.lua` replays every exercise in it and checks each result against
+  the tutorial's own "you should see" blocks, so the text stays true as the
+  plugin changes.
 - `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
   Unicode character; `predicate.lua` renders from it.
 - `abbreviations.lua` derives the default insert-mode abbreviations from
@@ -485,7 +502,8 @@ make check BUSTED=/path/to/busted
 ```
 
 Run `make test-integration` for headless Neovim command checks, malformed-table
-buffer preservation, rewrite preview/apply behavior, and automatic startup.
+buffer preservation, rewrite preview/apply behavior, the tutorial's exercises,
+and automatic startup.
 Lint (optional when running individual checks, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh
