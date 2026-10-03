@@ -3,6 +3,8 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add truth-table.derivation (pure Lua): split a line into sides at ≡, replace one
+  side, and build the next `≡` step line, aligned by display column.
 - Add rewrite.distribute: multiply an operand into the group beside it
   (¬C ∧ (A ∨ G) to ¬C ∧ A ∨ ¬C ∧ G, and dually). A soundness spec checks every
   rewrite at every cursor byte for truth-table equivalence.
