@@ -1,0 +1,33 @@
+-- The tutorial's exercises, in reading order, for spec/tutor.lua to replay.
+-- `line` is the line the cursor goes on, `at` the text on it the cursor sits
+-- on (the start of the line when absent), `run` the commands.
+return {
+    { line = 'p q', run = { '.TruthTable' } },
+    { line = '(your three-variable table goes above this line)', run = { 'TruthTable 3' } },
+    { line = 'p and q | p or q | not p', run = { '.TruthTable' } },
+    { line = 'p or q and r | (p or q) and r', run = { '.TruthTable' } },
+    { line = 'a b', run = { '.TruthTable' } },
+    { line = '|  a  |  b  |', run = { 'TruthTableExpand a xor b, a implies b, a iff b' } },
+    { line = 'a implies b | not a or b', run = { '.TruthTable' } },
+    { line = '|  a  |  b  | a → b | ¬a ∨ b |', run = { 'TruthTableExpand :h3 iff :h4' } },
+    { line = '|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” |', run = { 'TruthTableExpand a and not a' } },
+    { line = '|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |', run = { 'TruthTableToggle' } },
+    { line = '|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |', run = { 'TruthTableToggle' } },
+    { line = '|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |', at = 'a ∧ ¬a', run = { 'TruthTableDropColumn' } },
+    { line = 'not (p and q)', run = { 'TruthTableDeMorgan', 'TruthTableApply' } },
+    { line = 'not x and not y', run = { 'TruthTableDeMorgan', 'TruthTableApply' } },
+    { line = 'r and not (s or t)', at = 'not', run = { 'TruthTableDeMorgan', 'TruthTableApply' } },
+    { line = 'm and n', at = 'm', run = { 'TruthTableCommute', 'TruthTableApply' } },
+    { line = 'u and (v or w)', at = 'u', run = { 'TruthTableDistribute', 'TruthTableApply' } },
+    { line = '(c and d) or (c and e)', at = 'c', run = { 'TruthTableFactor', 'TruthTableApply' } },
+    { line = 'not (g or h) or (not g and k)', at = 'not', run = { 'TruthTableDeMorgan', 'TruthTableApplyStep' } },
+    { line = '≡ ¬g ∧ ¬h ∨ (¬g ∧ k)', at = '¬g', run = { 'TruthTableFactor', 'TruthTableApplyStep' } },
+    { line = '(not t and e) or (t and not e)', at = 't', run = { 'TruthTableXor', 'TruthTableApply' } },
+    { line = '(A xor B) or (A and C)', run = { '.TruthTable' } },
+    { line = '|  A  |  B  |  C  | (A ⊕ B) ∨ (A ∧ C) |', at = '(A ⊕', run = { 'TruthTableKarnaugh' } },
+    { line = '(A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C', at = '¬A', run = { 'TruthTableXor', 'TruthTableApplyStep' } },
+    { line = 'key and door', run = { '.TruthTable' } },
+    { line = '|  0  |  1   |     0      |', at = '     0', run = { 'TruthTableDropRow', 'TruthTableKarnaugh' } },
+    { line = 'S or (A and not C) or (G and not C)', at = 'not C', run = { 'TruthTableFactor', 'TruthTableApplyStep' } },
+    { line = '≡ S ∨ (¬C ∧ (A ∨ G))', at = 'S', run = { 'TruthTableCommute', 'TruthTableApplyStep' } },
+}

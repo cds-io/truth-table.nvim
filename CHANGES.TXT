@@ -3,6 +3,11 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableTutor: a logic course in ten lessons (tutor/truth-table-tutor.md),
+  opened as a scratch copy in a new tab; every exercise runs on the tutorial's
+  own lines. Running the command again returns to the copy, and ! starts a fresh
+  one. spec/tutor.lua replays the exercises and checks them against the
+  tutorial's expected blocks.
 - Add :TruthTableXor (<leader>tto): recognise an exclusive or or an equivalence
   spelled out as two terms (¬A ∧ B ∨ A ∧ ¬B to A ⊕ B, A ∧ B ∨ ¬A ∧ ¬B to A ⇔ B,
   and the product-of-sums forms), with the cursor anywhere in either term.
