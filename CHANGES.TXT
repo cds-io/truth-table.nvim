@@ -3,6 +3,8 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add truth-table.rewrite (pure Lua): find the operand under a cursor byte, reading
+  a run of ∧, ∨, ⊕ or ⇔ as one flat chain, and commute it with its neighbour.
 - Add predicate.parse_located: parse_expression's tree with a byte span on every
   node, for cursor-targeted rewrites. parse_expression's output is unchanged.
 - Write the Karnaugh formula line as `target ≡ formula` (it was `target = formula`,
