@@ -212,8 +212,9 @@ describe("rewrite.distribute", function()
 end)
 
 -- Every rewrite, at every cursor byte of every expression here, either refuses
--- with a message or returns a tree that means the same and survives a
--- render/parse round trip. The input is never modified.
+-- with a message or returns a tree that means the same, and whose rendered
+-- text (what lands in the buffer) parses back to that same function. The
+-- input is never modified.
 describe("rewrite soundness", function()
     local corpus = {
         "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)",
@@ -228,6 +229,7 @@ describe("rewrite soundness", function()
         "((A ∧ B)) ∨ (A ∧ (C ∨ (B ∧ D)))",
         "A ∧ A ∧ B ∨ A ∧ C ∨ 1 ∧ A",
         "not (A and B) or not (A and C)",
+        ":h1 ∧ A ∨ :h1 ∧ :h2 ∨ 0 ∧ A",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,
@@ -235,6 +237,23 @@ describe("rewrite soundness", function()
         commute = function(ast, byte) return rewrite.commute(ast, byte, false) end,
         commute_back = function(ast, byte) return rewrite.commute(ast, byte, true) end,
     }
+
+    -- Every input a tree reads: variable names and :hN indices. eval_ast looks
+    -- both up in the one assignment table.
+    local function inputs(node, found, seen)
+        found, seen = found or {}, seen or {}
+        local key = node.type == "var" and node.name or node.type == "reference" and node.index
+        if key and not seen[key] then
+            seen[key] = true
+            found[#found + 1] = key
+        end
+        for _, field in ipairs({ "expr", "operand", "left", "right" }) do
+            if node[field] then
+                inputs(node[field], found, seen)
+            end
+        end
+        return found
+    end
 
     local function same_function(a, b, variables)
         for row = 0, 2 ^ #variables - 1 do
@@ -254,7 +273,7 @@ describe("rewrite soundness", function()
         for _, source in ipairs(corpus) do
             local ast = assert(predicate.parse_located(source))
             local before = predicate.ast_to_heading(ast)
-            local variables = assert(predicate.variables(ast))
+            local variables = inputs(ast)
             for byte = 0, #source + 1 do
                 for name, fn in pairs(rewrites) do
                     local where = name .. " at byte " .. byte .. " of " .. source
@@ -265,6 +284,7 @@ describe("rewrite soundness", function()
                         assert.is_true(same_function(ast, tree, variables), where .. " gave " .. text)
                         local reparsed = assert(predicate.parse_expression(text), where)
                         assert.are.equal(text, predicate.ast_to_heading(reparsed), where)
+                        assert.is_true(same_function(ast, reparsed, variables), where .. " rendered as " .. text)
                         assert.is_nil(tree.span, where)
                     else
                         assert.is_string(err, where)
