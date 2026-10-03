@@ -167,7 +167,8 @@ end
 -- Running the pending preview's own command dismisses it; any other rewrite
 -- replaces it.
 function M.toggle(name)
-    local kind = REWRITES[name]
+    -- Without a name this is the De Morgan toggle it was before rewrites had names.
+    local kind = REWRITES[name or "de_morgan"]
     local buf = vim.api.nvim_get_current_buf()
     local shown = pending[buf]
     if shown then

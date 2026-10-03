@@ -196,4 +196,11 @@ notified = nil
 vim.cmd('TruthTableCommute')
 assert(notified == 'Put the cursor on an operand' and vim.api.nvim_get_current_line() == 'A ∧ B   ')
 
+-- The Lua entry point keeps its no-argument form: a De Morgan preview.
+set({ 'not (A and B)' })
+require('truth-table.preview').toggle()
+assert(text() == ' ⇒ ¬A ∨ ¬B')
+require('truth-table.preview').toggle()
+assert(#marks() == 0)
+
 print('Rewrite preview integration passed')
