@@ -11,6 +11,7 @@ local result = require("truth-table.result")
 local model = require("truth-table.table_model")
 local predicate = require("truth-table.predicate")
 local markdown = require("truth-table.markdown")
+local karnaugh = require("truth-table.karnaugh")
 
 local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
@@ -38,6 +39,14 @@ M.drop_model_column = model.drop_column
 M.toggle_model = model.toggle
 function M.format_model(tbl)
     return markdown.format(tbl, M.display_width)
+end
+
+-- Karnaugh analysis of one column (see truth-table.karnaugh for the fields)
+-- and its rendering as Markdown lines: the map, when the column has two to
+-- four inputs, followed by `heading = formula`.
+M.derive_karnaugh = karnaugh.derive
+function M.format_karnaugh(analysis)
+    return karnaugh.render(analysis, M.display_width)
 end
 
 local function legacy_parts(tbl, err)

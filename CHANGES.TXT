@@ -3,6 +3,15 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableKarnaugh (<leader>ttk): insert below the table a Karnaugh map
+  of the column under the cursor and a minimal sum-of-products formula for it
+  in the predicate language. Inputs are the shortest left-to-right run of
+  columns that distinguishes every row; missing rows are don't-cares (shown as
+  X). Maps are drawn for two to four inputs; the formula is always derived.
+- Add truth-table.karnaugh (pure Lua: input detection, Quine-McCluskey prime
+  implicants, essential primes then a budgeted exact cover with a greedy
+  fallback for large functions, map layout) and markdown.format_cells for
+  string-cell tables.
 - Normal-mode <leader>ttn builds the table from the current line when it is
   nonblank, matching the visual mapping; a blank line still prefills
   `:TruthTable `.
