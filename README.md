@@ -66,10 +66,11 @@ built-in keys:
 | `exists`                   | `∃`                   | Existential quantifier |
 | `true`                     | `⊤`                   | Truth / top            |
 | `false`                    | `⊥`                   | Falsity / bottom       |
+| `equiv`                    | `≡`                   | Derivation separator   |
 
 The same symbol table supplies default abbreviations and generated headings.
-The quantifier and truth symbols are typing aids; the predicate language does
-not accept them as operators or literals.
+The quantifier, truth, and `≡` symbols are typing aids; the predicate language
+does not accept them as operators or literals.
 
 ## Customization
 
@@ -264,7 +265,7 @@ Karnaugh map for F:
 |  A  |  0  |  0  |  0  |  1  |  1  |
 |     |  1  |  1  |  1  |  1  |  0  |
 
-F = ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+F ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
 ```
 
 Which columns are the inputs? The shortest run of columns, starting from the

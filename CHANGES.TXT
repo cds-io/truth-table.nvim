@@ -3,6 +3,10 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Write the Karnaugh formula line as `target ≡ formula` (it was `target = formula`,
+  which the predicate language reads as one biconditional). Add ≡ to
+  truth-table.symbols and the `equiv@` abbreviation; ≡ stays outside the
+  predicate language.
 - Add :TruthTableKarnaugh (<leader>ttk): insert below the table a Karnaugh map
   of the column under the cursor and a minimal sum-of-products formula for it
   in the predicate language. Inputs are the shortest left-to-right run of

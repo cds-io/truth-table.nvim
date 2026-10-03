@@ -127,7 +127,7 @@ local karnaugh_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 assert(karnaugh_lines[6] == '  |1|1|1|' and karnaugh_lines[7] == '')
 assert(karnaugh_lines[8] == '  Karnaugh map for A ∧ B:')
 assert(karnaugh_lines[10]:match('^  |') and karnaugh_lines[14]:find('|  1  |  0  |  1  |', 1, true))
-assert(karnaugh_lines[16] == '  A ∧ B = A ∧ B' and karnaugh_lines[17] == 'after')
+assert(karnaugh_lines[16] == '  A ∧ B ≡ A ∧ B' and karnaugh_lines[17] == 'after')
 -- A column its predecessors do not determine is reported and nothing is inserted.
 vim.api.nvim_win_set_cursor(0, {3, 5})
 local karnaugh_before = vim.api.nvim_buf_get_lines(0, 0, -1, false)

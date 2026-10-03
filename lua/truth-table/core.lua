@@ -43,7 +43,7 @@ end
 
 -- Karnaugh analysis of one column (see truth-table.karnaugh for the fields)
 -- and its rendering as Markdown lines: the map, when the column has two to
--- four inputs, followed by `heading = formula`.
+-- four inputs, followed by `heading ≡ formula`.
 M.derive_karnaugh = karnaugh.derive
 function M.format_karnaugh(analysis)
     return karnaugh.render(analysis, M.display_width)

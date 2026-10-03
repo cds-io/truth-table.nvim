@@ -162,7 +162,7 @@ lists or blockquotes are not supported.
 :TruthTableKarnaugh
     Insert, below the table, a Karnaugh map of the column under the cursor and
     a minimal sum-of-products formula for it, written in the predicate
-    language. The table is left as it is.
+    language, on a line reading `target ≡ formula`. The table is left as it is.
 
     The inputs are the shortest run of columns from the left that tells every
     row apart, so a computed column between the variables and the target is
@@ -289,7 +289,7 @@ CTRL-] explicitly expands the abbreviation without inserting an extra character.
     or@       ∨          exists@   ∃
     xor@      ⊕          true@     ⊤
     not@      ¬          false@    ⊥
-    implies@  →
+    implies@  →          equiv@    ≡
     iff@      ⇔
 
                                                           *truth-table-symbols*

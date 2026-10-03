@@ -14,7 +14,7 @@ local defaults = require('truth-table.abbreviations').defaults
 
 -- The defaults pair each constant's ascii word plus `@` with its unicode symbol.
 assert(defaults.trigger == '@')
-for _, key in ipairs({ 'NOT', 'AND', 'OR', 'XOR', 'IMPLIES', 'IFF', 'FORALL', 'EXISTS', 'TOP', 'BOTTOM' }) do
+for _, key in ipairs({ 'NOT', 'AND', 'OR', 'XOR', 'IMPLIES', 'IFF', 'FORALL', 'EXISTS', 'TOP', 'BOTTOM', 'EQUIV' }) do
     assert(defaults.symbols[symbols[key].ascii] == symbols[key].unicode, key)
 end
 
@@ -25,6 +25,7 @@ for word, symbol in pairs(defaults.symbols) do
 end
 assert(abbrev('iff@') == '⇔')
 assert(abbrev('implies@') == '→')
+assert(abbrev('equiv@') == '≡')
 
 -- false registers none, and undoes the earlier call.
 tt.setup({ abbreviations = false })
