@@ -1,6 +1,8 @@
 # truth-table.nvim
 
-Generate and manipulate markdown truth tables from inside Neovim.
+[GitHub: cds-io/truth-table.nvim](https://github.com/cds-io/truth-table.nvim)
+
+Generate and manipulate Markdown truth tables from inside Neovim, natch.
 
 Give it a count or a list of variable names and it writes every combination of
 their values as a centered markdown table. Put your cursor in an existing table
@@ -26,19 +28,136 @@ See the compatibility changes below for differences from the original module.
 An LLM was used to convert a long time personally maintained hack to a plugin
 with testing.
 
-## Install
+## Install and defaults
 
 With lazy.nvim:
 
 ```lua
-{ dir = "~/dev/nvim-plugins/truth-table.nvim", lazy = false }
+return {
+  "cds-io/truth-table.nvim",
+  lazy = false,
+}
 ```
 
-The plugin self-registers on load (`plugin/truth-table.lua` calls `setup()`),
-so there is nothing else to wire up. which-key is optional (a `<leader>tt`
-group label is registered if it is present). Load it eagerly: the insert-mode
-abbreviations below are global, and a plugin lazy-loaded on its commands would
-register them only after the first `:TruthTable`.
+Load it eagerly if you want the global insert-mode abbreviations available from
+startup. Loading only on a `TruthTable` command delays abbreviation registration
+until that command is used. The plugin registers commands and default mappings
+automatically; which-key is optional.
+
+### Default abbreviations
+
+Abbreviations are global across buffers and filetypes. The default trigger is
+`@`: type `and@` followed by a space to insert `∧`. `Ctrl-]` expands without
+adding a character. Plain words such as `and` in prose stay unchanged.
+
+`abbreviations.symbols` is keyed by the ASCII word you type, using lowercase
+names—not constants such as `IMPLIES` or Unicode characters. These are all the
+built-in keys:
+
+| Configuration key (symbol) | Default inserted text | Meaning                |
+|----------------------------|-----------------------|------------------------|
+| `not`                      | `¬`                   | Negation               |
+| `and`                      | `∧`                   | Conjunction            |
+| `or`                       | `∨`                   | Disjunction            |
+| `xor`                      | `⊕`                   | Exclusive or           |
+| `implies`                  | `→`                   | Implication            |
+| `iff`                      | `⇔`                   | Equivalence            |
+| `forall`                   | `∀`                   | Universal quantifier   |
+| `exists`                   | `∃`                   | Existential quantifier |
+| `true`                     | `⊤`                   | Truth / top            |
+| `false`                    | `⊥`                   | Falsity / bottom       |
+
+The same symbol table supplies default abbreviations and generated headings.
+The quantifier and truth symbols are typing aids; the predicate language does
+not accept them as operators or literals.
+
+## Customization
+
+Configure abbreviations through `setup()`. With lazy.nvim, specify the module
+explicitly and pass options:
+
+```lua
+return {
+  "cds-io/truth-table.nvim",
+  lazy = false,
+  main = "truth-table",
+  opts = {
+    abbreviations = {
+      trigger = ";",          -- type and; rather than and@
+      symbols = {             -- configuration keys: not, and, or, xor, etc
+        implies = "⇒",        -- change the inserted symbol
+        forall = false,       -- disable this abbreviation
+        top = "⊤",            -- add top;
+      },
+    },
+  },
+}
+```
+
+Unspecified keys retain their defaults. A string overrides the inserted text;
+`false` disables that abbreviation. Custom ASCII identifier keys are also valid:
+`top = "⊤"` adds a new abbreviation and does not replace the built-in `true`.
+Use bracket syntax for Lua keywords, for example:
+
+```lua
+symbols = {
+  ["true"] = false,        -- disable true@ (or true; with trigger = ";")
+  ["false"] = false,       -- disable false@
+  ["and"] = "∧",           -- keyword keys require brackets
+  top = "⊤",              -- add a custom name
+}
+```
+
+To disable abbreviations, use `opts = { abbreviations = false }`. Without a
+plugin manager, call `require("truth-table").setup({ abbreviations = false })`
+after adding the plugin to your runtimepath. Automatic loading preserves that
+configuration. See [Default abbreviations](#default-abbreviations) for the
+built-in keys.
+
+These settings change inserted text, not generated headings or the parser's
+accepted operators. Generated headings use Unicode. There is no ASCII-output
+mode or configurable parser-alias option.
+
+`symbols` merges over the defaults, which `require("truth-table.abbreviations").defaults`
+exposes as `{ trigger = "@", symbols = { ... } }`. Overriding a symbol here
+changes what you type, and only that; headings still render from
+`truth-table.symbols`. Explicit `setup()` calls replace the plugin-owned
+abbreviations. Automatic plugin loading preserves configuration already supplied
+in your init file. Disabling or reconfiguring restores displaced global
+abbreviations and leaves user replacements made after setup intact. Options are validated before abbreviations are changed.
+The trigger must be a single ASCII punctuation character other than backslash,
+`|`, `<`, or `>`. Symbol keys must be ASCII identifiers; values must be `false`
+or nonempty single-line strings without surrounding whitespace.
+
+### Adding a parser alias
+
+For example, to accept `≠` as another spelling of XOR and insert it with `xor@`:
+
+```lua
+return {
+  "cds-io/truth-table.nvim",
+  lazy = false,
+  opts = { abbreviations = { symbols = { xor = "≠" } } },
+  config = function(_, opts)
+    require("truth-table").setup(opts)
+
+    local predicate = require("truth-table.predicate")
+    local tokenize = predicate.tokenize
+    predicate.tokenize = function(input)
+      return tokenize((input:gsub("≠", "⊕")))
+    end
+    -- The core facade captured the original tokenizer when it loaded.
+    require("truth-table.core").tokenize = predicate.tokenize
+  end,
+}
+```
+
+> This is an advanced tokenizer wrapper, not a built-in alias setting. Both symbols
+> occupy three UTF-8 bytes, so substitution preserves diagnostic byte positions.
+> Headings still render XOR as `⊕`. The textual substitution also affects quoted
+> column labels containing `≠`; avoid those labels with this wrapper. Quantifier
+> and truth-symbol abbreviations (`∀`, `∃`, `⊤`, `⊥`) are typing aids and are not
+> currently accepted as predicate operators or literals.
 
 ## Commands
 
@@ -82,8 +201,9 @@ are column names and the literals `0` / `1`. Operators, tightest binding first:
 
 Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
-Each operator can be typed as its symbol, so a decoded heading parses back to
-the expression it came from. Markdown source escapes literal backticks, pipes,
+Each operator can be typed as its symbol, so formula headings can be used as
+expressions. Reference-based headings describe stored values; use positional references to
+reference those values again. Markdown source escapes literal backticks, pipes,
 and backslashes; use the decoded label when referencing a column.
 New-table expressions must mention at least one variable; constant-only
 expressions are supported by expansion of an existing table.
@@ -131,56 +251,6 @@ double negations are retained; there is no automatic simplification.
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
 
-## Abbreviations
-
-`setup()` also registers insert-mode abbreviations for the logic symbols, so
-headings can be typed as words. Each is a word plus a trigger, `@` by default;
-the trigger is what keeps `and` in prose from expanding. Type `and@` followed
-by a space to expand it to `∧`. `Ctrl-]` explicitly expands without inserting
-an extra character:
-
-| Typed | Inserted | | Typed | Inserted |
-|---|---|---|---|---|
-| `and@` | `∧` | | `forall@` | `∀` |
-| `or@` | `∨` | | `exists@` | `∃` |
-| `xor@` | `⊕` | | `true@` | `⊤` |
-| `not@` | `¬` | | `false@` | `⊥` |
-| `implies@` | `→` | | | |
-| `iff@` | `⇔` | | | |
-
-The word and the symbol come from one table, `require("truth-table.symbols")`,
-which the predicate language renders headings from as well: `AND = { ascii =
-"and", unicode = "∧" }` and so on. A heading you type and a heading the plugin
-generates therefore use the same characters. The abbreviations are global
-(every buffer, every filetype) and configurable through `setup()`, with the
-input side and the display side as separate settings:
-
-```lua
-require("truth-table").setup({
-  abbreviations = {
-    trigger = ";",          -- input: and; or; not; ...
-    symbols = {             -- display, keyed by word
-      implies = "⇒",        -- override one
-      forall = false,       -- drop one
-      top = "⊤",            -- add one
-    },
-  },
-})
-require("truth-table").setup({ abbreviations = false })  -- none at all
-```
-
-`symbols` merges over the defaults, which `require("truth-table.abbreviations").defaults`
-exposes as `{ trigger = "@", symbols = { ... } }`. Overriding a symbol here
-changes what you type, and only that; headings still render from
-`truth-table.symbols`. Explicit `setup()` calls replace the plugin-owned abbreviations. Automatic plugin
-loading preserves configuration already supplied in your init file. Disabling or
-reconfiguring restores displaced global abbreviations and leaves user replacements
-made after setup intact. Options are validated before abbreviations are changed.
-The trigger must be a single ASCII punctuation character other than backslash,
-`|`, `<`, or `>`. Symbol keys must be ASCII identifiers; values must be `false`
-or nonempty single-line strings without surrounding whitespace. With
-lazy.nvim, `opts = { abbreviations = ... }` is the usual place for this.
-
 ## Design
 
 The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
@@ -218,24 +288,24 @@ buffer edits. Expansion preserves encoding and skips headings already present;
 it still validates the expressions and their references against the input table.
 
 Computed columns contain stored values. Dropping a variable leaves those values
-intact. Backticks explicitly reference an existing column by its exact heading:
+intact. Positional references read stored values from an existing column:
 
 ```vim
-:TruthTableExpand not `A ∧ B`
+:TruthTableExpand not :h1
 ```
 
-This works after A or B is dropped. `not (A and B)` instead evaluates the formula
-and requires both variable columns. References bind to positions before expansion;
-new columns can be referenced in the next command. Double a backtick inside a
-reference to include it in the column name:
+`:h1` refers to the first column, `:h2` to the second, and so on. If the first
+heading is `A ∧ B`, this reads its stored values even after the original variable
+columns have been dropped. `not (A and B)` instead evaluates the formula and
+requires both variable columns.
 
-```vim
-:TruthTableExpand not `¬``A```
-```
+Indices resolve against the table before expansion; newly appended columns can
+be referenced in the next command. Removing or reordering columns changes their
+indices. Generated headings use the resolved label, for example `¬“A ∧ B”`.
 
-This reads the stored column named ¬`A`. Backslashes remain literal inside
-references. References are unavailable during new-table construction.
-Commas inside references belong to the label. Empty expressions are rejected.
+References require a positive, in-range index and are unavailable during new-table
+construction. Named bracket and backtick references are not supported. Empty
+expressions are rejected.
 
 Discovery isolates adjacent tables at their heading/separator pairs and skips
 backtick/tilde fenced code and indented code. It supports top-level tables with

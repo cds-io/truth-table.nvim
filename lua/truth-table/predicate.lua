@@ -65,31 +65,6 @@ local function symbol_op_at(input, pos)
     end
 end
 
--- Double a backtick inside a reference to represent a literal backtick.
--- Shared by tokenization and list splitting so comma-bearing labels stay whole.
-local function read_reference(input, start)
-    local characters, pos = {}, start + 1
-    while pos <= #input do
-        local ch = input:sub(pos, pos)
-        if ch == "`" then
-            if input:sub(pos + 1, pos + 1) == "`" then
-                characters[#characters + 1] = "`"
-                pos = pos + 2
-            else
-                local name = table.concat(characters)
-                if name == "" then
-                    return nil, "Empty column reference at byte " .. start
-                end
-                return name, nil, pos + 1
-            end
-        else
-            characters[#characters + 1] = ch
-            pos = pos + 1
-        end
-    end
-    return nil, "Unclosed column reference at byte " .. start
-end
-
 function M.tokenize(input)
     local tokens, spans = {}, {}
     local pos = 1
@@ -108,13 +83,17 @@ function M.tokenize(input)
         local ch = input:sub(pos, pos)
         local symbol_op, symbol_len = symbol_op_at(input, pos)
 
-        if ch == "`" then
-            local name, err, next_pos = read_reference(input, pos)
-            if not name then
-                return nil, err
+        if ch == ":" then
+            local reference = input:match("^:h%d+", pos)
+            if not reference or input:sub(pos + #reference, pos + #reference):match("[%w_:]") then
+                return nil, "Invalid column reference at byte " .. pos .. "; expected :hN"
             end
-            tokens[#tokens + 1] = { type = "reference", value = name }
-            pos = next_pos
+            local index = tonumber(reference:sub(3))
+            if index < 1 or index == math.huge then
+                return nil, "Column reference must have a positive index at byte " .. pos
+            end
+            tokens[#tokens + 1] = { type = "reference", value = index }
+            pos = pos + #reference
         elseif symbol_op then
             tokens[#tokens + 1] = { type = "op", value = symbol_op }
             pos = pos + symbol_len
@@ -183,7 +162,7 @@ function M.parse_predicate(tokens, locations)
 
         if tok.type == "reference" then
             consume()
-            return { type = "reference", name = tok.value }
+            return { type = "reference", index = tok.value }
         elseif tok.type == "ident" then
             consume()
             return { type = "var", name = tok.value }
@@ -268,7 +247,9 @@ function M.eval_ast(node, ctx)
         return M.eval_ast(node.expr, ctx)
     elseif node.type == "column" then
         return ctx[node.index]
-    elseif node.type == "var" or node.type == "reference" then
+    elseif node.type == "reference" then
+        return ctx[node.index]
+    elseif node.type == "var" then
         return ctx[node.name]
     elseif node.type == "literal" then
         return node.value
@@ -290,9 +271,9 @@ end
 
 -- Parentheses in the source are preserved; generated trees gain the grouping
 -- needed to parse back with the same meaning, including right-nested chains.
-function M.ast_to_heading(node)
+local function render_ast(node, reference_text)
     local function child_heading(child, right)
-        local heading = M.ast_to_heading(child)
+        local heading = render_ast(child, reference_text)
         if precedence(child) < precedence(node)
             or (right and precedence(child) == precedence(node)) then
             return "(" .. heading .. ")"
@@ -300,9 +281,11 @@ function M.ast_to_heading(node)
         return heading
     end
     if node.type == "paren" then
-        return "(" .. M.ast_to_heading(node.expr) .. ")"
+        return "(" .. render_ast(node.expr, reference_text) .. ")"
     elseif node.type == "reference" then
-        return "`" .. node.name:gsub("`", "``") .. "`"
+        return ":h" .. node.index
+    elseif node.type == "column" then
+        return node.variable or reference_text(node.name)
     elseif node.type == "var" then
         return node.name
     elseif node.type == "literal" then
@@ -312,6 +295,18 @@ function M.ast_to_heading(node)
     elseif BINARY[node.type] then
         return child_heading(node.left, false) .. " " .. M.SYMBOLS[node.type] .. " " .. child_heading(node.right, true)
     end
+end
+
+function M.ast_to_heading(node)
+    return render_ast(node, function(name)
+        return "“" .. name .. "”"
+    end)
+end
+
+local function ast_to_expression(node)
+    return render_ast(node, function(name)
+        return "[" .. name .. "]"
+    end)
 end
 
 -- Parse source through the tokenizer/parser Result pipeline.
@@ -346,12 +341,14 @@ function M.transform_ast(node, fn)
                 return fn(copy)
             end)
         end)
-    elseif node.type == "var" or node.type == "reference" then
+    elseif node.type == "var" then
         copy.name = node.name
+    elseif node.type == "reference" then
+        copy.index = node.index
     elseif node.type == "literal" then
         copy.value = node.value
     elseif node.type == "column" then
-        copy.index = node.index
+        copy.index, copy.name, copy.variable = node.index, node.name, node.variable
     else
         return nil, "Unknown AST node: " .. tostring(node.type)
     end
@@ -359,31 +356,30 @@ function M.transform_ast(node, fn)
 end
 
 -- Resolve surface names once; evaluation uses row positions, never labels.
-function M.bind_columns(node, columns)
+function M.bind_columns(node, columns, headers)
     return M.transform_ast(node, function(copy)
-        if copy.type == "var" or copy.type == "reference" then
+        if copy.type == "reference" then
+            if not headers or not headers[copy.index] then
+                return nil, "Column reference out of range: :h" .. copy.index
+            end
+            return { type = "column", index = copy.index, name = headers[copy.index] }
+        elseif copy.type == "var" then
             local index = columns[copy.name]
             if not index then
                 return nil, "Unknown column: " .. copy.name
             end
-            return { type = "column", index = index }
+            return { type = "column", index = index, variable = copy.name }
         end
         return copy
     end)
 end
 
--- Delimiters inside explicit column references belong to the name.
+-- Positional references contain no expression delimiters.
 function M.split_expressions(input, delimiters)
     local parts, start, pos = {}, 1, 1
     while pos <= #input do
         local ch = input:sub(pos, pos)
-        if ch == "`" then
-            local name, err, next_pos = read_reference(input, pos)
-            if not name then
-                return nil, err
-            end
-            pos = next_pos
-        elseif delimiters:find(ch, 1, true) then
+        if delimiters:find(ch, 1, true) then
             local part = trim(input:sub(start, pos - 1))
             if part == "" then
                 return nil, "Empty expression at position " .. start
@@ -480,7 +476,7 @@ end
 function M.de_morgan_expression(input)
     local ast, err = M.parse_expression(input)
     local rewritten, rewrite_err = result.bind(ast, err, M.de_morgan)
-    return result.bind(rewritten, rewrite_err, M.ast_to_heading)
+    return result.bind(rewritten, rewrite_err, ast_to_expression)
 end
 
 return M
