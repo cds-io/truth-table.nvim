@@ -59,6 +59,13 @@ local function format_valid(headers, rows, display_width)
     return lines
 end
 
+-- Format arbitrary string cells (headers may be empty). The Boolean codec
+-- below validates before calling this; the Karnaugh renderer, whose cells are
+-- Gray codes and axis labels, uses it directly.
+function M.format_cells(headers, rows, display_width)
+    return format_valid(headers, rows, display_width or M.display_width)
+end
+
 function M.is_table_line(line)
     return line:match("^%s*|.*|%s*$") ~= nil
 end
