@@ -9,7 +9,7 @@ describe("Markdown codec", function()
         -- making the round-trip assertion pass together.
         assert.are.equal("| p \\| q | path\\\\name | slash\\\\\\|pipe |", lines[1])
         assert.are.same(tbl, markdown.parse_table_lines(lines))
-        local headers, rows = core.expand({ headers = tbl.headers, rows = { { "F", "T", "F" } } }, { "not `p | q`" })
+        local headers, rows = core.expand({ headers = tbl.headers, rows = { { "F", "T", "F" } } }, { "not :h1" })
         local reparsed = assert(core.parse_table_lines(assert(core.format_table(headers, rows))))
         assert.are.same(headers, reparsed.headers)
         assert.are.same({ { "F", "T", "F", "T" } }, reparsed.rows)

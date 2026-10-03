@@ -119,10 +119,10 @@ local function expand_asts(tbl, asts)
             indices[heading] = i
         end
         local columns, column_err = result.traverse(asts, function(ast)
-            local bound, bind_err = M.bind_columns(ast, indices)
+            local bound, bind_err = M.bind_columns(ast, indices, valid.headers)
             return result.bind(bound, bind_err, function(expression)
                 return {
-                    heading = M.ast_to_heading(ast),
+                    heading = M.ast_to_heading(expression),
                     values = result.traverse(valid.rows, function(row)
                         return M.eval_ast(expression, row)
                     end),

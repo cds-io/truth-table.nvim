@@ -113,19 +113,19 @@ end)
 
 describe("predicate source diagnostics", function()
     it("retains byte spans without changing legacy token records", function()
-        local tokens, err, locations = predicate.tokenize('  A ∧ `B, C`')
+        local tokens, err, locations = predicate.tokenize('  A ∧ :h2')
         assert.is_nil(err)
         assert.are.same({
             { type = 'ident', value = 'A' },
             { type = 'op', value = 'and' },
-            { type = 'reference', value = 'B, C' },
+            { type = 'reference', value = 2 },
         }, tokens)
         assert.are.same({
             { start_byte = 3, end_byte = 3 },
             { start_byte = 5, end_byte = 7 },
-            { start_byte = 9, end_byte = 14 },
+            { start_byte = 9, end_byte = 11 },
         }, locations.spans)
-        assert.are.equal(15, locations.end_byte)
+        assert.are.equal(12, locations.end_byte)
     end)
 
     it("points to unexpected tokens and end-of-input after multibyte symbols", function()
@@ -145,8 +145,8 @@ describe("predicate source diagnostics", function()
     it("shows complete unexpected Unicode characters and reference positions", function()
         local _, unicode_err = predicate.parse_expression('A ∧ λ')
         assert.is_truthy(unicode_err:find('Unexpected character: λ at byte 7', 1, true))
-        local _, reference_err = predicate.parse_expression('  `A')
-        assert.is_truthy(reference_err:find('Unclosed column reference at byte 3', 1, true))
+        local _, reference_err = predicate.parse_expression('  :h')
+        assert.is_truthy(reference_err:find('Invalid column reference at byte 3', 1, true))
     end)
 
     it("falls back to token indices for manually supplied tokens", function()
@@ -157,27 +157,19 @@ describe("predicate source diagnostics", function()
     end)
 end)
 
-describe("escaped column references", function()
-    it("decodes doubled backticks while retaining commas and backslashes", function()
-        local input = '`path\\name, ``quoted```'
-        local ast = assert(predicate.parse_expression(input))
-        assert.are.same({ type = 'reference', name = 'path\\name, `quoted`' }, ast)
-        assert.are.equal(input, predicate.ast_to_heading(ast))
-        assert.are.same({ input, 'A' }, predicate.split_expressions(input .. ', A', ','))
-        assert.are.same({ type = 'reference', name = '`' }, predicate.parse_expression('````'))
+describe("positional column references", function()
+    it("parses indices and retains expression syntax", function()
+        local ast = assert(predicate.parse_expression('not :h12'))
+        assert.are.same({ type = 'not', operand = { type = 'reference', index = 12 } }, ast)
+        assert.are.equal('¬:h12', predicate.ast_to_heading(ast))
+        assert.are.same({ 'not :h12', 'A' }, predicate.split_expressions('not :h12, A', ','))
     end)
 
-    it("keeps span positions correct across escaped backticks", function()
-        local tokens, err, locations = predicate.tokenize('`a``b` and A')
-        assert.is_nil(err)
-        assert.are.same({ type = 'reference', value = 'a`b' }, tokens[1])
-        assert.are.same({ start_byte = 1, end_byte = 6 }, locations.spans[1])
-        assert.are.same({ start_byte = 8, end_byte = 10 }, locations.spans[2])
-        for _, input in ipairs({ '`a``', '```' }) do
-            local ast, parse_err = predicate.parse_expression(input)
+    it("rejects invalid indices and named reference syntax", function()
+        for _, input in ipairs({ ':h0', ':h', ':h-1', ':h1x', ':h1.5', ':H1', '[A]', '`A`' }) do
+            local ast, err = predicate.parse_expression(input)
             assert.is_nil(ast)
-            assert.is_truthy(parse_err:find('Unclosed column reference at byte 1', 1, true))
-            assert.is_nil(predicate.split_expressions(input, ','))
+            assert.is_string(err)
         end
     end)
 end)
@@ -209,7 +201,7 @@ describe("whole-expression De Morgan rewrites", function()
     it("treats root parentheses transparently and preserves necessary nested grouping", function()
         assert.are.equal('¬A ∨ ¬B', predicate.de_morgan_expression('(not (A and B))'))
         assert.are.equal('¬(A ∨ B) ∨ ¬C', predicate.de_morgan_expression('not ((A or B) and C)'))
-        assert.are.equal('¬`p, q` ∧ ¬B', predicate.de_morgan_expression('not (`p, q` or B)'))
+        assert.are.equal('¬:h2 ∧ ¬B', predicate.de_morgan_expression('not (:h2 or B)'))
         local ast, err = predicate.de_morgan_expression('A or not (B and C)')
         assert.is_nil(ast)
         assert.are.equal('No De Morgan rewrite applies to the whole expression', err)

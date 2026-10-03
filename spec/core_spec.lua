@@ -505,46 +505,58 @@ end)
 describe("stored column references", function()
     it("uses stored values after source columns have been dropped", function()
         local tbl = { headers = { "B", "A ∧ B" }, rows = { { "0", "0" }, { "1", "1" } } }
-        local headers, rows = core.expand(tbl, { "not `A ∧ B`" })
-        assert.are.same({ "B", "A ∧ B", "¬`A ∧ B`" }, headers)
+        local headers, rows = core.expand(tbl, { "not :h2" })
+        assert.are.same({ "B", "A ∧ B", "¬“A ∧ B”" }, headers)
         assert.are.same({ { "0", "0", "1" }, { "1", "1", "0" } }, rows)
         assert.is_nil(core.expand(tbl, { "not (A and B)" }))
     end)
 
     it("distinguishes a stored value from recomputing its displayed formula", function()
         local tbl = { headers = { "A", "B", "A ∧ B" }, rows = { { "1", "1", "0" } } }
-        local _, rows = core.expand(tbl, { "not `A ∧ B`", "not (A and B)" })
+        local _, rows = core.expand(tbl, { "not :h3", "not (A and B)" })
         assert.are.same({ { "1", "1", "0", "1", "0" } }, rows)
     end)
 
     it("binds names to positions without mutating the parsed tree", function()
-        local ast = assert(core.parse_expression("not `A ∧ B`"))
-        local bound = assert(core.bind_columns(ast, { ["A ∧ B"] = 2 }))
+        local ast = assert(core.parse_expression("not :h2"))
+        local bound = assert(core.bind_columns(ast, { ["A ∧ B"] = 2 }, { "B", "A ∧ B" }))
         assert.are.equal(1, core.eval_ast(bound, { 1, 0 }))
         assert.are.equal("reference", ast.operand.type)
         assert.are.equal("column", bound.operand.type)
-        assert.are.equal("¬`A ∧ B`", core.ast_to_heading(ast))
+        assert.are.equal("¬“A ∧ B”", core.ast_to_heading(bound))
     end)
 
-    it("round-trips reference headings and handles comma-bearing labels", function()
-        local input = "not `p, q`"
+    it("renders literal reference headings and handles comma-bearing labels", function()
+        local input = "not :h1"
         local ast = assert(core.parse_expression(input))
-        local heading = core.ast_to_heading(ast)
-        assert.are.same(ast, core.parse_expression(heading))
-        assert.are.same({ "not `p, q`", "A" }, core.split_expressions(input .. ", A", ","))
+        local heading = core.ast_to_heading(assert(core.bind_columns(ast, {}, { "p, q" })))
+        assert.are.equal("¬“p, q”", heading)
+        assert.are.same({ "not :h1", "A" }, core.split_expressions(input .. ", A", ","))
         local _, rows = core.expand({ headers = { "p, q" }, rows = { { "T" } } }, { input })
         assert.are.same({ { "T", "F" } }, rows)
     end)
 
+    it("resolves every index against the input table before appending columns", function()
+        local tbl = { headers = { "p, q", "[arbitrary] `label`" }, rows = { { 0, 1 } }, encoding = "bits" }
+        local expanded = assert(core.expand_model(tbl, { "not :h2", ":h1 xor :h2" }))
+        assert.are.same({ { 0, 1, 0, 1 } }, expanded.rows)
+        assert.are.equal("¬“[arbitrary] `label`”", expanded.headers[3])
+        local invalid, err = core.expand_model(tbl, { "not :h1", ":h3" })
+        assert.is_nil(invalid)
+        assert.are.equal("Column reference out of range: :h3", err)
+        assert.are.same({ { 0, 1 } }, tbl.rows)
+        assert.are.equal(2, #tbl.headers)
+    end)
+
     it("rejects invalid references and references during table creation", function()
-        for _, input in ipairs({ "``", "`A", "not `A" }) do
+        for _, input in ipairs({ ":h0", ":h", "not :h-1" }) do
             assert.is_nil(core.parse_expression(input))
         end
-        assert.is_nil(core.expand({ headers = { "A" }, rows = { { "0" } } }, { "`missing`" }))
-        local headers, err = core.build_truth_table("A and `B`")
+        assert.is_nil(core.expand({ headers = { "A" }, rows = { { "0" } } }, { ":h2" }))
+        local headers, err = core.build_truth_table("A and :h1")
         assert.is_nil(headers)
         assert.are.equal("Column references require an existing table", err)
-        for _, input in ipairs({ "A,,B", "A|", "|A", "A,`B" }) do
+        for _, input in ipairs({ "A,,B", "A|", "|A", "A,," }) do
             assert.is_nil(core.split_expressions(input, "|,"))
         end
     end)
@@ -608,12 +620,12 @@ describe("semantic core pipeline", function()
         assert.are.same({ 1, 1, 1 }, tbl.rows[4])
         local toggled = assert(core.toggle_model(tbl))
         local dropped = assert(core.drop_model_column(toggled, 1))
-        local expanded = assert(core.expand_model(dropped, { "not `A ∧ B`" }))
+        local expanded = assert(core.expand_model(dropped, { "not :h2" }))
         assert.are.equal("tf", expanded.encoding)
         assert.are.same({ 1, 1, 0 }, expanded.rows[4])
         local edited = assert(core.drop_model_row(expanded, 1))
         assert.are.same({
-            headers = { "B", "A ∧ B", "¬`A ∧ B`" },
+            headers = { "B", "A ∧ B", "¬“A ∧ B”" },
             rows = { { 1, 0, 1 }, { 0, 0, 1 }, { 1, 1, 0 } }, encoding = "tf",
         }, edited)
         assert.are.same(edited, core.parse_model(assert(core.format_model(edited))))
@@ -714,14 +726,14 @@ end)
 describe("references to reference-generated headings", function()
     it("chains stored-column operations after source columns are dropped", function()
         local tbl = { headers = { 'A' }, rows = { { 0 }, { 1 } }, encoding = 'bits' }
-        local first = assert(core.expand_model(tbl, { 'not `A`' }))
+        local first = assert(core.expand_model(tbl, { 'not :h1' }))
         local dropped = assert(core.drop_model_column(first, 1))
-        local second = assert(core.expand_model(dropped, { 'not `¬``A```' }))
+        local second = assert(core.expand_model(dropped, { 'not :h1' }))
         assert.are.same({
-            headers = { '¬`A`', '¬`¬``A```' }, rows = { { 1, 0 }, { 0, 1 } }, encoding = 'bits',
+            headers = { '¬“A”', '¬“¬“A””' }, rows = { { 1, 0 }, { 0, 1 } }, encoding = 'bits',
         }, second)
         local reparsed = assert(core.parse_model(assert(core.format_model(second))))
-        local third = assert(core.expand_model(reparsed, { 'not `¬``¬````A```````' }))
+        local third = assert(core.expand_model(reparsed, { 'not :h2' }))
         assert.are.same({ { 1, 0, 1 }, { 0, 1, 0 } }, third.rows)
     end)
 end)
