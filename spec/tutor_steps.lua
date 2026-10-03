@@ -30,4 +30,6 @@ return {
     { line = '|  0  |  1   |     0      |', at = '     0', run = { 'TruthTableDropRow', 'TruthTableKarnaugh' } },
     { line = 'S or (A and not C) or (G and not C)', at = 'not C', run = { 'TruthTableFactor', 'TruthTableApplyStep' } },
     { line = '≡ S ∨ (¬C ∧ (A ∨ G))', at = 'S', run = { 'TruthTableCommute', 'TruthTableApplyStep' } },
+    { line = 'isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)', at = 'not isClassified', run = { 'TruthTableFactor', 'TruthTableApplyStep' } },
+    { line = '≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))', at = 'isSuperAdmin', run = { 'TruthTableCommute', 'TruthTableApplyStep' } },
 }

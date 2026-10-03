@@ -497,6 +497,20 @@ S or (A and not C) or (G and not C)
 ≡ (¬C ∧ (A ∨ G)) ∨ S
 ```
 
+Single letters keep an expression short and a table narrow, which is why logic
+uses them. The plugin takes any identifier, though, and with the real names the
+result reads straight back into code. The same two steps again: factor with the
+cursor on either `not isClassified`, then commute `isSuperAdmin` in the new
+line, each applied as a step.
+
+isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
+
+```text
+isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
+≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))
+≡ (¬isClassified ∧ (isAdmin ∨ hasGrant)) ∨ isSuperAdmin
+```
+
 Read the last line back into code, one name per group:
 
 ```js
