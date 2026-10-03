@@ -259,4 +259,50 @@ function M.factor(ast, byte)
     return finish(substitute(ast, path[outer.top], fold(outer.op, terms)))
 end
 
+-- Multiply the target into the dual group next to it (right neighbour first):
+-- T ∧ (A ∨ G) becomes T ∧ A ∨ T ∧ G, and dually for ∨ over ∧.
+function M.distribute(ast, byte)
+    local path, index = locate(ast, byte)
+    if not path then
+        return nil, index
+    end
+    local target = path[index]
+    local chain = chain_at(path, index)
+    local dual = DUAL[chain.op]
+    local at, group_at = chain.index, nil
+    for _, candidate in ipairs({ at + 1, at - 1 }) do
+        local operand = chain.operands[candidate]
+        if not group_at and dual and operand and unparen(operand).type == dual then
+            group_at = candidate
+        end
+    end
+    if not group_at then
+        return nil, "No neighbouring group to distribute " .. predicate.ast_to_heading(target) .. " into"
+    end
+
+    local products = {}
+    for _, member in ipairs(operands(chain.operands[group_at], dual)) do
+        -- The target stays on the side of the group it started on.
+        products[#products + 1] = fold(chain.op, group_at > at and { target, member } or { member, target })
+    end
+
+    if #chain.operands > 2 then
+        local items, first = chain.operands, math.min(at, group_at)
+        items[first] = paren(fold(dual, products))
+        table.remove(items, first + 1)
+        return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+    end
+
+    -- The products take the chain's place. When the chain was a parenthesised
+    -- term of a dual chain they merge into it, each keeping those parentheses.
+    local slot, parent = path[chain.slot], path[chain.slot - 1]
+    if slot.type == "paren" and parent and parent.type == dual then
+        for i, product in ipairs(products) do
+            products[i] = paren(product)
+        end
+        return finish(substitute(ast, slot, fold(dual, products)))
+    end
+    return finish(substitute(ast, path[chain.top], fold(dual, products)))
+end
+
 return M

@@ -3,6 +3,9 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add rewrite.distribute: multiply an operand into the group beside it
+  (¬C ∧ (A ∨ G) to ¬C ∧ A ∨ ¬C ∧ G, and dually). A soundness spec checks every
+  rewrite at every cursor byte for truth-table equivalence.
 - Add rewrite.factor: pull a shared operand out of the terms of a sum or product
   (A ∧ ¬C ∨ G ∧ ¬C to ¬C ∧ (A ∨ G), and dually for ∨ inside ∧).
 - Add truth-table.rewrite (pure Lua): find the operand under a cursor byte, reading

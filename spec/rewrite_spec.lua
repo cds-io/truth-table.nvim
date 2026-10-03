@@ -165,3 +165,115 @@ describe("rewrite.factor", function()
         assert.are.equal("Fewer than two terms share (A ∨ B)", err)
     end)
 end)
+
+describe("rewrite.distribute", function()
+    it("multiplies the target into the group on its right", function()
+        assert.are.equal("¬C ∧ A ∨ ¬C ∧ G", run("distribute", "¬C ∧ (A ∨ G)", "¬C"))
+    end)
+
+    it("falls back to the group on its left, keeping its side", function()
+        assert.are.equal("A ∧ ¬C ∨ G ∧ ¬C", run("distribute", "(A ∨ G) ∧ ¬C", "¬C"))
+    end)
+
+    it("merges into the parent chain, keeping the term's parentheses", function()
+        assert.are.equal("S ∨ (¬C ∧ A) ∨ (¬C ∧ G)", run("distribute", "S ∨ (¬C ∧ (A ∨ G))", "¬C"))
+        assert.are.equal("S ∨ ¬C ∧ A ∨ ¬C ∧ G", run("distribute", "S ∨ ¬C ∧ (A ∨ G)", "¬C"))
+        assert.are.equal("(¬C ∧ A) ∨ (¬C ∧ G) ∨ S", run("distribute", "(¬C ∧ (A ∨ G)) ∨ S", "¬C"))
+    end)
+
+    it("keeps the products grouped beside other operands", function()
+        assert.are.equal("X ∧ (¬C ∧ A ∨ ¬C ∧ G)", run("distribute", "X ∧ ¬C ∧ (A ∨ G)", "¬C"))
+    end)
+
+    it("distributes a group over a group one step at a time", function()
+        assert.are.equal("(A ∨ B) ∧ C ∨ (A ∨ B) ∧ D", run("distribute", "(A ∨ B) ∧ (C ∨ D)", "("))
+    end)
+
+    it("distributes ∨ over ∧", function()
+        assert.are.equal("(A ∨ B) ∧ (A ∨ C)", run("distribute", "A ∨ (B ∧ C)", "A"))
+    end)
+
+    it("keeps the grouping a negation needs", function()
+        assert.are.equal("¬(¬C ∧ A ∨ ¬C ∧ G)", run("distribute", "¬(¬C ∧ (A ∨ G))", "¬C"))
+    end)
+
+    it("refuses without a neighbouring dual group", function()
+        for _, case in ipairs({
+            { "A ∧ B", "A", "A" },
+            { "A ∧ B ∧ (C ∨ D)", "A", "A" },
+            { "¬C ∧ (A ∨ G)", "A", "A" },
+            { "A ⊕ (B ∨ C)", "A", "A" },
+        }) do
+            local out, err = run("distribute", case[1], case[2])
+            assert.is_nil(out, case[1])
+            assert.are.equal("No neighbouring group to distribute " .. case[3] .. " into", err)
+        end
+    end)
+end)
+
+-- Every rewrite, at every cursor byte of every expression here, either refuses
+-- with a message or returns a tree that means the same and survives a
+-- render/parse round trip. The input is never modified.
+describe("rewrite soundness", function()
+    local corpus = {
+        "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)",
+        "S ∨ A ∧ ¬C ∨ G ∧ ¬C",
+        "(A ∨ B) ∧ (A ∨ C) ∧ D",
+        "A ∧ (B ∨ C) ∧ (D ∨ E)",
+        "¬(A ∧ (B ∨ ¬C)) ∨ A ∧ B",
+        "A ∨ (B ∨ C) ∧ (A ∨ (D ∧ E))",
+        "(A → B) ∧ C ∨ (A → B) ∧ D",
+        "A ⊕ B ∧ (C ∨ D) ⊕ C",
+        "A ⇔ (B ∨ C ∧ A) ⇔ B",
+        "((A ∧ B)) ∨ (A ∧ (C ∨ (B ∧ D)))",
+        "A ∧ A ∧ B ∨ A ∧ C ∨ 1 ∧ A",
+        "not (A and B) or not (A and C)",
+    }
+    local rewrites = {
+        factor = function(ast, byte) return rewrite.factor(ast, byte) end,
+        distribute = function(ast, byte) return rewrite.distribute(ast, byte) end,
+        commute = function(ast, byte) return rewrite.commute(ast, byte, false) end,
+        commute_back = function(ast, byte) return rewrite.commute(ast, byte, true) end,
+    }
+
+    local function same_function(a, b, variables)
+        for row = 0, 2 ^ #variables - 1 do
+            local assignment = {}
+            for i, name in ipairs(variables) do
+                assignment[name] = math.floor(row / 2 ^ (i - 1)) % 2
+            end
+            if predicate.eval_ast(a, assignment) ~= predicate.eval_ast(b, assignment) then
+                return false
+            end
+        end
+        return true
+    end
+
+    it("refuses or preserves meaning at every cursor position", function()
+        local rewritten = 0
+        for _, source in ipairs(corpus) do
+            local ast = assert(predicate.parse_located(source))
+            local before = predicate.ast_to_heading(ast)
+            local variables = assert(predicate.variables(ast))
+            for byte = 0, #source + 1 do
+                for name, fn in pairs(rewrites) do
+                    local where = name .. " at byte " .. byte .. " of " .. source
+                    local tree, err = fn(ast, byte)
+                    if tree then
+                        rewritten = rewritten + 1
+                        local text = predicate.ast_to_heading(tree)
+                        assert.is_true(same_function(ast, tree, variables), where .. " gave " .. text)
+                        local reparsed = assert(predicate.parse_expression(text), where)
+                        assert.are.equal(text, predicate.ast_to_heading(reparsed), where)
+                        assert.is_nil(tree.span, where)
+                    else
+                        assert.is_string(err, where)
+                    end
+                    assert.are.equal(before, predicate.ast_to_heading(ast), where)
+                end
+            end
+        end
+        -- Guards the property against a rewrite that silently refuses everything.
+        assert.is_true(rewritten > 200, "only " .. rewritten .. " rewrites ran")
+    end)
+end)
