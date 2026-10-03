@@ -196,6 +196,43 @@ notified = nil
 vim.cmd('TruthTableCommute')
 assert(notified == 'Put the cursor on an operand' and vim.api.nvim_get_current_line() == 'A ∧ B   ')
 
+-- Xor recognition closes a derivation; the cursor can be anywhere in either term.
+set({ '(T ⊕ E) ∧ R ≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))' })
+on('¬T')
+vim.cmd('TruthTableXor')
+assert(text() == ' ⇒ R ∧ (T ⊕ E)')
+vim.cmd('TruthTableApplyStep')
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
+    '(T ⊕ E) ∧ R ≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))',
+    '            ≡ R ∧ (T ⊕ E)',
+}))
+
+-- De Morgan reaches the nearest match around the cursor.
+set({ 'R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)' })
+on('¬T')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' ⇒ R ∧ (T ∨ E) ∧ ¬(T ∧ E)')
+vim.cmd('TruthTableDeMorgan')
+set({ 'A or not (B and C)' })
+on('not')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' ⇒ A ∨ ¬B ∨ ¬C')
+vim.cmd('TruthTableApply')
+assert(vim.api.nvim_get_current_line() == 'A ∨ ¬B ∨ ¬C')
+
+-- In a heading the cursor picks a nested match from the heading row; from a
+-- data row De Morgan still means the whole heading.
+local nested = assert(core.format_table({ 'A', 'B', 'A ∧ ¬(A ∧ B)' }, { { '0', '0', '0' }, { '1', '0', '1' } }))
+set(nested)
+on('¬')
+vim.cmd('TruthTableDeMorgan')
+assert(text() == ' [column 3] ⇒ A ∧ (¬A ∨ ¬B)')
+vim.cmd('TruthTableDeMorgan')
+set(nested, 3, 14)
+notified = nil
+vim.cmd('TruthTableDeMorgan')
+assert(#marks() == 0 and notified:find('whole expression', 1, true))
+
 -- The Lua entry point keeps its no-argument form: a De Morgan preview.
 set({ 'not (A and B)' })
 require('truth-table.preview').toggle()

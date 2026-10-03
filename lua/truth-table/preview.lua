@@ -8,18 +8,13 @@ local namespace = vim.api.nvim_create_namespace("truth-table.preview")
 local pending, attached = {}, {}
 
 -- Each rewrite maps a located tree and a cursor byte to a new tree. `command`
--- groups the names one user command toggles; `whole` marks a rewrite of the
--- whole expression, which needs no operand under the cursor.
+-- groups the names one user command toggles; `whole` marks a rewrite that
+-- also works without a cursor in the expression, on the whole of it.
 local REWRITES = {
-    de_morgan = {
-        command = "de_morgan",
-        whole = true,
-        run = function(ast)
-            return predicate.de_morgan(ast)
-        end,
-    },
+    de_morgan = { command = "de_morgan", whole = true, run = rewrite.de_morgan },
     factor = { command = "factor", run = rewrite.factor },
     distribute = { command = "distribute", run = rewrite.distribute },
+    xor = { command = "xor", run = rewrite.xor },
     commute = {
         command = "commute",
         run = function(ast, byte)

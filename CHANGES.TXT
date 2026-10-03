@@ -3,6 +3,12 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableXor (<leader>tto): recognise an exclusive or or an equivalence
+  spelled out as two terms (¬A ∧ B ∨ A ∧ ¬B to A ⊕ B, A ∧ B ∨ ¬A ∧ ¬B to A ⇔ B,
+  and the product-of-sums forms), with the cursor anywhere in either term.
+- :TruthTableDeMorgan applies at the nearest match around the cursor, so a nested
+  match is reachable by putting the cursor in it. From a table's data rows it
+  still means the whole heading.
 - Add :TruthTableFactor (<leader>ttf), :TruthTableDistribute (<leader>ttx) and
   :TruthTableCommute[!] (<leader>tts, <leader>ttS): preview a rewrite of the
   operand under the cursor, on an expression line or on a table's heading row.
