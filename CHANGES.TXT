@@ -3,6 +3,17 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableFactor (<leader>ttf), :TruthTableDistribute (<leader>ttx) and
+  :TruthTableCommute[!] (<leader>tts, <leader>ttS): preview a rewrite of the
+  operand under the cursor, on an expression line or on a table's heading row.
+- Add :TruthTableApply (<leader>tta), which replaces in place, and
+  :TruthTableApplyStep (<leader>ttA), which inserts the rewrite below as a `≡`
+  derivation step and moves the cursor to it. Both serve every preview, De
+  Morgan included; :TruthTableDeMorganApply remains as an alias.
+- On a line with `≡` separators a rewrite reads the side under the cursor and
+  keeps the others. Running a pending preview's own command dismisses it; a
+  different rewrite command replaces it.
+- Add markdown.heading_cell: the bytes of a heading cell's content.
 - Add truth-table.derivation (pure Lua): split a line into sides at ≡, replace one
   side, and build the next `≡` step line, aligned by display column.
 - Add rewrite.distribute: multiply an operand into the group beside it

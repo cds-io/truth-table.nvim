@@ -6,10 +6,16 @@ assert(vim.g.loaded_truth_table)
 vim.cmd('runtime plugin/truth-table.lua')
 require('truth-table').setup()
 require('truth-table').setup()
-for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh' }) do
+for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh',
+    'TruthTableDeMorgan', 'TruthTableDeMorganApply', 'TruthTableFactor', 'TruthTableDistribute', 'TruthTableCommute',
+    'TruthTableApply', 'TruthTableApplyStep' }) do
     assert(vim.api.nvim_get_commands({})[command], command)
 end
 assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
+for key, command in pairs({ f = 'TruthTableFactor', x = 'TruthTableDistribute', s = 'TruthTableCommute', S = 'TruthTableCommute!',
+    a = 'TruthTableApply', A = 'TruthTableApplyStep', d = 'TruthTableDeMorgan' }) do
+    assert(vim.fn.maparg('<leader>tt' .. key, 'n') == '<Cmd>' .. command .. '<CR>', key)
+end
 vim.cmd('TruthTable A B')
 vim.api.nvim_win_set_cursor(0, {3, 3})
 vim.cmd('TruthTableToggle')

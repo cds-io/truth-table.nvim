@@ -223,6 +223,24 @@ function M.find_table(lines, cursor_row)
     return nil, "Cursor is not inside a truth table"
 end
 
+-- One-based, inclusive bytes of a heading cell's content, surrounding blanks
+-- excluded. Nil for a blank cell or a column the line does not have.
+function M.heading_cell(line, index)
+    local pipes = {}
+    scan(line, function(pos)
+        pipes[#pipes + 1] = pos
+    end, function() end)
+    if not pipes[index + 1] then
+        return nil
+    end
+    local lead, content = line:sub(pipes[index] + 1, pipes[index + 1] - 1):match("^(%s*)(.-)%s*$")
+    if content == "" then
+        return nil
+    end
+    local first = pipes[index] + 1 + #lead
+    return first, first + #content - 1
+end
+
 function M.escape_heading(header)
     return (header:gsub("\\", "\\\\"):gsub("|", "\\|"):gsub("`", "\\`"))
 end
