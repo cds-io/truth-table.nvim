@@ -76,4 +76,17 @@ describe("derivation.step", function()
         local step = derivation.step("\tF ≡ A", "B", width)
         assert.are.equal("\t  ≡ B", step)
     end)
+
+    it("measures the head from the start of the line, where a tab's width depends on its column", function()
+        -- A tab advances to the next multiple of eight, as in Neovim.
+        local function tabbed_width(text)
+            local column = 0
+            for character in text:gmatch("[^\128-\191][\128-\191]*") do
+                column = character == "\t" and column - column % 8 + 8 or column + 1
+            end
+            return column
+        end
+        local step = derivation.step("  F\t≡ A ∧ B", "B ∧ A", tabbed_width)
+        assert.are.equal("        ≡ B ∧ A", step)
+    end)
 end)

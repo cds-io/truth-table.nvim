@@ -61,7 +61,8 @@ function M.step(line, text, display_width)
     local cuts = separators(line)
     local pad = line:match("^%s*")
     if #cuts > 0 then
-        pad = pad .. string.rep(" ", display_width(line:sub(#pad + 1, cuts[#cuts] - 1)))
+        -- Measured from the start of the line: a tab's width depends on its column.
+        pad = pad .. string.rep(" ", display_width(line:sub(1, cuts[#cuts] - 1)) - display_width(pad))
     end
     local prefix = pad .. SEPARATOR .. " "
     return prefix .. text, #prefix
