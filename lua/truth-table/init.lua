@@ -28,22 +28,33 @@ local function get_cursor_column_index()
     return core.column_index(vim.api.nvim_get_current_line(), cursor[2])
 end
 
--- Compose parse -> transform -> format, using one Result convention throughout.
-local function with_table(fn)
+-- The table under the cursor as a model plus its buffer bounds, or nil and an
+-- error. Bounds are one-based, inclusive line numbers.
+local function read_table()
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local bounds, find_err = core.find_table(lines, vim.api.nvim_win_get_cursor(0)[1])
     if not bounds then
-        vim.notify(find_err, vim.log.levels.WARN)
-        return
+        return nil, find_err
     end
     local selected = {}
     for row = bounds.start_line, bounds.end_line do
         selected[#selected + 1] = lines[row]
     end
     local tbl, err = core.parse_model(selected)
-    local edited, edit_err = result.bind(tbl, err, function(valid)
-        return fn(valid, bounds.start_line, bounds.end_line)
-    end)
+    if not tbl then
+        return nil, err
+    end
+    return tbl, bounds
+end
+
+-- Compose parse -> transform -> format, using one Result convention throughout.
+local function with_table(fn)
+    local tbl, bounds = read_table()
+    if not tbl then
+        vim.notify(bounds, vim.log.levels.WARN)
+        return
+    end
+    local edited, edit_err = fn(tbl, bounds.start_line, bounds.end_line)
     replace_table(bounds.start_line - 1, bounds.end_line, edited, edit_err, bounds.indent)
 end
 
@@ -100,6 +111,27 @@ local function cmd_toggle()
     end)
 end
 
+-- The table stays as it is; the map and formula go below it, after one blank
+-- line, at the table's indentation.
+local function cmd_karnaugh()
+    local tbl, bounds = read_table()
+    if not tbl then
+        vim.notify(bounds, vim.log.levels.WARN)
+        return
+    end
+    local col_idx = math.min(get_cursor_column_index(), #tbl.headers)
+    local analysis, err = core.derive_karnaugh(tbl, col_idx)
+    if not analysis then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+    end
+    local lines = { "" }
+    for _, line in ipairs(core.format_karnaugh(analysis)) do
+        lines[#lines + 1] = line == "" and "" or bounds.indent .. line
+    end
+    vim.api.nvim_buf_set_lines(0, bounds.end_line, bounds.end_line, false, lines)
+end
+
 -- Register commands, keymaps, insert-mode abbreviations, and (if present)
 -- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
 -- terminal-accurate. Idempotent: the last call wins, including for the
@@ -129,6 +161,9 @@ function M.setup(opts)
     })
     vim.api.nvim_create_user_command("TruthTableToggle", cmd_toggle, {
         desc = "Toggle truth table between 0/1 and F/T",
+    })
+    vim.api.nvim_create_user_command("TruthTableKarnaugh", cmd_karnaugh, {
+        desc = "Insert a Karnaugh map and minimal formula for the current column",
     })
 
     local preview = require("truth-table.preview")
@@ -164,6 +199,7 @@ function M.setup(opts)
     vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
     vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })
     vim.keymap.set("n", "<leader>ttc", "<cmd>TruthTableDropColumn<CR>", { desc = "Drop truth table column" })
+    vim.keymap.set("n", "<leader>ttk", "<cmd>TruthTableKarnaugh<CR>", { desc = "Karnaugh map for column" })
     M.configured = true
 end
 

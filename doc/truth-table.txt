@@ -158,6 +158,25 @@ lists or blockquotes are not supported.
     Drop the column under the cursor, respecting escaped pipes in headings.
     Refuses to drop the only remaining column.
 
+                                                         *:TruthTableKarnaugh*
+:TruthTableKarnaugh
+    Insert, below the table, a Karnaugh map of the column under the cursor and
+    a minimal sum-of-products formula for it, written in the predicate
+    language. The table is left as it is.
+
+    The inputs are the shortest run of columns from the left that tells every
+    row apart, so a computed column between the variables and the target is
+    never an input. Input patterns no row supplies are don't-cares, shown as
+    `X`. Rows that agree on every input but disagree on the target are
+    reported as an error.
+
+    The last two inputs run across the columns in Gray order, the rest down
+    the rows. The map is drawn for two to four inputs; otherwise only the
+    formula line is inserted. Covers minimize terms, then literals.
+    Input headings that are not variable identifiers use :hN references.
+    Equally small covers are broken toward the terms
+    that sort first, literals before free variables, so the output is stable.
+
 ==============================================================================
 5. PREDICATE LANGUAGE                                   *truth-table-predicates*
 
@@ -225,6 +244,7 @@ Examples: >
     <leader>ttt   |:TruthTableToggle|
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|
+    <leader>ttk   |:TruthTableKarnaugh|
 
 Normal-mode ttn reads the current line as the argument and replaces it with
 the table; on a blank line it prefills `:TruthTable ` instead and leaves you

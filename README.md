@@ -172,6 +172,7 @@ return {
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
+| `:TruthTableKarnaugh` | Insert, below the table, a Karnaugh map and a minimal sum-of-products formula for the column under the cursor |
 
 ```
 :TruthTable 3
@@ -236,6 +237,53 @@ renames its label: update explicit references to the old heading yourself. Store
 column values remain unchanged. Output uses the predicate language's logic symbols;
 double negations are retained; there is no automatic simplification.
 
+## Karnaugh maps
+
+Put the cursor in a column and run `:TruthTableKarnaugh`. Below the table you
+get a Karnaugh map of that column and a minimal sum-of-products formula for it,
+rendered in the predicate language so you can paste it straight back into
+`:TruthTableExpand` to check it:
+
+```markdown
+|  A  |  B  |  C  |  F  |
+|:---:|:---:|:---:|:---:|
+|  0  |  0  |  0  |  0  |
+|  0  |  0  |  1  |  0  |
+|  0  |  1  |  0  |  1  |
+|  0  |  1  |  1  |  1  |
+|  1  |  0  |  0  |  1  |
+|  1  |  0  |  1  |  1  |
+|  1  |  1  |  0  |  0  |
+|  1  |  1  |  1  |  1  |
+
+Karnaugh map for F:
+
+|     |     |     | BC  |     |     |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+|     |     | 00  | 01  | 11  | 10  |
+|  A  |  0  |  0  |  0  |  1  |  1  |
+|     |  1  |  1  |  1  |  1  |  0  |
+
+F = ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+```
+
+Which columns are the inputs? The shortest run of columns, starting from the
+left, that tells every row apart. For a table built by `:TruthTable` that is
+the variable columns; a computed column sitting between them and the target is
+never treated as an input. Input patterns no row supplies are don't-cares: they
+show as `X` in the map and the minimizer may use them. Two rows that agree on
+every input but disagree on the target are an error, since the column is then
+not a function of those inputs.
+
+The map follows the textbook layout: the last two inputs run across the
+columns in Gray order (`00 01 11 10`), the rest down the rows. Maps are drawn
+for two to four inputs; with one input or more than four, only the formula is
+inserted. Covers minimize the number of terms, then the number of literals.
+Ties between equally small covers are broken toward the terms that
+sort first with literals before free variables, so the output is stable, but
+your textbook may list a different, equally minimal answer. Input headings that
+are not variable identifiers use positional references (`:hN`) in the formula.
+
 ## Keymaps
 
 `setup()` registers these by default:
@@ -250,6 +298,7 @@ double negations are retained; there is no automatic simplification.
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
+| `<leader>ttk` | Karnaugh map and formula for the column |
 
 ## Design
 
@@ -263,6 +312,9 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
   immutable row/column transformations. Column appending centralizes deduplication.
 - `markdown.lua` parses and renders tables. It accepts display-width measurement
   explicitly; `core.display_width` retains the existing injection API.
+- `karnaugh.lua` finds a column's input variables, minimizes it (Quine-McCluskey
+  prime implicants, essential primes, then a smallest exact cover under a search
+  budget, greedy beyond it) and renders the map and the formula.
 - `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
   Only `nil` means failure; zero and false remain successful values.
 - `preview.lua` manages per-buffer De Morgan previews, extmarks, invalidation,

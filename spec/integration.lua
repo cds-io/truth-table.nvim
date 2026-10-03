@@ -6,7 +6,7 @@ assert(vim.g.loaded_truth_table)
 vim.cmd('runtime plugin/truth-table.lua')
 require('truth-table').setup()
 require('truth-table').setup()
-for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn' }) do
+for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh' }) do
     assert(vim.api.nvim_get_commands({})[command], command)
 end
 assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
@@ -116,4 +116,22 @@ vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<leader>ttn', true, false,
 local from_line = assert(core.parse_model(vim.api.nvim_buf_get_lines(0, 0, 6, false)))
 assert(#from_line.headers == 3 and from_line.headers[3] == 'A ∧ B' and #from_line.rows == 4)
 assert(vim.api.nvim_buf_get_lines(0, 6, 7, false)[1] == '')
+-- Karnaugh: the cursor column is the target; the map and formula land below
+-- the table at its indentation, and the table itself is untouched.
+vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    '  | A | B | A ∧ B |', '  |---|---|---|', '  |0|0|0|', '  |0|1|0|', '  |1|0|0|', '  |1|1|1|', 'after',
+})
+vim.api.nvim_win_set_cursor(0, {1, 14})
+vim.cmd('TruthTableKarnaugh')
+local karnaugh_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+assert(karnaugh_lines[6] == '  |1|1|1|' and karnaugh_lines[7] == '')
+assert(karnaugh_lines[8] == '  Karnaugh map for A ∧ B:')
+assert(karnaugh_lines[10]:match('^  |') and karnaugh_lines[14]:find('|  1  |  0  |  1  |', 1, true))
+assert(karnaugh_lines[16] == '  A ∧ B = A ∧ B' and karnaugh_lines[17] == 'after')
+-- A column its predecessors do not determine is reported and nothing is inserted.
+vim.api.nvim_win_set_cursor(0, {3, 5})
+local karnaugh_before = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+notified = false
+vim.cmd('TruthTableKarnaugh')
+assert(notified and vim.deep_equal(karnaugh_before, vim.api.nvim_buf_get_lines(0, 0, -1, false)))
 print('Neovim integration passed')
