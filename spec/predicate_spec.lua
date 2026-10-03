@@ -208,3 +208,46 @@ describe("whole-expression De Morgan rewrites", function()
         assert.is_nil(predicate.de_morgan_expression('A and'))
     end)
 end)
+
+describe("located parsing", function()
+    local function span_text(source, node)
+        return source:sub(node.span.start_byte, node.span.end_byte)
+    end
+
+    it("records the bytes each node was read from", function()
+        local source = "S ∨ (A ∧ ¬C)"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal(source, span_text(source, ast))
+        assert.are.equal("S", span_text(source, ast.left))
+        assert.are.equal("(A ∧ ¬C)", span_text(source, ast.right))
+        assert.are.equal("A ∧ ¬C", span_text(source, ast.right.expr))
+        assert.are.equal("¬C", span_text(source, ast.right.expr.right))
+        assert.are.equal("C", span_text(source, ast.right.expr.right.operand))
+    end)
+
+    it("spans a left-nested chain from its first operand", function()
+        local source = "A or B or :h3"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("A or B", span_text(source, ast.left))
+        assert.are.equal(":h3", span_text(source, ast.right))
+    end)
+
+    it("evaluates, renders, and copies like an unlocated tree", function()
+        local located = assert(predicate.parse_located("not (A and 1)"))
+        local plain = assert(predicate.parse_expression("not (A and 1)"))
+        assert.is_nil(plain.span)
+        assert.are.equal(predicate.ast_to_heading(plain), predicate.ast_to_heading(located))
+        assert.are.equal(predicate.eval_ast(plain, { A = 1 }), predicate.eval_ast(located, { A = 1 }))
+        local copy = assert(predicate.transform_ast(located, function(node)
+            return node
+        end))
+        assert.are.same(plain, copy)
+    end)
+
+    it("reports parse errors exactly as parse_expression does", function()
+        local _, plain_err = predicate.parse_expression("A and")
+        local ast, err = predicate.parse_located("A and")
+        assert.is_nil(ast)
+        assert.are.equal(plain_err, err)
+    end)
+end)
