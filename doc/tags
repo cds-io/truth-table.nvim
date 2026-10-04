@@ -18,6 +18,7 @@
 :TruthTableXor	truth-table.txt	/*:TruthTableXor*
 truth-table-abbreviations	truth-table.txt	/*truth-table-abbreviations*
 truth-table-architecture	truth-table.txt	/*truth-table-architecture*
+truth-table-canonical	truth-table.txt	/*truth-table-canonical*
 truth-table-commands	truth-table.txt	/*truth-table-commands*
 truth-table-configuration	truth-table.txt	/*truth-table-configuration*
 truth-table-contents	truth-table.txt	/*truth-table-contents*
