@@ -1,8 +1,11 @@
 -- Cursor-targeted rewrites of a predicate AST: factor, distribute, commute,
--- exclusive-or recognition, and De Morgan.
+-- exclusive-or recognition, De Morgan, and the collapsing laws (simplify).
 -- Pure: trees in, trees out. Inputs come from predicate.parse_located, whose
 -- node spans say where the cursor is; outputs are fresh trees without spans.
+-- A rewrite returns the new tree and the name of the law it applied, or nil
+-- and the reason it does not apply.
 local predicate = require("truth-table.predicate")
+local SYMBOLS = require("truth-table.symbols")
 local M = {}
 
 -- A chain is a maximal run of one of these operators, read as a flat operand
@@ -12,6 +15,9 @@ local CHAIN = { ["and"] = true, ["or"] = true, xor = true, iff = true }
 local DUAL = { ["and"] = "or", ["or"] = "and" }
 
 local NO_TARGET = "Put the cursor on an operand"
+-- Factoring and distributing are the one law, read in opposite directions.
+local DISTRIBUTIVITY = "distributivity"
+local DE_MORGAN = "De Morgan"
 
 local function unparen(node)
     while node.type == "paren" do
@@ -208,7 +214,7 @@ function M.commute(ast, byte, backward)
         to = backward and from + 1 or from - 1
     end
     items[from], items[to] = items[to], items[from]
-    return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+    return finish(substitute(ast, path[chain.top], fold(chain.op, items))), "commutativity"
 end
 
 -- Pull the target out of every term of the enclosing dual chain that has it:
@@ -257,7 +263,7 @@ function M.factor(ast, byte)
         factored = paren(factored)
     end
     table.insert(terms, position, factored)
-    return finish(substitute(ast, path[outer.top], fold(outer.op, terms)))
+    return finish(substitute(ast, path[outer.top], fold(outer.op, terms))), DISTRIBUTIVITY
 end
 
 -- Multiply the target into the dual group next to it (right neighbour first):
@@ -291,7 +297,7 @@ function M.distribute(ast, byte)
         local items, first = chain.operands, math.min(at, group_at)
         items[first] = paren(fold(dual, products))
         table.remove(items, first + 1)
-        return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+        return finish(substitute(ast, path[chain.top], fold(chain.op, items))), DISTRIBUTIVITY
     end
 
     -- The products take the chain's place. When the chain was a parenthesised
@@ -301,9 +307,9 @@ function M.distribute(ast, byte)
         for i, product in ipairs(products) do
             products[i] = paren(product)
         end
-        return finish(substitute(ast, slot, fold(dual, products)))
+        return finish(substitute(ast, slot, fold(dual, products))), DISTRIBUTIVITY
     end
-    return finish(substitute(ast, path[chain.top], fold(dual, products)))
+    return finish(substitute(ast, path[chain.top], fold(dual, products))), DISTRIBUTIVITY
 end
 
 -- When one of the two operands is the negation of the other (parentheses
@@ -374,7 +380,8 @@ function M.xor(ast, byte)
                         local items = chain.operands
                         items[low] = recognised
                         table.remove(items, high)
-                        return finish(substitute(ast, path[chain.top], fold(chain.op, items)))
+                        local law = "definition of " .. predicate.SYMBOLS[recognised.type]
+                        return finish(substitute(ast, path[chain.top], fold(chain.op, items))), law
                     end
                 end
             end
@@ -398,14 +405,309 @@ function M.de_morgan(ast, byte)
                 and path[replacement_index - 1].type == "paren" do
                 replacement_index = replacement_index - 1
             end
-            return finish(substitute(ast, path[replacement_index], rewritten))
+            return finish(substitute(ast, path[replacement_index], rewritten)), DE_MORGAN
         end
     end
     local rewritten = predicate.de_morgan(ast)
     if not rewritten then
         return nil, "No De Morgan rewrite applies under the cursor or to the whole expression"
     end
-    return rewritten
+    return rewritten, DE_MORGAN
+end
+
+-- ---------------------------------------------------------------------------
+-- Simplify: the laws that shrink an expression. Each takes the operands of
+-- one ∧ or ∨ chain and the position of one of them, the focus, and returns
+-- the operands that remain when the law applies to the focus, else nil.
+-- ---------------------------------------------------------------------------
+
+-- Per chain operator: the constant that leaves the chain as it is, and the
+-- one that decides it.
+local IDENTITY = { ["and"] = 1, ["or"] = 0 }
+local DOMINATOR = { ["and"] = 0, ["or"] = 1 }
+
+local function constant(node)
+    local inner = unparen(node)
+    return inner.type == "literal" and inner.value or nil
+end
+
+local function without(items, dropped)
+    local kept = {}
+    for index, item in ipairs(items) do
+        if index ~= dropped then
+            kept[#kept + 1] = item
+        end
+    end
+    return kept
+end
+
+-- A term's factors: its operands when it is a chain of `op`, else itself.
+local function factors(term, op)
+    return unparen(term).type == op and operands(term, op) or { term }
+end
+
+-- Does every factor of `small` appear among those of `large`? Then, in an ∨
+-- chain of ∧ terms, `large` is true only where `small` already is (dually
+-- for ∧ over ∨), which is what lets `small` absorb it.
+local function within(small, large, op)
+    local theirs = {}
+    for _, factor in ipairs(factors(large, op)) do
+        theirs[shape(factor)] = true
+    end
+    for _, factor in ipairs(factors(small, op)) do
+        if not theirs[shape(factor)] then
+            return false
+        end
+    end
+    return true
+end
+
+-- `term` without its factor that is the complement of `operand`, or nil when
+-- it has none. A parenthesised term keeps its parentheses while it has more
+-- than one factor left.
+local function strip(term, operand, op)
+    if unparen(term).type ~= op then
+        return nil
+    end
+    local rest, found = {}, false
+    for _, factor in ipairs(operands(term, op)) do
+        if not found and complement(operand, factor) then
+            found = true
+        else
+            rest[#rest + 1] = factor
+        end
+    end
+    if not found then
+        return nil
+    end
+    local stripped = fold(op, rest)
+    return term.type == "paren" and #rest > 1 and paren(stripped) or stripped
+end
+
+-- Two terms with the same factors but for one, plain in one term and negated
+-- in the other: the factors they share, in the first term's order.
+local function merge(first, second, op)
+    local left, right = factors(first, op), factors(second, op)
+    if #left < 2 or #left ~= #right then
+        return nil
+    end
+    local used, shared, differing = {}, {}, 0
+    for _, factor in ipairs(left) do
+        local same, opposite
+        for index, candidate in ipairs(right) do
+            if not used[index] then
+                if not same and shape(candidate) == shape(factor) then
+                    same = index
+                elseif not opposite and complement(factor, candidate) then
+                    opposite = index
+                end
+            end
+        end
+        if same then
+            used[same] = true
+            shared[#shared + 1] = factor
+        elseif opposite then
+            used[opposite] = true
+            differing = differing + 1
+        else
+            return nil
+        end
+    end
+    if differing ~= 1 then
+        return nil
+    end
+    local merged = fold(op, shared)
+    local parenthesised = first.type == "paren" or second.type == "paren"
+    return parenthesised and #shared > 1 and paren(merged) or merged
+end
+
+-- In order of preference when several apply to one focus.
+local CHAIN_LAWS = {
+    -- A ∨ ¬A is 1, and A ∧ ¬A is 0.
+    { name = "complement", apply = function(items, at, op)
+        for other, item in ipairs(items) do
+            if other ~= at and complement(items[at], item) then
+                local kept = without(items, math.max(at, other))
+                kept[math.min(at, other)] = { type = "literal", value = DOMINATOR[op] }
+                return kept
+            end
+        end
+    end },
+    -- A ∨ 1 is 1, and A ∧ 0 is 0. The constant stays as it was typed.
+    { name = "domination", apply = function(items, _, op)
+        for _, item in ipairs(items) do
+            if constant(item) == DOMINATOR[op] then
+                return { item }
+            end
+        end
+    end },
+    -- A ∨ 0 and A ∧ 1 are A.
+    { name = "identity", apply = function(items, at, op)
+        if constant(items[at]) == IDENTITY[op] then
+            return without(items, at)
+        end
+    end },
+    -- A ∨ A is A. The first of the two stays.
+    { name = "idempotence", apply = function(items, at, op)
+        for other, item in ipairs(items) do
+            if other ~= at and within(items[at], item, DUAL[op]) and within(item, items[at], DUAL[op]) then
+                return without(items, math.max(at, other))
+            end
+        end
+    end },
+    -- A ∨ A ∧ B is A: the focus absorbs every term that contains it, or is
+    -- itself absorbed by a term it contains.
+    { name = "absorption", apply = function(items, at, op)
+        local kept = {}
+        for other, item in ipairs(items) do
+            if other == at or not within(items[at], item, DUAL[op]) then
+                kept[#kept + 1] = item
+            end
+        end
+        if #kept < #items then
+            return kept
+        end
+        for other, item in ipairs(items) do
+            if other ~= at and within(item, items[at], DUAL[op]) then
+                return without(items, at)
+            end
+        end
+    end },
+    -- A ∨ ¬A ∧ B is A ∨ B: every term holding the focus's complement loses
+    -- it, or the focus loses the complement of another operand.
+    { name = "absorption", apply = function(items, at, op)
+        local kept, changed = {}, false
+        for other, item in ipairs(items) do
+            local stripped = other ~= at and strip(item, items[at], DUAL[op])
+            kept[other] = stripped or item
+            changed = changed or stripped ~= nil and stripped ~= false
+        end
+        if changed then
+            return kept
+        end
+        for other, item in ipairs(items) do
+            local stripped = other ~= at and strip(items[at], item, DUAL[op])
+            if stripped then
+                kept[at] = stripped
+                return kept
+            end
+        end
+    end },
+    -- A ∧ B ∨ ¬A ∧ B is B.
+    { name = "reduction", apply = function(items, at, op)
+        for other in ipairs(items) do
+            if other ~= at then
+                local low, high = math.min(at, other), math.max(at, other)
+                local merged = merge(items[low], items[high], DUAL[op])
+                if merged then
+                    local kept = without(items, high)
+                    kept[low] = merged
+                    return kept
+                end
+            end
+        end
+    end },
+}
+
+-- Where a collapsing law can apply: every ¬, and the root of every ∧ or ∨
+-- chain, innermost first. `slot` is the node with any parentheses around it,
+-- which go when a chain shrinks to a single operand.
+local function sites(node, slot, parent_op, out)
+    if node.type == "paren" then
+        return sites(node.expr, slot or node, parent_op, out)
+    elseif node.type == "not" then
+        sites(node.operand, nil, nil, out)
+        out[#out + 1] = { node = node, slot = slot or node }
+    elseif node.left then
+        sites(node.left, nil, node.type, out)
+        sites(node.right, nil, node.type, out)
+        if IDENTITY[node.type] and parent_op ~= node.type then
+            out[#out + 1] = { node = node, slot = slot or node }
+        end
+    end
+    return out
+end
+
+-- Apply the first law that fits at a site: the node to replace, its
+-- replacement, and the law's name. With `on_path` (the nodes over the
+-- cursor) a chain is tried only with its operand under the cursor as the
+-- focus; without it, with each operand in turn.
+local function collapse(site, on_path)
+    local node = site.node
+    if node.type == "not" then
+        local inner = unparen(node.operand)
+        if inner.type == "literal" then
+            -- A constant typed as a symbol flips to the other symbol.
+            local flipped = inner.value == 1 and SYMBOLS.BOTTOM or SYMBOLS.TOP
+            local symbol = inner.symbol and flipped.unicode or nil
+            return node, { type = "literal", value = 1 - inner.value, symbol = symbol }, "negation"
+        elseif inner.type == "not" then
+            return node, unparen(inner.operand), "double negation"
+        end
+        return nil
+    end
+
+    local items = operands(node, node.type)
+    local first, last = 1, #items
+    if on_path then
+        first = nil
+        for index, item in ipairs(items) do
+            if on_path[item] then
+                first, last = index, index
+            end
+        end
+        if not first then
+            return nil
+        end
+    end
+    for at = first, last do
+        for _, law in ipairs(CHAIN_LAWS) do
+            local kept = law.apply(items, at, node.type)
+            if kept and #kept == 1 then
+                -- The renderer restores any grouping the new context needs.
+                return site.slot, unparen(kept[1]), law.name
+            elseif kept then
+                return node, fold(node.type, kept), law.name
+            end
+        end
+    end
+end
+
+-- Apply one collapsing law (complement, domination, identity, idempotence,
+-- absorption, reduction, or the removal of a negated constant or a double
+-- negation) and say which. The nearest match wins: a law involving the
+-- operand under the cursor, then one inside whatever the cursor selects,
+-- then one in a chain around the cursor, then one anywhere. Without a cursor
+-- in the expression only the last applies. ⊕, ⇔ and → are left as they are.
+function M.simplify(ast, byte)
+    local path = byte and path_to(ast, byte) or {}
+    local on_path, target = {}, path[#path]
+    for _, node in ipairs(path) do
+        on_path[node] = true
+    end
+    local function around(site)
+        return on_path[site.node]
+    end
+    local function inside(site)
+        local span = site.node.span
+        return target and target.span.start_byte <= span.start_byte and span.end_byte <= target.span.end_byte
+    end
+    local function anywhere()
+        return true
+    end
+
+    local all = sites(ast, nil, nil, {})
+    for _, pass in ipairs({ { around, on_path }, { inside }, { around }, { anywhere } }) do
+        for _, site in ipairs(all) do
+            if pass[1](site) then
+                local old, new, law = collapse(site, pass[2])
+                if old then
+                    return finish(substitute(ast, old, new)), law
+                end
+            end
+        end
+    end
+    return nil, "No simplification applies to this expression"
 end
 
 return M
