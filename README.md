@@ -70,14 +70,16 @@ For an algebraic rewrite, put this expression on its own line:
 S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)
 ```
 
-Place the cursor on `¬C` and run `:TruthTableFactor`. The preview shows:
+Place the cursor on `¬C` and run `:TruthTableFactor`. The preview shows the
+result and the law that justifies it:
 
 ```text
-S ∨ (¬C ∧ (A ∨ G))
+⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity
 ```
 
 Use `:TruthTableApply` to replace the expression, or `:TruthTableApplyStep` to
-keep it and insert the equivalent expression as the next derivation step.
+keep it and insert the equivalent expression, with its law, as the next
+derivation step.
 
 Run `:TruthTableTutor` for guided exercises, or `:help truth-table.txt` for the
 help file.
@@ -98,8 +100,9 @@ Start with small expressions.
 | `:TruthTableDistribute` | Toggle a preview that distributes the operand under the cursor into the group beside it |
 | `:TruthTableXor` | Toggle a preview that recognises an exclusive or (or an equivalence) spelled out as the two terms under the cursor |
 | `:TruthTableCommute[!]` | Toggle a preview that swaps the operand under the cursor with the next one (`!`: the previous one) |
+| `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction) |
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
-| `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step |
+| `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -215,13 +218,14 @@ binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`. The preview
 is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
 renames its label: update explicit references to the old heading yourself. Stored
 column values remain unchanged. Output uses the predicate language's logic symbols;
-double negations are retained; there is no automatic simplification.
+double negations are retained (`:TruthTableSimplify` removes one on request).
 
 ## Rewrites and derivations
 
 `:TruthTableKarnaugh` gives a simplified sum of products, and the form you want in
-code is often one algebra step away from it. Four rewrites take that step on
-the operand under the cursor, each previewed the way De Morgan is:
+code is often one algebra step away from it. Five rewrites take that step at
+the cursor, each previewed the way De Morgan is, with the name of the law it
+applies:
 
 | Command | Cursor on | Example |
 |---|---|---|
@@ -229,6 +233,7 @@ the operand under the cursor, each previewed the way De Morgan is:
 | `:TruthTableDistribute` | an operand beside a parenthesised group | `¬C ∧ (A ∨ G)` ⇒ `¬C ∧ A ∨ ¬C ∧ G` |
 | `:TruthTableCommute` | any operand | `S ∨ (¬C ∧ (A ∨ G))` ⇒ `(¬C ∧ (A ∨ G)) ∨ S` |
 | `:TruthTableXor` | either of two complementary terms | `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))` ⇒ `R ∧ (T ⊕ E)` |
+| `:TruthTableSimplify` | anywhere; the nearest match wins | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B` |
 
 So, which operand does the cursor pick? A run of one operator out of `∧`, `∨`,
 `⊕`, `⇔` is read as a flat list (a *chain*), whatever its parentheses, and the
@@ -252,14 +257,50 @@ have exactly two operands, so factor a shared operand out first:
 Beside other terms the result is parenthesised, since `⊕` and `⇔` bind
 looser than `∨`: `(A ⊕ B) ∨ A ∧ C`.
 
+### Simplify
+
+The first four rewrites rearrange an expression. `:TruthTableSimplify`
+(`<leader>ttz`) shrinks it: one run applies one *collapsing law* (a law whose
+right-hand side is smaller than its left) and the preview says which.
+
+| Law, as the preview names it | Example |
+|---|---|
+| complement | `A ∨ ¬A` ⇒ `1`, `A ∧ ¬A` ⇒ `0` |
+| domination | `A ∨ 1` ⇒ `1`, `A ∧ 0` ⇒ `0` |
+| identity | `A ∨ 0` ⇒ `A`, `A ∧ 1` ⇒ `A` |
+| idempotence | `A ∨ A` ⇒ `A`, `A ∧ B ∨ B ∧ A` ⇒ `A ∧ B` |
+| absorption | `A ∨ A ∧ B` ⇒ `A`, `A ∨ ¬A ∧ B` ⇒ `A ∨ B`, and the duals |
+| reduction | `A ∧ B ∨ ¬A ∧ B` ⇒ `B`, `(A ∨ B) ∧ (¬A ∨ B)` ⇒ `B` |
+| negation | `¬1` ⇒ `0`, `¬⊥` ⇒ `⊤` |
+| double negation | `¬¬A` ⇒ `A` |
+
+So, which law, and where? The nearest match to the cursor, searched in four
+rounds:
+
+1. a law that involves the operand under the cursor: on `A` in
+   `A ∨ A ∧ B ∨ C ∨ C ∧ D`, `A` absorbs `A ∧ B` and `C ∧ D` stays;
+2. a law anywhere inside what the cursor selects (a cursor on a parenthesis
+   selects the group);
+3. a law in a chain around the cursor, with any of its operands;
+4. a law anywhere in the expression, innermost and leftmost first.
+
+At any one place the laws are tried in the table's order. From a table's data
+rows there is no cursor in the heading, so only the fourth round runs. Terms
+match as sets of operands here, so `A ∧ B` and `B ∧ A` count as the same term.
+A constant typed as `⊤` or `⊥` keeps that spelling when it survives. Chains of
+`⊕` and `⇔`, and `→`, are left as they are (`A ⊕ A` stays put).
+
+### Applying a preview
+
 A preview can land in two ways. `:TruthTableApply` replaces the expression in
 place. `:TruthTableApplyStep` leaves the line alone and inserts the rewrite below
 it as the next line of a derivation, then moves the cursor there:
 
 ```text
-S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C
-≡ S ∨ ¬C ∧ (A ∨ G)
-≡ ¬C ∧ (A ∨ G) ∨ S
+(a and b) or (not a and b)
+≡ b ∧ (a ∨ ¬a)                | by distributivity
+≡ b ∧ 1                       | by complement
+≡ b                           | by identity
 ```
 
 `≡` separates the sides of a derivation: a rewrite reads the side under the
@@ -269,11 +310,23 @@ line's last `≡` (or at its indentation when it has none). Type it as `equiv@`.
 spelling of `⇔`. Steps apply to expression lines; a heading takes
 `:TruthTableApply` only. Both apply commands serve De Morgan previews too.
 
-N.B. the rewrites rearrange an expression and stop there: simplification
-(absorption, idempotence, double negation) is yours to do. An in-place apply
-re-renders the whole side in logic symbols, as De Morgan does. A formula line
-written by an earlier version, `F = …`, reads as one biconditional; change its
-`=` to `≡` before stepping from it.
+Each step ends in its *justification*: `| by` and the law that takes the line
+above to this one. The laws are named as in the table above, plus
+`distributivity` (factor and distribute are the one law read in opposite
+directions), `commutativity`, `De Morgan`, and `definition of ⊕` or `⇔`. The
+bar sits four columns clear of the wider of the two lines, or under the bar of
+the line above when that is further right, so the justifications of a
+derivation form a column. Everything from the first `|` of an expression line
+on is a remark: a rewrite reads the expression before it, and a cursor in the
+remark means the line's last side. Applying in place to a justified line adds
+the new law to it (`| by distributivity, complement`), so the line still says
+how it follows from the one above.
+
+N.B. Simplify takes one step per run and leaves the choice of steps to you; for
+a minimal form in one go, build the table and use `:TruthTableKarnaugh`. An
+in-place apply re-renders the whole side in logic symbols, as De Morgan does. A
+formula line written by an earlier version, `F = …`, reads as one
+biconditional; change its `=` to `≡` before stepping from it.
 
 ## Karnaugh maps
 
@@ -384,10 +437,11 @@ on it, and the `solution` that the test suite replays.
 | `<leader>ttf` | toggle factor preview |
 | `<leader>ttx` | toggle distribute preview |
 | `<leader>tto` | toggle xor-recognition preview |
+| `<leader>ttz` | toggle simplify preview |
 | `<leader>tts` | toggle commute preview (swap with the next operand) |
 | `<leader>ttS` | toggle commute preview (swap with the previous operand) |
 | `<leader>tta` | apply the preview in place |
-| `<leader>ttA` | apply the preview as a `≡` step |
+| `<leader>ttA` | apply the preview as a `≡` step with its justification |
 | `<leader>ttt` | toggle `0/1 ↔ F/T` |
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
@@ -550,10 +604,13 @@ budget, greedy beyond it) and renders the map and the formula.
 - `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
 Only `nil` means failure; zero and false remain successful values.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
-distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, and
-applies De Morgan at the nearest match: located trees in, fresh trees out.
-- `derivation.lua` splits a line into sides at `≡`, replaces one side, and
-builds an aligned step line.
+distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
+Morgan at the nearest match, and applies the nearest collapsing law
+(simplify): located trees in, fresh trees out, each with the name of the law
+applied.
+- `derivation.lua` splits a line into sides at `≡`, sets its `| by`
+justification apart, replaces one side, and builds an aligned, justified step
+line.
 - `preview.lua` resolves the expression under the cursor (one side of a line,
 or a heading), runs a rewrite on it, and manages per-buffer previews,
 extmarks, invalidation, and applying in place or as a step.

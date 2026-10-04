@@ -3,6 +3,28 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableSimplify (<leader>ttz): preview one collapsing law at the
+  nearest match to the cursor and name it. The laws are complement (A ∨ ¬A to
+  1), domination (A ∨ 1 to 1), identity (A ∨ 0 to A), idempotence, absorption
+  (A ∨ A ∧ B to A, and A ∨ ¬A ∧ B to A ∨ B), reduction (A ∧ B ∨ ¬A ∧ B to B),
+  each with its dual, plus a negated constant and a double negation. The
+  search runs from a law involving the operand under the cursor, to one inside
+  what the cursor selects, to one in a chain around it, to one anywhere.
+- Every rewrite names its law. A preview ends in `| by <law>`, and
+  :TruthTableApplyStep writes that after the step, with the bars of a
+  derivation in one column:
+      ≡ b ∧ (a ∨ ¬a)                | by distributivity
+      ≡ b ∧ 1                       | by complement
+  On an expression line everything from the first | on is a remark, which the
+  rewrites leave alone. :TruthTableApply on a justified line adds the new law
+  to its justification.
+- rewrite.commute, factor, distribute, xor and de_morgan return the law's name
+  as a second value. derivation.step and derivation.replace take the rewrite
+  as { text, law } where they took the text; add derivation.justification.
+- Tutor: the lessons on derivations, Karnaugh maps and code show justified
+  steps; the lesson on absorption and reduction derives each law with
+  :TruthTableSimplify steps and then takes it in one move; the reference
+  sheet names the laws as the previews do.
 - The predicate language reads ⊤ and ⊥ as the constants 1 and 0, so what the
   true@ and false@ abbreviations insert is now an expression (it was a parse
   error). A constant renders as typed: `a or ⊤` gives the heading a ∨ ⊤, and
