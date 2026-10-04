@@ -8,12 +8,13 @@ require('truth-table').setup()
 require('truth-table').setup()
 for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle', 'TruthTableDropRow', 'TruthTableDropColumn', 'TruthTableKarnaugh',
     'TruthTableDeMorgan', 'TruthTableDeMorganApply', 'TruthTableFactor', 'TruthTableDistribute', 'TruthTableCommute',
-    'TruthTableApply', 'TruthTableApplyStep', 'TruthTableXor', 'TruthTableTutor' }) do
+    'TruthTableApply', 'TruthTableApplyStep', 'TruthTableXor', 'TruthTableSimplify', 'TruthTableTutor' }) do
     assert(vim.api.nvim_get_commands({})[command], command)
 end
 assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
 for key, command in pairs({ f = 'TruthTableFactor', x = 'TruthTableDistribute', s = 'TruthTableCommute', S = 'TruthTableCommute!',
-    a = 'TruthTableApply', A = 'TruthTableApplyStep', d = 'TruthTableDeMorgan', o = 'TruthTableXor' }) do
+    a = 'TruthTableApply', A = 'TruthTableApplyStep', d = 'TruthTableDeMorgan', o = 'TruthTableXor',
+    z = 'TruthTableSimplify' }) do
     assert(vim.fn.maparg('<leader>tt' .. key, 'n') == '<Cmd>' .. command .. '<CR>', key)
 end
 vim.cmd('TruthTable A B')

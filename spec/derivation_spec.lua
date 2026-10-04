@@ -37,19 +37,66 @@ describe("derivation.working_side", function()
     end)
 end)
 
+describe("a justification", function()
+    it("ends the sides: no side reaches into it, and a cursor in it selects the last side", function()
+        local line = "≡ b ∧ 1        | by complement"
+        local side = assert(derivation.working_side(line, 1))
+        assert.are.same({ "b ∧ 1", "b ∧ 1" }, { side.text, line:sub(side.first, side.last) })
+        assert.are.equal("b ∧ 1", assert(derivation.working_side(line, #line)).text)
+        local head = "F ≡ A ∨ B  | by De Morgan"
+        assert.are.equal("F", assert(derivation.working_side(head, 1)).text)
+        assert.are.equal("A ∨ B", assert(derivation.working_side(head, #head)).text)
+    end)
+
+    it("is written `| by` and the law", function()
+        assert.are.equal("| by absorption", derivation.justification("absorption"))
+    end)
+end)
+
 describe("derivation.replace", function()
     it("rewrites one side and keeps the rest of the line byte for byte", function()
         local line = "\t F  ≡  A ∨ B   ≡ C  "
         local side = assert(derivation.working_side(line, (line:find("A", 1, true))))
-        assert.are.equal("\t F  ≡  B ∨ A   ≡ C  ", derivation.replace(line, side, "B ∨ A"))
+        assert.are.equal("\t F  ≡  B ∨ A   ≡ C  ", derivation.replace(line, side, { text = "B ∨ A", law = "commutativity" }))
+    end)
+end)
+
+describe("derivation.replace on a justified line", function()
+    it("adds the law to the justification, which then covers both rewrites", function()
+        local line = "≡ b ∧ (a ∨ ¬a)    | by distributivity  "
+        local side = assert(derivation.working_side(line, 3))
+        local replaced = derivation.replace(line, side, { text = "b ∧ 1", law = "complement" })
+        assert.are.equal("≡ b ∧ 1    | by distributivity, complement", replaced)
+        assert.are.equal("≡ b ∧ 1    | by distributivity  ", derivation.replace(line, side, { text = "b ∧ 1" }))
     end)
 end)
 
 describe("derivation.step", function()
     local width = markdown.display_width
 
+    it("justifies a step four columns clear of the wider of the two lines", function()
+        local first = derivation.step("(a and b) or (not a and b)", { text = "b ∧ (a ∨ ¬a)", law = "distributivity" }, width)
+        assert.are.equal("≡ b ∧ (a ∨ ¬a)                | by distributivity", first)
+        local wide = derivation.step("a ∨ b", { text = "¬(¬a ∧ ¬b)", law = "De Morgan" }, width)
+        assert.are.equal("≡ ¬(¬a ∧ ¬b)    | by De Morgan", wide)
+    end)
+
+    it("puts the bar under the bar above, or further right when the step needs the room", function()
+        local above = "≡ b ∧ (a ∨ ¬a)                | by distributivity"
+        local step, column = derivation.step(above, { text = "b ∧ 1", law = "complement" }, width)
+        assert.are.equal("≡ b ∧ 1                       | by complement", step)
+        assert.are.equal(#"≡ ", column)
+        local longer = derivation.step("≡ a  | by identity", { text = "a ∨ a ∧ b", law = "absorption" }, width)
+        assert.are.equal("≡ a ∨ a ∧ b    | by absorption", longer)
+    end)
+
+    it("aligns a justified step under the last separator of a head line", function()
+        local step = derivation.step("F ≡ A ∧ B", { text = "B ∧ A", law = "commutativity" }, width)
+        assert.are.equal("  ≡ B ∧ A    | by commutativity", step)
+    end)
+
     it("starts at the indentation of a line with no separator", function()
-        local step, column = derivation.step("  S ∨ T", "T ∨ S", width)
+        local step, column = derivation.step("  S ∨ T", { text = "T ∨ S" }, width)
         assert.are.equal("  ≡ T ∨ S", step)
         assert.are.equal(#"  ≡ ", column)
         assert.are.equal("T ∨ S", step:sub(column + 1))
@@ -57,23 +104,23 @@ describe("derivation.step", function()
 
     it("aligns under the last separator by display column, whatever the byte count", function()
         local head = "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C"
-        local step = derivation.step(head, "S ∨ ¬C ∧ (A ∨ G)", width)
+        local step = derivation.step(head, { text = "S ∨ ¬C ∧ (A ∨ G)" }, width)
         assert.are.equal("                        ≡ S ∨ ¬C ∧ (A ∨ G)", step)
         assert.are.equal(width(head:sub(1, (head:find("≡", 1, true)) - 1)), width(step:sub(1, (step:find("≡", 1, true)) - 1)))
     end)
 
     it("continues a chain from a continuation line", function()
-        local step = derivation.step("      ≡ A ∨ B", "B ∨ A", width)
+        local step = derivation.step("      ≡ A ∨ B", { text = "B ∨ A" }, width)
         assert.are.equal("      ≡ B ∨ A", step)
     end)
 
     it("uses the last separator of a line that has several", function()
-        local step = derivation.step("F ≡ A ≡ B", "C", width)
+        local step = derivation.step("F ≡ A ≡ B", { text = "C" }, width)
         assert.are.equal("      ≡ C", step)
     end)
 
     it("copies leading whitespace verbatim", function()
-        local step = derivation.step("\tF ≡ A", "B", width)
+        local step = derivation.step("\tF ≡ A", { text = "B" }, width)
         assert.are.equal("\t  ≡ B", step)
     end)
 
@@ -86,7 +133,7 @@ describe("derivation.step", function()
             end
             return column
         end
-        local step = derivation.step("  F\t≡ A ∧ B", "B ∧ A", tabbed_width)
+        local step = derivation.step("  F\t≡ A ∧ B", { text = "B ∧ A" }, tabbed_width)
         assert.are.equal("        ≡ B ∧ A", step)
     end)
 end)

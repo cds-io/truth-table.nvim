@@ -70,7 +70,7 @@ exclusive-or pattern from the previous lesson. Put the cursor on `¬A`, preview
 ]],
             expect = [[
 (A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
-                  ≡ (A ⊕ B) ∨ A ∧ C
+                  ≡ (A ⊕ B) ∨ A ∧ C            | by definition of ⊕
 ]],
             note = [[
 That is the expression the column was built from, up to a pair of parentheses.

@@ -28,8 +28,8 @@ S or (A and not C) or (G and not C)
 ]],
             expect = [[
 S or (A and not C) or (G and not C)
-≡ S ∨ (¬C ∧ (A ∨ G))
-≡ (¬C ∧ (A ∨ G)) ∨ S
+≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity
+≡ (¬C ∧ (A ∨ G)) ∨ S                   | by commutativity
 ]],
             solution = {
                 {
@@ -37,7 +37,11 @@ S or (A and not C) or (G and not C)
                     at = "not C",
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
-                { on = "≡ S ∨ (¬C ∧ (A ∨ G))", at = "S", run = { "TruthTableCommute", "TruthTableApplyStep" } },
+                {
+                    on = "≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity",
+                    at = "S",
+                    run = { "TruthTableCommute", "TruthTableApplyStep" },
+                },
             },
         },
         {
@@ -53,8 +57,8 @@ isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified
 ]],
             expect = [[
 isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
-≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))
-≡ (¬isClassified ∧ (isAdmin ∨ hasGrant)) ∨ isSuperAdmin
+≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity
+≡ (¬isClassified ∧ (isAdmin ∨ hasGrant)) ∨ isSuperAdmin                              | by commutativity
 ]],
             note = [[
 Read the last line back into code, one name per group:
@@ -67,7 +71,8 @@ function canAccess({ isSuperAdmin, isAdmin, hasGrant, isClassified }) {
 }
 ```
 
-The derivation is the argument that the two functions agree. If you would
+The derivation is the argument that the two functions agree, each line with
+the law that licenses it. If you would
 sooner see it than trust it, put both expressions on one line separated by `|`,
 run `:.TruthTable` on it, and compare the columns, as in the lesson on
 equivalence.
@@ -79,7 +84,7 @@ equivalence.
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))",
+                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity",
                     at = "isSuperAdmin",
                     run = { "TruthTableCommute", "TruthTableApplyStep" },
                 },

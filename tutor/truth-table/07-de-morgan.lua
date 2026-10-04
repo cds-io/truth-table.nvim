@@ -16,7 +16,8 @@ false". The negation moves inward and the connective flips.
 
 The plugin applies the law to an expression on a line of its own. A rewrite
 happens in two moves, so you can look before you commit: `:TruthTableDeMorgan`
-(`<leader>ttd`) previews the result as dimmed text at the end of the line, and
+(`<leader>ttd`) previews the result as dimmed text at the end of the line,
+followed by the law that justifies it (`⇒ ¬p ∨ ¬q  | by De Morgan`), and
 `:TruthTableApply` (`<leader>tta`) replaces the expression with it. Try it on
 the line in the scratch pane.
 ]],
