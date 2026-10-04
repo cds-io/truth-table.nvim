@@ -1,9 +1,25 @@
 return {
     title = "Quick reference",
-    aim = "Every command from the course in one place, with a scratch pane to try them in.",
+    aim = "Every law and command from the course in one place, with a scratch pane to try them in.",
     steps = {
         {
             text = [=[
+Laws, each with its dual beside it:
+
+```text
+identity      a ∨ 0 ≡ a                      a ∧ 1 ≡ a
+domination    a ∨ 1 ≡ 1                      a ∧ 0 ≡ 0
+idempotence   a ∨ a ≡ a                      a ∧ a ≡ a
+complements   a ∨ ¬a ≡ 1                     a ∧ ¬a ≡ 0
+commutative   a ∨ b ≡ b ∨ a                  a ∧ b ≡ b ∧ a
+associative   (a ∨ b) ∨ c ≡ a ∨ (b ∨ c)      (a ∧ b) ∧ c ≡ a ∧ (b ∧ c)
+distributive  a ∧ (b ∨ c) ≡ a ∧ b ∨ a ∧ c    a ∨ b ∧ c ≡ (a ∨ b) ∧ (a ∨ c)
+absorption    a ∨ a ∧ b ≡ a                  a ∧ (a ∨ b) ≡ a
+              a ∨ ¬a ∧ b ≡ a ∨ b             a ∧ (¬a ∨ b) ≡ a ∧ b
+reduction     a ∧ b ∨ ¬a ∧ b ≡ b             (a ∨ b) ∧ (¬a ∨ b) ≡ b
+De Morgan     ¬(a ∧ b) ≡ ¬a ∨ ¬b             ¬(a ∨ b) ≡ ¬a ∧ ¬b
+```
+
 Tables:
 
 - `:TruthTable {N or names or expressions}` (`<leader>ttn`): build a table; on

@@ -7,6 +7,7 @@ vim.opt.rtp:append(vim.fn.getcwd())
 vim.o.wrap = false
 require('truth-table').setup()
 local page = require('truth-table.tutor_page')
+local predicate = require('truth-table.predicate')
 
 local warnings = {}
 vim.notify = function(message, level)
@@ -34,6 +35,52 @@ for number, lesson in ipairs(course) do
     end
 end
 assert(exercises >= 20)
+
+-- Every law a lesson states holds. A law is `left ≡ right` on a line of a
+-- fenced block in a step's text; a line may hold several, two or more spaces
+-- apart (the reference lists each law beside its dual, after its name).
+local function equivalent(left, right)
+    local sides = { assert(predicate.parse_expression(left)), assert(predicate.parse_expression(right)) }
+    local names = {}
+    for _, side in ipairs(sides) do
+        for _, name in ipairs(assert(predicate.variables(side))) do
+            if not vim.tbl_contains(names, name) then
+                names[#names + 1] = name
+            end
+        end
+    end
+    for row = 0, 2 ^ #names - 1 do
+        local values = {}
+        for index, name in ipairs(names) do
+            values[name] = math.floor(row / 2 ^ (index - 1)) % 2
+        end
+        if predicate.eval_ast(sides[1], values) ~= predicate.eval_ast(sides[2], values) then
+            return false
+        end
+    end
+    return true
+end
+
+local laws = 0
+for number, lesson in ipairs(course) do
+    for index, step in ipairs(lesson.steps) do
+        local fenced = false
+        for _, line in ipairs(page.lines(step.text)) do
+            if line:match('^```') then
+                fenced = not fenced
+            elseif fenced and line:find('≡', 1, true) then
+                for _, law in ipairs(vim.split((line:gsub('%s+≡%s+', ' ≡ ')), '%s%s+')) do
+                    local left, right = law:match('^(.-) ≡ (.+)$')
+                    if left then
+                        assert(equivalent(left, right), ('lesson %d step %d: %s'):format(number, index, law))
+                        laws = laws + 1
+                    end
+                end
+            end
+        end
+    end
+end
+assert(laws >= 40)
 
 local function pane(role)
     for _, win in ipairs(vim.api.nvim_list_wins()) do

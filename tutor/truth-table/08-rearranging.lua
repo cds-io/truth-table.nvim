@@ -1,10 +1,10 @@
 return {
-    title = "Rearranging: the commutative and distributive laws",
-    aim = "Reorder, distribute and factor an expression, choosing the operand with the cursor.",
+    title = "Rearranging: the commutative, associative and distributive laws",
+    aim = "Reorder, regroup, distribute and factor an expression, choosing the operand with the cursor.",
     steps = {
         {
             text = [[
-Two more families of laws let you reshape an expression while keeping its
+Three more families of laws let you reshape an expression while keeping its
 meaning.
 
 The *commutative* laws say order is free: `m ∧ n ≡ n ∧ m`, and the same for
@@ -21,6 +21,45 @@ n ∧ m
 ]],
             solution = {
                 { on = "m and n", at = "m", run = { "TruthTableCommute", "TruthTableApply" } },
+            },
+        },
+        {
+            text = [[
+The *associative* laws say grouping is free too, as long as the connective
+stays the same:
+
+```text
+(x ∨ y) ∨ z  ≡  x ∨ (y ∨ z)
+(x ∧ y) ∧ z  ≡  x ∧ (y ∧ z)
+```
+
+The line in the scratch pane holds both groupings of `or`. Build the table
+(`:.TruthTable`, `<leader>ttn`) and compare the two computed columns.
+]],
+            template = [[
+(x or y) or z | x or (y or z)
+]],
+            expect = [[
+|  x  |  y  |  z  | (x ∨ y) ∨ z | x ∨ (y ∨ z) |
+|:---:|:---:|:---:|:-----------:|:-----------:|
+|  0  |  0  |  0  |      0      |      0      |
+|  0  |  0  |  1  |      1      |      1      |
+|  0  |  1  |  0  |      1      |      1      |
+|  0  |  1  |  1  |      1      |      1      |
+|  1  |  0  |  0  |      1      |      1      |
+|  1  |  0  |  1  |      1      |      1      |
+|  1  |  1  |  0  |      1      |      1      |
+|  1  |  1  |  1  |      1      |      1      |
+]],
+            note = [[
+Since the grouping makes no difference, a run of one connective is written
+without parentheses, `x ∨ y ∨ z`, and the rewrite commands read such a run as
+one chain: `:TruthTableCommute` on `y` there gives `x ∨ z ∨ y`. Mixing
+connectives is another matter: the lesson on connectives showed that
+`p ∨ q ∧ r` and `(p ∨ q) ∧ r` differ.
+]],
+            solution = {
+                { on = "(x or y) or z | x or (y or z)", run = { ".TruthTable" } },
             },
         },
         {
