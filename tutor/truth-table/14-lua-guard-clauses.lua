@@ -5,9 +5,9 @@ return {
         {
             text = [=[
 Nothing in this course depends on the language a condition is written in.
-The next four lessons take their examples from the Lua of a Neovim config,
-the kind of script that rarely gets a second look. Each excerpt links to its
-source.
+The next five lessons take their examples from Lua: four from a Neovim
+config, the kind of script that rarely gets a second look, and one from a
+textbook. Each excerpt links to its source.
 
 Getting from code to an expression is a task of its own, and so is getting
 back. So every example goes through the same five stages, and every step

@@ -3,9 +3,10 @@ truth-table.nvim changes
 
 Unreleased
 ----------
-- Tutor: add four lessons of Lua examples from a public Neovim config, each
-  excerpt linked to its source at a fixed commit (22 steps, 10 of them
-  exercises; the course is now 18 lessons). Every example goes through the
+- Tutor: add five lessons of Lua examples, four from a public Neovim config
+  with each excerpt linked to its source at a fixed commit, and one quoted
+  from Programming in Lua, section 12.1.2 (27 steps, 12 of them exercises;
+  the course is now 19 lessons). Every example goes through the
   same five stages, named at the top of each step: name the checks, translate
   the code into an expression, rewrite it, put the tests back and write the
   Lua, and review the before and after side by side (counts, what the change
@@ -19,7 +20,12 @@ Unreleased
     that keeps the short form and takes the names.
   - 17, `and`/`or`: `c and x or y` against the ternary it stands in for, which
     differ in one row, and when that row can be reached.
-- The reference lesson (now 18) lists the five stages and the rule for the
+  - 18, a dispatch on type: the branches of a function that returns nothing;
+    with the rows that cannot happen dropped (a value has one type), the
+    Karnaugh map shows ¬(N ∨ S) ∧ T is T, so the conditions are minimal and
+    their order is free, which is what allows the nested branches to become
+    guards.
+- The reference lesson (now 19) lists the five stages and the rule for the
   condition each branch of an `if` runs under.
 - Expressions are written back in one canonical form, in headings, previews,
   derivation steps and Karnaugh formula lines: an operand that is itself a

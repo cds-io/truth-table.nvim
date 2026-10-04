@@ -174,10 +174,6 @@ gets wrong is closed off a few lines above. What the table changes is what a
 reviewer looks for: every `c and x or y` comes with the question "can `x` be
 `false` or `nil`?", and a line such as `enabled and false or default` fails it
 at a glance.
-
-That is the last of the Lua examples. The five stages are the same in any
-language: name the checks, translate, rewrite, translate back, and look at
-what you have with a reviewer's eye.
 ]],
             template = [[
 Before:
