@@ -7,6 +7,11 @@ return {
 This is a short logic course, worked inside the plugin. Each lesson introduces
 one idea from propositional logic and the command that goes with it.
 
+The course keeps one use in view: refactoring code. The condition of an `if`,
+and any function that returns true or false, is a logic expression, and
+changing one safely means knowing that the new version says the same thing as
+the old. The examples come back to that question again and again.
+
 The tutor has two panes:
 
 - This one, on the left, is the lesson: what to do in the current step and,

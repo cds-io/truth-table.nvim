@@ -1,6 +1,6 @@
 return {
     title = "Equivalence, tautology, contradiction",
-    aim = "Use a table to test whether two expressions mean the same thing.",
+    aim = "Use a table to test whether two expressions mean the same thing, and catch a refactor that does not.",
     steps = {
         {
             text = [[
@@ -160,6 +160,59 @@ cursor in the same way. The lesson on Karnaugh maps puts that to use.
                     at = "a ∧ ¬a",
                     run = { "TruthTableDropColumn" },
                 },
+            },
+        },
+        {
+            text = [[
+Equivalence is the question every refactor of a condition asks: does the new
+version mean the same as the old one? Here is a function with two ways to say
+yes:
+
+```js
+function canEdit({ isPrivileged, hasGrant, isSuspended }) {
+  if (isPrivileged) return true;
+  if (hasGrant && !isSuspended) return true;
+  return false;
+}
+```
+
+A function that only ever returns true or false is a logic expression written
+as control flow: each branch that returns true is a term, and the terms are
+joined by `or`. With `P`, `G`, `S` for the three checks, this one is
+`P ∨ (G ∧ ¬S)`.
+
+Two branches that both return true look as if they could be merged, and a
+reviewer proposes `return (isPrivileged || hasGrant) && !isSuspended;`, which
+is `(P ∨ G) ∧ ¬S`. Is it the same function? The scratch pane holds both
+expressions. Build the table (`:.TruthTable`, `<leader>ttn`).
+]],
+            template = [[
+P or (G and not S) | (P or G) and not S
+]],
+            expect = [[
+|  P  |  G  |  S  | P ∨ (G ∧ ¬S) | (P ∨ G) ∧ ¬S |
+|:---:|:---:|:---:|:------------:|:------------:|
+|  0  |  0  |  0  |      0       |      0       |
+|  0  |  0  |  1  |      0       |      0       |
+|  0  |  1  |  0  |      1       |      1       |
+|  0  |  1  |  1  |      0       |      0       |
+|  1  |  0  |  0  |      1       |      1       |
+|  1  |  0  |  1  |      1       |      0       |
+|  1  |  1  |  0  |      1       |      1       |
+|  1  |  1  |  1  |      1       |      0       |
+]],
+            note = [[
+The columns differ in two rows, `1 0 1` and `1 1 1`: a privileged user who is
+suspended. The original lets them edit, and the merged version locks them out.
+(`:TruthTableExpand :h4 iff :h5` would mark those rows with a `0`: the claim
+is no tautology.)
+
+A test suite catches this only if someone thought to write that case. The
+table has every case by construction, which is the reason to build one before
+trusting a refactor: if you cannot enumerate the cases, you are guessing.
+]],
+            solution = {
+                { on = "P or (G and not S) | (P or G) and not S", run = { ".TruthTable" } },
             },
         },
     },

@@ -50,6 +50,11 @@ The two tables agree cell for cell: the spelling changes the headings and
 nothing else. In both, the column for `a ∨ 1` is all ones, and the other two
 repeat the `a` column.
 
+These laws look too obvious to need stating, and they are what a refactor
+leaves behind when a value becomes known: inside `if (isAdmin) { ... }`, the
+condition `isAdmin || hasGrant` is `1 ∨ hasGrant`, which is `1`, and the check
+can go.
+
 A heading keeps the spelling you typed. The words `true` and `false` are read
 as well, and rendered as `⊤` and `⊥`, the way `and` is rendered as `∧`; in
 insert mode, `true@` and `false@` followed by a space give the symbols

@@ -19,6 +19,13 @@ m and n
             expect = [[
 n ∧ m
 ]],
+            note = [[
+N.B. This is a law about truth values. In code, `a() || b()` evaluates left to
+right and stops at the first true operand, so swapping is safe when the
+operands are plain values or checks without side effects. It changes behaviour
+when `b()` does something, or when the left operand guards the right, as in
+`user && user.isAdmin`.
+]],
             solution = {
                 { on = "m and n", at = "m", run = { "TruthTableCommute", "TruthTableApply" } },
             },
@@ -113,6 +120,47 @@ it turns a repeated check into a single one.
 ]],
             solution = {
                 { on = "(c and d) or (c and e)", at = "c", run = { "TruthTableFactor", "TruthTableApply" } },
+            },
+        },
+        {
+            text = [[
+Factoring works the other way round as well, pulling a shared operand out of
+`or` groups joined by `and`. Here it undoes a refactor that went the wrong
+way: someone distributed a pull-request rule and left this.
+
+```js
+function canMerge({ isRepoAdmin, ciPasses, hasBlockingReviews }) {
+  return (isRepoAdmin || ciPasses) && (isRepoAdmin || !hasBlockingReviews);
+}
+```
+
+It is correct, and it says the admin check twice. Put the cursor on either
+`isRepoAdmin`, preview the factoring (`<leader>ttf`), and apply.
+]],
+            template = [[
+(isRepoAdmin or ciPasses) and (isRepoAdmin or not hasBlockingReviews)
+]],
+            expect = [[
+isRepoAdmin ∨ (ciPasses ∧ ¬hasBlockingReviews)
+]],
+            note = [[
+Admins can merge; everyone else needs passing CI and no blocking reviews. In
+code the inner group wants a name:
+
+```js
+const isUnblocked = ciPasses && !hasBlockingReviews;
+return isRepoAdmin || isUnblocked;
+```
+
+Equivalent forms are not equally readable. The laws let you move between them
+and pick the one that says what the rule is.
+]],
+            solution = {
+                {
+                    on = "(isRepoAdmin or ciPasses) and (isRepoAdmin or not hasBlockingReviews)",
+                    at = "isRepoAdmin",
+                    run = { "TruthTableFactor", "TruthTableApply" },
+                },
             },
         },
     },

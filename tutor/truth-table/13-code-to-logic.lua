@@ -1,11 +1,98 @@
 return {
     title = "From code to logic and back",
-    aim = "Tidy a condition from real code, and read the result back into code.",
+    aim = "Read a function that returns true or false as one expression, tidy it, and read the result back into code.",
     steps = {
         {
             text = [[
-The reason to do any of this at a keyboard is conditions in code. Here is one,
-with four Boolean inputs:
+The reason to do any of this at a keyboard is conditions in code, and the
+skill that connects the two is reading a function as an expression. A function
+that returns only true or false, however many `return`s it has, is one Boolean
+expression written as control flow. Read it from the top, one `return` at a
+time:
+
+- `if (c) return true;` followed by the rest is `c ∨ rest`.
+- `if (c) return false;` followed by the rest is `¬c ∧ rest`.
+- A final `return x;` is `x`: `0` for `return false`, `1` for `return true`.
+
+Practise on this one:
+
+```js
+function canDelete({ isModerator, isAuthor, isLocked }) {
+  if (isModerator) return true;
+  if (isAuthor && !isLocked) return true;
+  return false;
+}
+```
+
+Name the checks `M`, `A`, `L` and work out the expression before reading on.
+The scratch pane is empty: give your expression to `:TruthTable` and compare
+your table with the one below.
+]],
+            expect = [[
+|  M  |  A  |  L  | M ∨ (A ∧ ¬L) |
+|:---:|:---:|:---:|:------------:|
+|  0  |  0  |  0  |      0       |
+|  0  |  0  |  1  |      0       |
+|  0  |  1  |  0  |      1       |
+|  0  |  1  |  1  |      0       |
+|  1  |  0  |  0  |      1       |
+|  1  |  0  |  1  |      1       |
+|  1  |  1  |  0  |      1       |
+|  1  |  1  |  1  |      1       |
+]],
+            note = [[
+The rules give `M ∨ ((A ∧ ¬L) ∨ 0)`, and the identity law drops the `0`. If
+your table differs from this one, so does your reading of the function, and
+the rows that differ say where.
+
+This is worth practising until it is quick. It is the step that turns "these
+two functions look the same" into something you can check, and every refactor
+in this lesson starts with it. It also shows why two branches that both return
+true are not a single merged condition: `(M ∨ A) ∧ ¬L` is the trap from the
+lesson on equivalence, in another function.
+]],
+            solution = {
+                { run = { "TruthTable M or (A and not L)" } },
+            },
+        },
+        {
+            text = [[
+Guard clauses are the second rule at work. This function rejects early:
+
+```js
+function canPublish({ hasFatalError, hasTitle, hasTags }) {
+  if (hasFatalError) return false;
+  if (!hasTitle) return false;
+  return hasTags;
+}
+```
+
+Each guard is a reason to reject. Reading from the top, with `F`, `T`, `G` for
+the checks, gives `¬F ∧ (¬¬T ∧ G)`: the second guard's own `!` sits under the
+rule's `¬`. (`∧` is associative, so the scratch pane leaves the parentheses
+out.) Simplify (`<leader>ttz`) and apply it as a step (`<leader>ttA`).
+]],
+            template = [[
+not F and not not T and G
+]],
+            expect = [[
+not F and not not T and G
+≡ ¬F ∧ T ∧ G                 | by double negation
+]],
+            note = [[
+`return !hasFatalError && hasTitle && hasTags;`. The guards and the single
+expression are the same function, one written as reasons to reject and the
+other as a list of requirements. Knowing that they are the same thing is what
+lets you choose: guards when each rejection deserves its own error or log
+line, the expression when the rule should be read at a glance.
+]],
+            solution = {
+                { on = "not F and not not T and G", run = { "TruthTableSimplify", "TruthTableApplyStep" } },
+            },
+        },
+        {
+            text = [[
+Now a larger one, with four Boolean inputs and three ways to say yes:
 
 ```js
 function canAccess({ isSuperAdmin, isAdmin, hasGrant, isClassified }) {
@@ -16,9 +103,9 @@ function canAccess({ isSuperAdmin, isAdmin, hasGrant, isClassified }) {
 }
 ```
 
-Name the four checks `S`, `A`, `G`, `C`. The function returns true when any of
-the three branches fires, which is the expression in the scratch pane. The
-repeated `not C` is the thing to tidy. Put the cursor on either `not C`,
+Name the four checks `S`, `A`, `G`, `C`. Reading from the top, the function
+is the three branches joined by `or`, which is the expression in the scratch
+pane. The repeated `not C` is the thing to tidy. Put the cursor on either `not C`,
 preview `:TruthTableFactor` (`<leader>ttf`), and apply it as a step
 (`<leader>ttA`); then, with the cursor on `S` in the new line, commute
 (`<leader>tts`) and apply that as a step as well.

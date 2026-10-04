@@ -53,10 +53,11 @@ preview `:TruthTableDistribute` (`<leader>ttx`), and apply it as a step
 (`<leader>ttA`). The new line contains `a ∨ ¬a`, which the complement law
 turns into `1`, and the identity law then removes the `1`.
 
-One command covers the laws that shrink an expression:
-`:TruthTableSimplify` (`<leader>ttz`) finds the nearest place one of them
-applies, previews the result, and names the law it used. Run it on the new
-line and apply it as a step, then do the same once more.
+`:TruthTableSimplify` (`<leader>ttz`), which removed the double negations in
+earlier lessons, covers every law that shrinks an expression: it finds the
+nearest place one of them applies, previews the result, and names the law it
+used. Run it on the new line and apply it as a step, then do the same once
+more.
 ]],
             template = [[
 a or (not a and b)
@@ -137,9 +138,10 @@ when `a` is false, then `a` has no say. Derive it: with the cursor on either
 ≡ b                           | by identity
 ]],
             note = [[
-Factor, complement, identity: three laws compressed into one. This is the law
-that does the work in the lesson on Karnaugh maps, where every group of
-neighbouring cells is a reduction.
+Factor, complement, identity: three laws compressed into one. In code it is
+two branches that differ only in whether `a` holds, which make one branch that
+never asks about `a`. This is also the law that does the work in the lesson on
+Karnaugh maps, where every group of neighbouring cells is a reduction.
 ]],
             solution = {
                 { on = "(a and b) or (not a and b)", at = "b", run = { "TruthTableFactor", "TruthTableApplyStep" } },

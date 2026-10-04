@@ -85,6 +85,52 @@ That is the expression the column was built from, up to a pair of parentheses.
         },
         {
             text = [[
+A map can also tell you there is nothing to find. Take the retry condition
+from the last lesson, `(T ⊕ E) ∧ R`: is there a shorter way to write it with
+`and`, `or` and `not`? Build the table, then run `:TruthTableKarnaugh`
+(`<leader>ttk`) with the cursor in its last column.
+]],
+            template = [[
+(T xor E) and R
+]],
+            expect = [[
+|  T  |  E  |  R  | (T ⊕ E) ∧ R |
+|:---:|:---:|:---:|:-----------:|
+|  0  |  0  |  0  |      0      |
+|  0  |  0  |  1  |      0      |
+|  0  |  1  |  0  |      0      |
+|  0  |  1  |  1  |      1      |
+|  1  |  0  |  0  |      0      |
+|  1  |  0  |  1  |      1      |
+|  1  |  1  |  0  |      0      |
+|  1  |  1  |  1  |      0      |
+
+Karnaugh map for (T ⊕ E) ∧ R:
+
+|     |     |     | ER  |     |     |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+|     |     | 00  | 01  | 11  | 10  |
+|  T  |  0  |  0  |  0  |  1  |  0  |
+|     |  1  |  0  |  1  |  0  |  0  |
+
+(T ⊕ E) ∧ R ≡ ¬T ∧ E ∧ R ∨ T ∧ ¬E ∧ R
+]],
+            note = [[
+The two ones sit on a diagonal. Neither has a neighbour to group with, so no
+variable drops out, and the minimal sum of products is longer than what you
+started with. That is an answer too: this condition does not simplify, and the
+thing left to improve in the code is its name (`exactlyOneFailure`).
+
+The formula line is where the last lesson's derivation began: factor `R`,
+recognise `⊕`, and you are back at `(T ⊕ E) ∧ R`.
+]],
+            solution = {
+                { on = "(T xor E) and R", run = { ".TruthTable" } },
+                { on = "|  T  |  E  |  R  | (T ⊕ E) ∧ R |", at = "(T ⊕", run = { "TruthTableKarnaugh" } },
+            },
+        },
+        {
+            text = [[
 Rows can be missing, and that is useful. Suppose a door only ever reports
 "open" when its key is present, so the state "no key, door open" never occurs.
 

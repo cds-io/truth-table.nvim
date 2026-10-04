@@ -1,6 +1,6 @@
 return {
     title = "De Morgan's laws",
-    aim = "Move a negation across `and` and `or`, looking at each rewrite before applying it.",
+    aim = "Move a negation across `and` and `or`, and use that to make a negated condition say what it requires.",
     steps = {
         {
             text = [[
@@ -33,6 +33,36 @@ not (p and q)
         },
         {
             text = [[
+So, when does a programmer want this? When a condition is written as what must
+not happen. Here is a login check:
+
+```js
+function denyLogin({ isActive, hasPassword }) {
+  return !(isActive && hasPassword);
+}
+```
+
+It is correct, and it hides its own content: the reasons a login is denied
+sit inside a negation, as their opposites. De Morgan brings them out. Preview
+and apply.
+]],
+            template = [[
+not (isActive and hasPassword)
+]],
+            expect = [[
+¬isActive ∨ ¬hasPassword
+]],
+            note = [[
+Read it back into code: `return !isActive || !hasPassword;`. Each reason for
+denial is now a term of its own, which is where a specific error message or a
+log line would attach.
+]],
+            solution = {
+                { on = "not (isActive and hasPassword)", run = { "TruthTableDeMorgan", "TruthTableApply" } },
+            },
+        },
+        {
+            text = [[
 The law runs in the other direction too, pulling a negation outward. Preview
 and apply as before.
 ]],
@@ -60,6 +90,51 @@ r ∧ ¬s ∧ ¬t
 ]],
             solution = {
                 { on = "r and not (s or t)", at = "not", run = { "TruthTableDeMorgan", "TruthTableApply" } },
+            },
+        },
+        {
+            text = [[
+The opposite complaint is the more common one: a condition written as *reasons
+to reject*, wrapped in one big `not`.
+
+```js
+function showBanner({ isFreeUser, hasDismissedBanner }) {
+  return !(!isFreeUser || hasDismissedBanner);
+}
+```
+
+"Not (not free, or dismissed)": a reader has to undo two negations in their
+head to learn who sees the banner. Pushing the negation inward turns the
+reasons to reject into a *list of requirements*. Apply De Morgan
+(`<leader>ttd`, then `<leader>tta`). That leaves `¬¬isFreeUser`, and a double
+negation cancels:
+
+```text
+¬¬p  ≡  p
+```
+
+`:TruthTableSimplify` (`<leader>ttz`) previews the cancellation. Apply it too.
+]],
+            template = [[
+not (not isFreeUser or hasDismissedBanner)
+]],
+            expect = [[
+isFreeUser ∧ ¬hasDismissedBanner
+]],
+            note = [[
+`return isFreeUser && !hasDismissedBanner;`: free users who have not dismissed
+it. The function is the same, and the condition now reads as the requirement
+it is.
+
+Simplify knows more laws than this one. The lesson on absorption and reduction
+comes back to it.
+]],
+            solution = {
+                {
+                    on = "not (not isFreeUser or hasDismissedBanner)",
+                    run = { "TruthTableDeMorgan", "TruthTableApply" },
+                },
+                { on = "¬¬isFreeUser ∧ ¬hasDismissedBanner", run = { "TruthTableSimplify", "TruthTableApply" } },
             },
         },
     },
