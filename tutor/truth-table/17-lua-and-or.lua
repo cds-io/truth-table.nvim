@@ -1,13 +1,15 @@
 return {
-    title = "Lua: `and` and `or` as a conditional",
-    aim = "Test the `c and x or y` idiom against a real conditional, and know the one row where they part.",
+    title = "Lua: `and` and `or` as a ternary",
+    aim = "Test the `c and x or y` idiom against the ternary it stands in for, and know the one row where they part.",
     steps = {
         {
             text = [[
 **Stage 1 of 5: name the checks.**
 
-Lua has no conditional expression, and the idiom that stands in for one is
-built from `and` and `or`. This callback receives the answer to a "go to
+A *ternary* is an expression that picks one of two values: `c ? x : y` in
+JavaScript is `x` when `c` holds and `y` when it does not. Lua has no ternary,
+and the idiom that stands in for one is built from `and` and `or`. This
+callback receives the answer to a "go to
 definition" request, which can be one location or a list of them:
 
 ```lua
@@ -49,8 +51,8 @@ c and x or y                    the idiom, as written
 if c then x else y              the intent
 ```
 
-The idiom is already an expression. The intent is a conditional, and written
-out with the connectives it is `(c ∧ x) ∨ (¬c ∧ y)`: `x` when `c` holds, `y`
+The idiom is already an expression. The intent is a ternary, and written out
+with the connectives it is `(c ∧ x) ∨ (¬c ∧ y)`: `x` when `c` holds, `y`
 when it does not.
 
 Is the idiom the same thing? There is nothing to rewrite here; the question is
@@ -75,7 +77,7 @@ c and x or y | (c and x) or (not c and y)
             note = [[
 One row differs: `c` true, `x` false, `y` true. The condition holds, and the
 idiom still falls through to `y`, because `c and x` came out false. That is
-the whole weakness of the idiom: it is a conditional only as long as `x` can
+the whole weakness of the idiom: it is a ternary only as long as `x` can
 never be `false` or `nil`.
 ]],
             solution = {
@@ -98,7 +100,8 @@ three lines up returns early when `result` is an empty table, so by the time
 this line runs, a list has a first item. The row is closed off, and the line
 is right.
 
-The form with no such row is the conditional itself:
+The form with no such row is an `if` statement, which is how Lua spells a
+ternary in full:
 
 ```lua
 local loc = result
@@ -128,7 +131,7 @@ c    vim.islist(result)    the condition
 x    result[1]             the value wanted when the condition holds
 y    result                the value wanted when it fails
 
-The row where the idiom and the conditional differ:
+The row where the idiom and the ternary differ:
 
 |  c  |  x  |  y  | (c ∧ x) ∨ y | (c ∧ x) ∨ (¬c ∧ y) |
 |:---:|:---:|:---:|:-----------:|:------------------:|
