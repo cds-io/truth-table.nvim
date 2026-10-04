@@ -10,6 +10,7 @@
 :TruthTableExpand	truth-table.txt	/*:TruthTableExpand*
 :TruthTableFactor	truth-table.txt	/*:TruthTableFactor*
 :TruthTableKarnaugh	truth-table.txt	/*:TruthTableKarnaugh*
+:TruthTableSimplify	truth-table.txt	/*:TruthTableSimplify*
 :TruthTableToggle	truth-table.txt	/*:TruthTableToggle*
 :TruthTableTutor	truth-table.txt	/*:TruthTableTutor*
 :TruthTableTutorNext	truth-table.txt	/*:TruthTableTutorNext*
@@ -22,6 +23,7 @@ truth-table-configuration	truth-table.txt	/*truth-table-configuration*
 truth-table-contents	truth-table.txt	/*truth-table-contents*
 truth-table-installation	truth-table.txt	/*truth-table-installation*
 truth-table-introduction	truth-table.txt	/*truth-table-introduction*
+truth-table-justification	truth-table.txt	/*truth-table-justification*
 truth-table-keymaps	truth-table.txt	/*truth-table-keymaps*
 truth-table-predicates	truth-table.txt	/*truth-table-predicates*
 truth-table-requirements	truth-table.txt	/*truth-table-requirements*

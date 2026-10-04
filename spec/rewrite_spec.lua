@@ -298,6 +298,115 @@ describe("rewrite.de_morgan", function()
     end)
 end)
 
+describe("rewrite.simplify", function()
+    -- The rewritten text and the law that was applied.
+    local function simplify(source, needle, occurrence)
+        local ast = assert(predicate.parse_located(source))
+        local tree, law = rewrite.simplify(ast, needle and byte_of(source, needle, occurrence))
+        if not tree then
+            return nil, law
+        end
+        return predicate.ast_to_heading(tree), law
+    end
+
+    local function check(cases)
+        for _, case in ipairs(cases) do
+            local text, law = simplify(case[1], case[2], case[5])
+            assert.are.same({ case[3], case[4] }, { text, law }, case[1] .. " at " .. tostring(case[2]))
+        end
+    end
+
+    it("collapses an operand and its negation to a constant", function()
+        check({
+            { "a ∨ ¬a", "a", "1", "complement" },
+            { "a ∧ ¬a", "¬", "0", "complement" },
+            { "b ∧ (a ∨ ¬a)", "a", "b ∧ 1", "complement" },
+            { "¬a ∨ b ∨ a", "a", "1 ∨ b", "complement" },
+            { "(p ∧ q) ∨ ¬(p ∧ q)", "p", "1", "complement" },
+        })
+    end)
+
+    it("applies the constant laws, keeping a typed constant's spelling", function()
+        check({
+            { "b ∧ 1", "1", "b", "identity" },
+            { "0 ∨ a ∨ b", "0", "a ∨ b", "identity" },
+            { "c ∧ (a ∨ 0)", "0", "c ∧ a", "identity" },
+            { "(a ∨ b) ∧ 1", "1", "a ∨ b", "identity" },
+            { "a ∨ 1", "a", "1", "domination" },
+            { "a ∧ b ∧ ⊥", "b", "⊥", "domination" },
+            { "c ∨ (a ∧ 0)", "a", "c ∨ 0", "domination" },
+            { "a ∨ a", "a", "a", "idempotence" },
+            { "a ∧ b ∧ a", "a", "a ∧ b", "idempotence" },
+            { "(a ∧ b) ∨ (b ∧ a)", "a", "a ∧ b", "idempotence" },
+        })
+    end)
+
+    it("absorbs the terms that contain the operand under the cursor", function()
+        check({
+            { "a ∨ (a ∧ b)", "a", "a", "absorption" },
+            { "a ∧ (a ∨ b)", "a", "a", "absorption" },
+            { "a ∨ a ∧ b ∨ c ∨ a ∧ d", "a", "a ∨ c", "absorption" },
+            { "a ∧ b ∨ a ∧ b ∧ c", "a", "a ∧ b", "absorption" },
+            { "a ∨ (a ∧ b)", "b", "a", "absorption" },
+        })
+    end)
+
+    it("drops the negated operand from the terms beside it", function()
+        check({
+            { "a ∨ (¬a ∧ b)", "a", "a ∨ b", "absorption" },
+            { "a ∧ (¬a ∨ b)", "a", "a ∧ b", "absorption" },
+            { "¬a ∨ a ∧ b ∧ c", "¬", "¬a ∨ b ∧ c", "absorption" },
+            { "a ∨ (¬a ∧ b ∧ c)", "b", "a ∨ (b ∧ c)", "absorption" },
+        })
+    end)
+
+    it("merges two terms that differ in one complemented operand", function()
+        check({
+            { "(a ∧ b) ∨ (¬a ∧ b)", "b", "b", "reduction" },
+            { "(a ∨ b) ∧ (¬a ∨ b)", "b", "b", "reduction" },
+            { "a ∧ b ∧ c ∨ c ∧ ¬a ∧ b ∨ d", "c", "b ∧ c ∨ d", "reduction" },
+            { "(a ∧ b ∧ c) ∨ (a ∧ ¬b ∧ c) ∨ d", "b", "(a ∧ c) ∨ d", "reduction" },
+        })
+    end)
+
+    it("removes negations of constants and double negations", function()
+        check({
+            { "¬1", "1", "0", "negation" },
+            { "a ∨ ¬⊥", "⊥", "a ∨ ⊤", "negation" },
+            { "¬¬a", "a", "a", "double negation" },
+            { "b ∧ ¬¬(a ∨ c)", "¬", "b ∧ (a ∨ c)", "double negation" },
+            { "¬¬(a ∨ c)", "¬", "a ∨ c", "double negation" },
+        })
+    end)
+
+    it("prefers a match involving the operand under the cursor", function()
+        check({
+            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "c", "a ∨ a ∧ b ∨ c", "absorption" },
+            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "a", "a ∨ c ∨ c ∧ d", "absorption" },
+            { "(a ∨ ¬a) ∧ (b ∨ ¬b)", "b", "(a ∨ ¬a) ∧ 1", "complement" },
+        })
+    end)
+
+    it("looks inside a group the cursor selects, then around it, then anywhere", function()
+        check({
+            { "(a ∨ ¬a) ∧ (a ∨ b)", "(", "1 ∧ (a ∨ b)", "complement" },
+            { "c ∧ (a ∨ 1)", "a", "c ∧ 1", "domination" },
+            { "c ∧ (a ∨ 1)", "c", "c ∧ 1", "domination" },
+            { "(a ∧ 1) ∨ (b ∧ 1)", "∨", "a ∨ (b ∧ 1)", "identity" },
+        })
+        local text, law = simplify("a ∨ ¬a")
+        assert.are.same({ "1", "complement" }, { text, law })
+    end)
+
+    it("refuses when no collapsing law applies", function()
+        for _, source in ipairs({ "a", "a ∨ b", "a ∧ (b ∨ c)", "a ⊕ a", "a → a", "(a ∧ b) ∨ (¬a ∧ c)" }) do
+            local text, err = simplify(source, "a")
+            assert.is_nil(text, source)
+            assert.are.equal("No simplification applies to this expression", err)
+        end
+    end)
+end)
+
 -- Every rewrite, at every cursor byte of every expression here, either refuses
 -- with a message or returns a tree that means the same, and whose rendered
 -- text (what lands in the buffer) parses back to that same function. The
@@ -320,6 +429,11 @@ describe("rewrite soundness", function()
         "R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))",
         "(A ∨ B) ∧ (¬A ∨ ¬B) ∧ ¬(C ∧ ¬A)",
         "A ∧ B ∨ ¬A ∧ ¬B ∨ ¬(¬A ∨ ¬C)",
+        "A ∧ ⊤ ∨ ⊥ ∧ A ∨ 1 ∧ (B ∨ ⊥)",
+        "A ∨ A ∧ B ∨ ¬A ∧ C ∨ (B ∧ ¬C ∧ A) ∨ B ∧ C ∧ A",
+        "(A ∨ B) ∧ (¬A ∨ B) ∧ (A ∨ ¬A ∨ C) ∧ ¬¬B ∧ ¬0",
+        "A ∧ A ∨ A ∧ B ∨ ¬(A ∧ A) ∧ C ∨ B ∧ A",
+        "¬(A ∨ ¬A) ∨ (B → B ∧ (C ∨ ¬C)) ∨ (A ⊕ (B ∨ B))",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,
@@ -328,6 +442,7 @@ describe("rewrite soundness", function()
         commute_back = function(ast, byte) return rewrite.commute(ast, byte, true) end,
         xor = function(ast, byte) return rewrite.xor(ast, byte) end,
         de_morgan = function(ast, byte) return rewrite.de_morgan(ast, byte) end,
+        simplify = function(ast, byte) return rewrite.simplify(ast, byte) end,
     }
 
     -- Every input a tree reads: variable names and :hN indices. eval_ast looks

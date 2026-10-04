@@ -7,11 +7,13 @@ local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.preview")
 local pending, attached = {}, {}
 
--- Each rewrite maps a located tree and a cursor byte to a new tree. `command`
--- groups the names one user command toggles; `whole` marks a rewrite that
--- also works without a cursor in the expression, on the whole of it.
+-- Each rewrite maps a located tree and a cursor byte to a new tree and the
+-- name of the law that justifies it. `command` groups the names one user
+-- command toggles; `whole` marks a rewrite that also works without a cursor
+-- in the expression, on the whole of it.
 local REWRITES = {
     de_morgan = { command = "de_morgan", whole = true, run = rewrite.de_morgan },
+    simplify = { command = "simplify", whole = true, run = rewrite.simplify },
     factor = { command = "factor", run = rewrite.factor },
     distribute = { command = "distribute", run = rewrite.distribute },
     xor = { command = "xor", run = rewrite.xor },
@@ -57,9 +59,10 @@ local function watch(buf)
 end
 
 -- A source is the expression the cursor selects plus the ways to write a
--- rewritten one back: `replace(text)` gives the edited line, and `step(text)`,
--- for expression lines only, gives the line to insert below. `offset` is the
--- cursor's byte within the expression, when it has one.
+-- rewritten one, { text, law }, back: `replace(rewritten)` gives the edited
+-- line, and `step(rewritten)`, for expression lines only, gives the line to
+-- insert below. `offset` is the cursor's byte within the expression, when it
+-- has one.
 
 -- A heading is one expression, read from anywhere in its column. Only the
 -- heading row itself puts the cursor on a byte of the expression.
@@ -88,8 +91,8 @@ local function heading_source(lines, bounds, at)
         column = column,
         expression = expression,
         offset = offset,
-        replace = function(text)
-            return markdown.replace_heading(heading_line, column, text)
+        replace = function(rewritten)
+            return markdown.replace_heading(heading_line, column, rewritten.text)
         end,
     }
 end
@@ -106,11 +109,11 @@ local function line_source(line, at)
         row = at.row,
         expression = side.text,
         offset = at.byte - side.first + 1,
-        replace = function(text)
-            return derivation.replace(line, side, text)
+        replace = function(rewritten)
+            return derivation.replace(line, side, rewritten)
         end,
-        step = function(text)
-            return derivation.step(line, text, vim.fn.strdisplaywidth)
+        step = function(rewritten)
+            return derivation.step(line, rewritten, vim.fn.strdisplaywidth)
         end,
     }
 end
@@ -136,12 +139,14 @@ local function resolve(buf, kind)
     if not kind.whole and not source.offset then
         return nil, "Put the cursor on the heading row to choose an operand"
     end
-    local rewritten, rewrite_err = kind.run(ast, source.offset)
-    if not rewritten then
-        return nil, rewrite_err
+    -- On success the second value is the law; on refusal, the reason.
+    local tree, law = kind.run(ast, source.offset)
+    if not tree then
+        return nil, law
     end
-    local heading = predicate.ast_to_heading(rewritten)
-    local replacement, replace_err = source.replace(heading)
+    local heading = predicate.ast_to_heading(tree)
+    local rewritten = { text = heading, law = law }
+    local replacement, replace_err = source.replace(rewritten)
     if not replacement then
         return nil, replace_err
     end
@@ -149,12 +154,13 @@ local function resolve(buf, kind)
         row = source.row - 1,
         replacement = replacement,
         heading = heading,
+        law = law,
         column = source.column,
         command = kind.command,
         tick = vim.api.nvim_buf_get_changedtick(buf),
     }
     if source.step then
-        preview.step, preview.step_column = source.step(heading)
+        preview.step, preview.step_column = source.step(rewritten)
     end
     return preview
 end
@@ -179,8 +185,9 @@ function M.toggle(name)
     end
     watch(buf)
     local label = preview.column and (" [column " .. preview.column .. "] ⇒ ") or " ⇒ "
+    local shown_text = label .. preview.heading .. "  " .. derivation.justification(preview.law)
     preview.mark = vim.api.nvim_buf_set_extmark(buf, namespace, preview.row, 0, {
-        virt_text = { { label .. preview.heading, "Comment" } }, virt_text_pos = "eol",
+        virt_text = { { shown_text, "Comment" } }, virt_text_pos = "eol",
     })
     pending[buf] = preview
     if preview.column then

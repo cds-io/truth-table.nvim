@@ -184,6 +184,9 @@ function M.setup(opts)
     vim.api.nvim_create_user_command("TruthTableXor", toggles("xor"), {
         desc = "Toggle a preview recognising an exclusive or (or an equivalence) in the terms under the cursor",
     })
+    vim.api.nvim_create_user_command("TruthTableSimplify", toggles("simplify"), {
+        desc = "Toggle a preview applying the collapsing law nearest the cursor (complement, identity, absorption, reduction, ...)",
+    })
     vim.api.nvim_create_user_command("TruthTableCommute", function(command)
         preview.toggle(command.bang and "commute_back" or "commute")
     end, {
@@ -245,6 +248,7 @@ function M.setup(opts)
     vim.keymap.set("n", "<leader>ttf", "<cmd>TruthTableFactor<CR>", { desc = "Preview factoring out operand" })
     vim.keymap.set("n", "<leader>ttx", "<cmd>TruthTableDistribute<CR>", { desc = "Preview distributing operand" })
     vim.keymap.set("n", "<leader>tto", "<cmd>TruthTableXor<CR>", { desc = "Preview exclusive-or recognition" })
+    vim.keymap.set("n", "<leader>ttz", "<cmd>TruthTableSimplify<CR>", { desc = "Preview simplifying at the cursor" })
     vim.keymap.set("n", "<leader>tts", "<cmd>TruthTableCommute<CR>", { desc = "Preview swap with next operand" })
     vim.keymap.set("n", "<leader>ttS", "<cmd>TruthTableCommute!<CR>", { desc = "Preview swap with previous operand" })
     vim.keymap.set("n", "<leader>tta", "<cmd>TruthTableApply<CR>", { desc = "Apply rewrite in place" })

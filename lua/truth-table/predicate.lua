@@ -56,6 +56,15 @@ table.sort(SYMBOL_OPS, function(a, b)
     return #a[1] > #b[1]
 end)
 
+-- The constants: the digits, with ⊤ and ⊥ as further spellings of 1 and 0.
+-- The words `true` and `false` are read as ⊤ and ⊥, the way `and` is read as
+-- ∧, which reserves them: neither can name a column.
+local CONSTANTS = { ["0"] = 0, ["1"] = 1, [SYMBOLS.TOP.unicode] = 1, [SYMBOLS.BOTTOM.unicode] = 0 }
+local CONSTANT_WORDS = {
+    [SYMBOLS.TOP.ascii] = SYMBOLS.TOP.unicode,
+    [SYMBOLS.BOTTOM.ascii] = SYMBOLS.BOTTOM.unicode,
+}
+
 local function symbol_op_at(input, pos)
     for _, entry in ipairs(SYMBOL_OPS) do
         local symbol = entry[1]
@@ -104,16 +113,19 @@ function M.tokenize(input)
             local ident = input:match("^[A-Za-z_][A-Za-z0-9_]*", pos)
             if KEYWORDS[ident] then
                 tokens[#tokens + 1] = { type = "op", value = ident }
+            elseif CONSTANT_WORDS[ident] then
+                tokens[#tokens + 1] = { type = "literal", value = CONSTANT_WORDS[ident] }
             else
                 tokens[#tokens + 1] = { type = "ident", value = ident }
             end
             pos = pos + #ident
-        elseif ch == "0" or ch == "1" then
-            tokens[#tokens + 1] = { type = "literal", value = ch }
-            pos = pos + 1
         else
             local character = input:match("^[^\128-\191][\128-\191]*", pos) or ch
-            return nil, "Unexpected character: " .. character .. " at byte " .. pos
+            if not CONSTANTS[character] then
+                return nil, "Unexpected character: " .. character .. " at byte " .. pos
+            end
+            tokens[#tokens + 1] = { type = "literal", value = character }
+            pos = pos + #character
         end
         spans[#tokens] = { start_byte = token_start, end_byte = pos - 1 }
     end
@@ -182,7 +194,11 @@ function M.parse_predicate(tokens, locations)
             return located({ type = "var", name = tok.value }, first)
         elseif tok.type == "literal" then
             consume()
-            return located({ type = "literal", value = tonumber(tok.value) }, first)
+            -- A constant typed as a symbol keeps it, so the heading renders
+            -- as written; a digit is its own rendering.
+            local value = CONSTANTS[tok.value]
+            local symbol = tok.value ~= tostring(value) and tok.value or nil
+            return located({ type = "literal", value = value, symbol = symbol }, first)
         elseif tok.type == "paren" and tok.value == "(" then
             consume()
             local node, err = parse_expr()
@@ -305,7 +321,7 @@ local function render_ast(node, reference_text)
     elseif node.type == "var" then
         return node.name
     elseif node.type == "literal" then
-        return tostring(node.value)
+        return node.symbol or tostring(node.value)
     elseif node.type == "not" then
         return M.SYMBOLS["not"] .. child_heading(node.operand, false)
     elseif BINARY[node.type] then
@@ -374,7 +390,7 @@ function M.transform_ast(node, fn)
     elseif node.type == "reference" then
         copy.index = node.index
     elseif node.type == "literal" then
-        copy.value = node.value
+        copy.value, copy.symbol = node.value, node.symbol
     elseif node.type == "column" then
         copy.index, copy.name, copy.variable = node.index, node.name, node.variable
     else
@@ -447,15 +463,15 @@ end
 
 -- Does the :TruthTable argument use the expression form? The classic forms (an
 -- integer, or a list of names) consist of word characters and spaces only, so
--- any other character, or an operator keyword among the names, means
--- expressions. N.B. this reserves the operator keywords: `:TruthTable p or q`
+-- any other character, or an operator keyword or constant word among the
+-- names, means expressions. N.B. this reserves those words: `:TruthTable p or q`
 -- is the expression p ∨ q, where it used to be three variables.
 function M.is_expression_input(args)
     if args:match("[^%w_%s]") then
         return true
     end
     for word in args:gmatch("%S+") do
-        if KEYWORDS[word] then
+        if KEYWORDS[word] or CONSTANT_WORDS[word] then
             return true
         end
     end

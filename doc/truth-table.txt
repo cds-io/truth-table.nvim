@@ -90,8 +90,8 @@ lists or blockquotes are not supported.
 
     N.B. {arg} is read as expressions when it contains anything besides names
     and spaces, or an operator keyword. So `:TruthTable p or q` is the
-    expression p ∨ q; the keywords (and, or, xor, not, implies, iff) are
-    reserved and cannot be variable names.
+    expression p ∨ q; the keywords (and, or, xor, not, implies, iff) and the
+    constant words (true, false) are reserved and cannot be variable names.
 
 :[range]TruthTable
     Without {arg}, read the argument from the lines in [range] (typically a
@@ -181,28 +181,62 @@ lists or blockquotes are not supported.
     to its right, or with [!] to its left. At the end of a chain the direction
     flips. Works on ∧, ∨, ⊕ and ⇔.
 
+                                                         *:TruthTableSimplify*
+:TruthTableSimplify
+    Toggle a preview that applies one collapsing law, a law whose right-hand
+    side is smaller than its left, and names it: >
+
+        complement        A ∨ ¬A ⇒ 1            A ∧ ¬A ⇒ 0
+        domination        A ∨ 1 ⇒ 1             A ∧ 0 ⇒ 0
+        identity          A ∨ 0 ⇒ A             A ∧ 1 ⇒ A
+        idempotence       A ∨ A ⇒ A             A ∧ A ⇒ A
+        absorption        A ∨ A ∧ B ⇒ A         A ∧ (A ∨ B) ⇒ A
+                          A ∨ ¬A ∧ B ⇒ A ∨ B    A ∧ (¬A ∨ B) ⇒ A ∧ B
+        reduction         A ∧ B ∨ ¬A ∧ B ⇒ B    (A ∨ B) ∧ (¬A ∨ B) ⇒ B
+        negation          ¬1 ⇒ 0                ¬0 ⇒ 1
+        double negation   ¬¬A ⇒ A
+<
+    The nearest match to the cursor wins, searched in four rounds: a law that
+    involves the operand under the cursor (on A in `A ∨ A ∧ B ∨ C ∨ C ∧ D`, A
+    absorbs `A ∧ B` and `C ∧ D` stays); then a law anywhere inside what the
+    cursor selects (a cursor on a parenthesis selects the group); then a law
+    in a chain around the cursor, with any of its operands; then a law
+    anywhere in the expression, innermost and leftmost first. At any one
+    place the laws are tried in the order above. From a table's data rows
+    only the last round runs.
+
+    Terms match as sets of operands, so `A ∧ B` and `B ∧ A` are the same
+    term. A constant typed as ⊤ or ⊥ keeps that spelling when it survives.
+    Chains of ⊕ and ⇔, and →, are left as they are. One run is one law; for a
+    minimal form in one go use |:TruthTableKarnaugh|.
+
                                                             *:TruthTableApply*
                                                     *:TruthTableDeMorganApply*
 :TruthTableApply
     Apply the pending preview in this buffer, in place. On an expression line
     only the previewed side changes: indentation, other sides, and the spacing
-    around each ≡ are kept. For tables, replace only the selected header cell,
+    around each ≡ are kept; a line that carries a justification gains the new
+    law at the end of it. For tables, replace only the selected header cell,
     leaving separators and stored data values untouched. Duplicate headings
     are rejected. Explicit references to the old header label must be updated
-    by the user after renaming. Output uses logic symbols and is left
-    unsimplified. :TruthTableDeMorganApply is an alias.
+    by the user after renaming. Output uses logic symbols.
+    :TruthTableDeMorganApply is an alias.
 
                                                         *:TruthTableApplyStep*
 :TruthTableApplyStep
     Leave the previewed line as it is and insert the rewrite below it as the
-    next step of a derivation, then move the cursor to the new expression: >
+    next step of a derivation, with the law that justifies it, then move the
+    cursor to the new expression: >
 
-        S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C
-                                ≡ S ∨ ¬C ∧ (A ∨ G)
-                                ≡ ¬C ∧ (A ∨ G) ∨ S
+        (a and b) or (not a and b)
+        ≡ b ∧ (a ∨ ¬a)                | by distributivity
+        ≡ b ∧ 1                       | by complement
+        ≡ b                           | by identity
 <
     The new ≡ sits under the line's last ≡, or at the line's indentation when
-    it has none. Steps apply to expression lines; a heading takes
+    it has none. The justification's bar sits four columns clear of the wider
+    of the two lines, or under the bar of the line above when that is further
+    right. Steps apply to expression lines; a heading takes
     |:TruthTableApply| only.
 
                                                         *truth-table-rewrites*
@@ -219,6 +253,15 @@ the heading row, inside the cell.
 cursor and leaves the others as they are. ≡ is outside the predicate language,
 so `=` remains a spelling of ⇔; type ≡ as `equiv@`. |:TruthTableKarnaugh|
 writes its formula line as `target ≡ formula`, ready to step from.
+
+                                                   *truth-table-justification*
+Every preview ends in its justification, `| by` and the name of the law the
+rewrite applies, and |:TruthTableApplyStep| writes it after the step. The
+names are those of |:TruthTableSimplify|, plus `distributivity` (factor and
+distribute are the one law read in opposite directions), `commutativity`,
+`De Morgan`, and `definition of ⊕` or `definition of ⇔`. On an expression
+line everything from the first | on is a remark: a rewrite reads the
+expression before it, and a cursor in the remark means the line's last side.
 
 One preview is pending per buffer. Running its own command again dismisses
 it; running a different rewrite command replaces it.
@@ -298,7 +341,9 @@ the columns from it.
 
 Operands:
     - column names (for |:TruthTableExpand|, must match an existing header)
-    - literals `0` and `1`
+    - constants `0` and `1`, also written `⊥` and `⊤`; a heading keeps the
+      spelling you typed. The words `false` and `true` are read as `⊥` and
+      `⊤`.
 
 Stored column references ~
 
@@ -355,6 +400,7 @@ Examples: >
     <leader>ttf   |:TruthTableFactor|
     <leader>ttx   |:TruthTableDistribute|
     <leader>tto   |:TruthTableXor|
+    <leader>ttz   |:TruthTableSimplify|
     <leader>tts   |:TruthTableCommute|
     <leader>ttS   |:TruthTableCommute| with !
     <leader>tta   |:TruthTableApply|
@@ -419,11 +465,13 @@ record per symbol with an `ascii` word and a `unicode` character: >
     AND = { ascii = "and", unicode = "∧" }
     IFF = { ascii = "iff", unicode = "⇔" }
 <
-The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`)
-and BOTTOM (`false`). The predicate language renders headings from the same
-table (|truth-table-predicates|), so a heading you type and one the plugin
-generates use the same characters. The abbreviations are global: every
-buffer, every filetype.
+The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`),
+BOTTOM (`false`) and EQUIV. The predicate language reads TOP and BOTTOM, by
+word or by symbol, as the constants 1 and 0, and renders headings from the
+same table
+(|truth-table-predicates|), so a heading you type and one the plugin generates
+use the same characters. The abbreviations are global: every buffer, every
+filetype.
 
 The `abbreviations` key of |truth-table.setup()| controls the set, with the
 input side and the display side as separate settings:
@@ -473,17 +521,20 @@ All pure modules support Lua 5.1 and have no vim dependency:
   backticks so displayed headings retain their literal reference names.
 - result.lua composes value, error results through bind and traverse.
 - rewrite.lua finds the chain operand under a cursor byte and factors,
-  distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, and applies
-  De Morgan at the nearest match, returning a fresh tree.
-- derivation.lua splits a line into sides at ≡, replaces one side, and builds
-  an aligned step line.
+  distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, applies
+  De Morgan at the nearest match, and applies the nearest collapsing law,
+  returning a fresh tree and the name of the law applied.
+- derivation.lua splits a line into sides at ≡, sets its `| by` justification
+  apart, replaces one side, and builds an aligned, justified step line.
 - preview.lua resolves the expression under the cursor (a side of a line, or
   a heading), runs a rewrite on it, and manages per-buffer extmarks,
   invalidation, and applying in place or as a step.
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
   turns a step into the lesson pane's text. spec/tutor.lua replays each
-  step's solution and requires the scratch buffer to end as its expectation.
+  step's solution and requires the scratch buffer to end as its expectation,
+  and evaluates every law a lesson states (`left ≡ right` in a fenced block)
+  over all values of its variables.
 - symbols.lua is the one table of logic symbols (ASCII word plus Unicode
   character); predicate.lua renders from it.
 - abbreviations.lua derives the default insert-mode abbreviations from
