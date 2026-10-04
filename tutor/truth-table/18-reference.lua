@@ -23,13 +23,30 @@ De Morgan        ¬(a ∧ b) ≡ ¬a ∨ ¬b             ¬(a ∨ b) ≡ ¬a ∧
 double negation  ¬¬a ≡ a
 ```
 
-A function that returns true or false, read from the top as one expression:
+A function that returns true or false, read from the top as one expression,
+and the condition each branch of an `if` runs under (the syntax is beside the
+point: `if c then return true end` in Lua reads the same way):
 
 ```text
 if (c) return true;   rest      c ∨ rest
 if (c) return false;  rest      ¬c ∧ rest
 return x;                       x
+
+if (a) X                        X runs when a
+else if (b) Y                   Y runs when ¬a ∧ b
+else Z                          Z runs when ¬a ∧ ¬b
 ```
+
+From code to an expression and back, in five stages:
+
+- **1. Name the checks.** Find the smallest tests the code makes and give
+  each a letter.
+- **2. Translate.** Write the code as an expression in those letters.
+- **3. Rewrite.** Apply the laws, one step per line.
+- **4. Back into the code.** Put the tests back in place of the letters, turn
+  negated comparisons around (`¬(x < y)` is `x >= y`), and write it out.
+- **5. Review.** Before and after, side by side: what the change buys and
+  what it costs.
 
 Tables:
 
