@@ -3,6 +3,20 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- The tutor is framed around refactoring code, with examples adapted from the
+  logic-exercises companion repo. Equivalence: a merge of two `return true`
+  branches that the table shows to be wrong in two rows. De Morgan: a login
+  check and a banner condition turned from reasons to reject into
+  requirements, the second finishing with a double negation. Rearranging: a
+  distributed pull-request rule factored back (∨ out of ∧), and a note on
+  when commuting is safe in code. Derivations: a form condition taken through
+  De Morgan twice and two double negations. Exclusive or: a retry function
+  derived to (T ⊕ E) ∧ R, and its table against the `||` version. Karnaugh
+  maps: the same condition, where the map finds nothing shorter. Code to
+  logic: two new steps on reading a function with several returns as one
+  expression, the second on guard clauses.
+- The reference lesson lists the double negation law and the rules for
+  reading a function as an expression.
 - Add :TruthTableSimplify (<leader>ttz): preview one collapsing law at the
   nearest match to the cursor and name it. The laws are complement (A ∨ ¬A to
   1), domination (A ∨ 1 to 1), identity (A ∨ 0 to A), idempotence, absorption

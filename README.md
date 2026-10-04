@@ -390,6 +390,16 @@ absorption and reduction), derivations, and Karnaugh maps, ending with a
 condition from code refactored step by step. The last lesson is a reference
 sheet of every law and command.
 
+The course keeps one use in view: refactoring code. A function that returns
+true or false, however many `return`s it has, is one Boolean expression
+written as control flow (`if (c) return true; rest` is `c ∨ rest`, and
+`if (c) return false; rest` is `¬c ∧ rest`), and the lessons practise reading
+one that way. Their examples are small functions from application code: a
+merge of two branches that a truth table shows to be wrong, negated conditions
+turned from reasons to reject into requirements with De Morgan, a distributed
+rule factored back, and a retry condition that turns out to be an exclusive
+or.
+
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
 the lesson's aim, what to do, and what you should see afterwards. The scratch
 pane, on the right, holds that step's starting text, and is where you run the
