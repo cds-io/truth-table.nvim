@@ -320,6 +320,7 @@ describe("rewrite soundness", function()
         "R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))",
         "(A ∨ B) ∧ (¬A ∨ ¬B) ∧ ¬(C ∧ ¬A)",
         "A ∧ B ∨ ¬A ∧ ¬B ∨ ¬(¬A ∨ ¬C)",
+        "A ∧ ⊤ ∨ ⊥ ∧ A ∨ 1 ∧ (B ∨ ⊥)",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,

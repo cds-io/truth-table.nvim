@@ -157,6 +157,64 @@ describe("predicate source diagnostics", function()
     end)
 end)
 
+describe("truth constants", function()
+    it("reads ⊤ and ⊥ as 1 and 0", function()
+        local top = assert(predicate.parse_expression("A and ⊤"))
+        local bottom = assert(predicate.parse_expression("A or ⊥"))
+        for a = 0, 1 do
+            assert.are.equal(a, predicate.eval_ast(top, { A = a }))
+            assert.are.equal(a, predicate.eval_ast(bottom, { A = a }))
+        end
+        assert.are.same({ "A" }, assert(predicate.variables(top)))
+    end)
+
+    it("renders each constant as it was typed, through a copy as well", function()
+        for source, heading in pairs({ ["A or ⊤"] = "A ∨ ⊤", ["⊥ and A"] = "⊥ ∧ A", ["A or 1"] = "A ∨ 1" }) do
+            local ast = assert(predicate.parse_expression(source))
+            assert.are.equal(heading, predicate.ast_to_heading(ast))
+            local copy = assert(predicate.transform_ast(ast, function(node)
+                return node
+            end))
+            assert.are.equal(heading, predicate.ast_to_heading(copy))
+        end
+    end)
+
+    it("leaves a digit's token and node as they were", function()
+        local tokens = assert(predicate.tokenize("1 or ⊤"))
+        assert.are.same({ type = "literal", value = "1" }, tokens[1])
+        assert.are.same({ type = "literal", value = "⊤" }, tokens[3])
+        assert.are.same({ type = "literal", value = 1 }, assert(predicate.parse_expression("1")))
+    end)
+
+    it("spans the symbol's three bytes", function()
+        local source = "A ∧ ⊤ ∧ B"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("⊤", source:sub(ast.left.right.span.start_byte, ast.left.right.span.end_byte))
+    end)
+
+    it("reads the words true and false as ⊤ and ⊥", function()
+        local ast = assert(predicate.parse_expression("A and true or false"))
+        assert.are.equal("A ∧ ⊤ ∨ ⊥", predicate.ast_to_heading(ast))
+        assert.are.same({ "A" }, assert(predicate.variables(ast)))
+        for a = 0, 1 do
+            assert.are.equal(a, predicate.eval_ast(ast, { A = a }))
+        end
+        assert.are.equal("truest", predicate.ast_to_heading(assert(predicate.parse_expression("truest"))))
+    end)
+
+    it("reserves the words, so a list of names holding one is an expression", function()
+        assert.is_true(predicate.is_expression_input("p true"))
+        assert.is_true(predicate.is_expression_input("false"))
+        assert.is_false(predicate.is_expression_input("p truthy"))
+    end)
+
+    it("spans a word constant from its first letter to its last", function()
+        local source = "A or false"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("false", source:sub(ast.right.span.start_byte, ast.right.span.end_byte))
+    end)
+end)
+
 describe("positional column references", function()
     it("parses indices and retains expression syntax", function()
         local ast = assert(predicate.parse_expression('not :h12'))
