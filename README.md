@@ -117,13 +117,16 @@ Start with small expressions.
 
 The expression form reads its variables off the expressions, in order of first
 appearance (m, a, b above). A bare variable adds no column, so it can pin the
-order: `:TruthTable b | a | a -> b` puts `b` first. (The operator keywords are
-reserved: `:TruthTable p or q` is the expression `p ∨ q`.)
+order: `:TruthTable b | a | a -> b` puts `b` first. (The operator keywords and
+the words `true` and `false` are reserved: `:TruthTable p or q` is the
+expression `p ∨ q`.)
 
 ## Predicate language
 
 Used by `:TruthTableExpand` and the expression form of `:TruthTable`. Operands
-are column names and the literals `0` / `1`. Operators, tightest binding first:
+are column names and the constants `0` / `1`, which can also be written `⊥` /
+`⊤`. A heading keeps whichever of those you typed; the words `false` / `true`
+are read too, and rendered as `⊥` / `⊤`. Operators, tightest binding first:
 
 | Operator | Meaning | Rendered |
 |---|---|---|
@@ -328,8 +331,11 @@ are not variable identifiers use positional references (`:hN`) in the formula.
 ## Tutorial
 
 `:TruthTableTutor` opens a short logic course in a new tab: from propositions
-and truth tables through De Morgan, the distributive laws, derivations, and
-Karnaugh maps, ending with a condition from code refactored step by step.
+and truth tables through the laws of Boolean algebra (the constant and
+complement laws, De Morgan, the commutative, associative and distributive laws,
+absorption and reduction), derivations, and Karnaugh maps, ending with a
+condition from code refactored step by step. The last lesson is a reference
+sheet of every law and command.
 
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
 the lesson's aim, what to do, and what you should see afterwards. The scratch
@@ -339,7 +345,7 @@ commands:
 ```text
 # 3. Connectives: not, and, or            │ p and q | p or q | not p
 │
-Lesson 3 of 12, step 1 of 2               │
+Lesson 3 of 14, step 1 of 2               │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │
@@ -413,8 +419,9 @@ built-in keys:
 
 The built-in symbol table supplies both default abbreviations and generated
 headings. Custom abbreviation settings affect inserted text only.
-The quantifier, truth, and `≡` symbols are typing aids; the predicate language
-does not accept them as operators or literals.
+The predicate language reads `⊤` and `⊥` (and the words `true` and `false`) as
+the constants `1` and `0`. The quantifiers and `≡` are typing aids, outside the
+predicate language.
 
 ## Customization
 
@@ -507,9 +514,9 @@ return {
 > This is an advanced tokenizer wrapper, not a built-in alias setting. Both symbols
 > occupy three UTF-8 bytes, so substitution preserves diagnostic byte positions.
 > Headings still render XOR as `⊕`. The textual substitution also affects quoted
-> column labels containing `≠`; avoid those labels with this wrapper. Quantifier
-> and truth-symbol abbreviations (`∀`, `∃`, `⊤`, `⊥`) are typing aids and are not
-> currently accepted as predicate operators or literals.
+> column labels containing `≠`; avoid those labels with this wrapper. The
+> quantifier abbreviations (`∀`, `∃`) are typing aids, outside the predicate
+> language.
 
 ## Compatibility with the original config module
 
@@ -554,7 +561,9 @@ extmarks, invalidation, and applying in place or as a step.
 panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
 turns a step into the lesson pane's text. `spec/tutor.lua` replays every
 step's `solution` in its scratch buffer and requires the result to be the
-step's own `expect` block, so the course stays true as the plugin changes.
+step's own `expect` block, so the course stays true as the plugin changes. It
+also evaluates every law a lesson states (`left ≡ right` in a fenced block)
+over all values of its variables.
 - `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
 Unicode character; `predicate.lua` renders from it.
 - `abbreviations.lua` derives the default insert-mode abbreviations from

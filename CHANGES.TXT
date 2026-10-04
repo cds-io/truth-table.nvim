@@ -3,6 +3,30 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- The predicate language reads ⊤ and ⊥ as the constants 1 and 0, so what the
+  true@ and false@ abbreviations insert is now an expression (it was a parse
+  error). A constant renders as typed: `a or ⊤` gives the heading a ∨ ⊤, and
+  `a or 1` still gives a ∨ 1.
+- The words `true` and `false` are read as ⊤ and ⊥, the way `and` is read as
+  ∧, and are reserved: `:TruthTable true false` is now an expression (and a
+  parse error) where it made two variables, and an existing column with either
+  name is reached from an expression by its :hN reference.
+- Tutor lesson 6 opens with both spellings of the constants: its scratch pane
+  holds the `or` laws once with 1 and 0 and once with ⊤ and ⊥, and the two
+  tables agree cell for cell.
+- The tutor covers the laws of Boolean algebra a logic-simplification course
+  lists. New lesson 6, "Constants and complements": the identity, domination
+  and idempotence laws for `or` and `and`, duality, and a ∨ ¬a ≡ 1,
+  a ∧ ¬a ≡ 0, each checked with a table. New lesson 10, "Absorption and
+  reduction": both forms of absorption and both reduction laws, the latter
+  derived with :TruthTableDistribute or :TruthTableFactor followed by
+  hand-written complement and identity steps. The rearranging lesson gains a
+  step on the associative laws, the Karnaugh lesson names its groups as
+  reductions, and the reference lesson opens with a sheet of every law beside
+  its dual. The course is now 14 lessons; the lesson files after 05 are
+  renumbered.
+- spec/tutor.lua evaluates every law a lesson states (`left ≡ right` in a
+  fenced block of a step's text) over all values of its variables.
 - :TruthTableTutor shows the course in two panes: the lesson on the left, one
   step at a time (aim, instructions, expected result), and on the right a
   scratch buffer holding that step's starting text. Each step keeps its own

@@ -90,8 +90,8 @@ lists or blockquotes are not supported.
 
     N.B. {arg} is read as expressions when it contains anything besides names
     and spaces, or an operator keyword. So `:TruthTable p or q` is the
-    expression p ∨ q; the keywords (and, or, xor, not, implies, iff) are
-    reserved and cannot be variable names.
+    expression p ∨ q; the keywords (and, or, xor, not, implies, iff) and the
+    constant words (true, false) are reserved and cannot be variable names.
 
 :[range]TruthTable
     Without {arg}, read the argument from the lines in [range] (typically a
@@ -298,7 +298,9 @@ the columns from it.
 
 Operands:
     - column names (for |:TruthTableExpand|, must match an existing header)
-    - literals `0` and `1`
+    - constants `0` and `1`, also written `⊥` and `⊤`; a heading keeps the
+      spelling you typed. The words `false` and `true` are read as `⊥` and
+      `⊤`.
 
 Stored column references ~
 
@@ -419,11 +421,13 @@ record per symbol with an `ascii` word and a `unicode` character: >
     AND = { ascii = "and", unicode = "∧" }
     IFF = { ascii = "iff", unicode = "⇔" }
 <
-The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`)
-and BOTTOM (`false`). The predicate language renders headings from the same
-table (|truth-table-predicates|), so a heading you type and one the plugin
-generates use the same characters. The abbreviations are global: every
-buffer, every filetype.
+The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`),
+BOTTOM (`false`) and EQUIV. The predicate language reads TOP and BOTTOM, by
+word or by symbol, as the constants 1 and 0, and renders headings from the
+same table
+(|truth-table-predicates|), so a heading you type and one the plugin generates
+use the same characters. The abbreviations are global: every buffer, every
+filetype.
 
 The `abbreviations` key of |truth-table.setup()| controls the set, with the
 input side and the display side as separate settings:
@@ -483,7 +487,9 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
   turns a step into the lesson pane's text. spec/tutor.lua replays each
-  step's solution and requires the scratch buffer to end as its expectation.
+  step's solution and requires the scratch buffer to end as its expectation,
+  and evaluates every law a lesson states (`left ≡ right` in a fenced block)
+  over all values of its variables.
 - symbols.lua is the one table of logic symbols (ASCII word plus Unicode
   character); predicate.lua renders from it.
 - abbreviations.lua derives the default insert-mode abbreviations from
