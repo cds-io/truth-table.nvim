@@ -20,6 +20,9 @@ Unreleased
   operator, through its parentheses) and predicate.fold (a left-nested chain
   from a list of operands). rewrite.lua and karnaugh.lua use them in place of
   their own copies.
+- Tutor: the distributive law is explained by what moves (distributing moves
+  an operand into a group, factoring moves a shared one out), where it spoke
+  of reading the law left to right or right to left.
 - Tutor: expected results, law statements and the reference sheet use the
   canonical form. The lesson on connectives points out that the heading shows
   how `p or q and r` was read, and the associativity step tests the law

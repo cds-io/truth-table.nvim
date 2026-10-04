@@ -28,8 +28,9 @@ not (g or h) or (not g and k)
 ≡ ¬g ∧ (¬h ∨ k)                  | by distributivity
 ]],
             note = [[
-Factoring is the distributive law read right to left, which is why the second
-step says distributivity.
+The second step says distributivity because factoring is the distributive law
+too: it moves the shared `¬g` out of the two terms, where distributing would
+move it into them. One law, used from either side.
 
 Everything from the `|` on is a remark for the reader: a rewrite reads only the
 expression before it, and on a line with several `≡`, only the side under the

@@ -16,7 +16,8 @@ local CHAIN = { ["and"] = true, ["or"] = true, xor = true, iff = true }
 local DUAL = { ["and"] = "or", ["or"] = "and" }
 
 local NO_TARGET = "Put the cursor on an operand"
--- Factoring and distributing are the one law, read in opposite directions.
+-- Distributing moves an operand into a group and factoring moves a shared
+-- one out: the one law, used from either side.
 local DISTRIBUTIVITY = "distributivity"
 local DE_MORGAN = "De Morgan"
 

@@ -333,10 +333,11 @@ spelling of `⇔`. Steps apply to expression lines; a heading takes
 
 Each step ends in its *justification*: `| by` and the law that takes the line
 above to this one. The laws are named as in the table above, plus
-`distributivity` (factor and distribute are the one law read in opposite
-directions), `commutativity`, `De Morgan`, and `definition of ⊕` or `⇔`. The
-bar sits four columns clear of the wider of the two lines, or under the bar of
-the line above when that is further right, so the justifications of a
+`distributivity` (distributing moves an operand into a group and factoring
+moves a shared one out: the one law, used from either side), `commutativity`,
+`De Morgan`, and `definition of ⊕` or `⇔`. The bar sits four columns clear of
+the wider of the two lines, or under the bar of the line above when that is
+further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
 on is a remark: a rewrite reads the expression before it, and a cursor in the
 remark means the line's last side. Applying in place to a justified line adds

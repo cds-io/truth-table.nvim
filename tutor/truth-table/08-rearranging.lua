@@ -104,9 +104,11 @@ u ∨ (v ∧ w)  ≡  (u ∨ v) ∧ (u ∨ w)
 (The second one has no counterpart in arithmetic: in logic each connective
 distributes over the other.)
 
-Read left to right, the law *distributes*: `:TruthTableDistribute`
-(`<leader>ttx`) multiplies the operand under the cursor into the group next to
-it. Put the cursor on `u`, preview, then apply.
+A law can be used from either of its sides, and here each use has a name for
+what happens to `u`. Starting from the left side, `u` moves *in*: the one `u`
+outside the group becomes a `u` in each term. That is *distributing*.
+`:TruthTableDistribute` (`<leader>ttx`) moves the operand under the cursor into
+the group next to it. Put the cursor on `u`, preview, then apply.
 ]],
             template = [[
 u and (v or w)
@@ -126,9 +128,16 @@ cursor on `u` to distribute it.
         },
         {
             text = [[
-Read right to left, the distributive law *factors*: `:TruthTableFactor`
-(`<leader>ttf`) pulls the operand under the cursor out of every term that has
-it. Put the cursor on either `c`, preview, then apply.
+Starting from the other side of the same law, the shared operand moves *out*:
+the `c` that both terms have is written once, in front, and what is left of
+the terms becomes a group. That is *factoring*.
+
+```text
+(c ∧ d) ∨ (c ∧ e)  ≡  c ∧ (d ∨ e)
+```
+
+`:TruthTableFactor` (`<leader>ttf`) pulls the operand under the cursor out of
+every term that has it. Put the cursor on either `c`, preview, then apply.
 ]],
             template = [[
 (c and d) or (c and e)
@@ -137,8 +146,9 @@ it. Put the cursor on either `c`, preview, then apply.
 c ∧ (d ∨ e)
 ]],
             note = [[
-Factoring is the one you will reach for most when tidying a condition in code:
-it turns a repeated check into a single one.
+The factor is written first, whichever side of its terms it was on. Factoring
+is the one you will reach for most when tidying a condition in code: it turns
+a repeated check into a single one.
 ]],
             solution = {
                 { on = "(c and d) or (c and e)", at = "c", run = { "TruthTableFactor", "TruthTableApply" } },
@@ -146,9 +156,9 @@ it turns a repeated check into a single one.
         },
         {
             text = [[
-Factoring works the other way round as well, pulling a shared operand out of
-`or` groups joined by `and`. Here it undoes a refactor that went the wrong
-way: someone distributed a pull-request rule and left this.
+Factoring works with the connectives swapped as well: a shared operand can be
+pulled out of `or` groups joined by `and`. Here it undoes a refactor that went
+the wrong way: someone distributed a pull-request rule and left this.
 
 ```js
 function canMerge({ isRepoAdmin, ciPasses, hasBlockingReviews }) {
