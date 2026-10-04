@@ -3,6 +3,21 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- :TruthTableTutor shows the course in two panes: the lesson on the left, one
+  step at a time (aim, instructions, expected result), and on the right a
+  scratch buffer holding that step's starting text. Each step keeps its own
+  scratch, so undo stops at the starting text and work survives moving on.
+- Add :TruthTableTutorNext and :TruthTableTutorPrev (]] and [[ in the tutor's
+  panes) to move one step, and :TruthTableTutor {lesson} to jump to a lesson.
+  :TruthTableTutor! starts the course over and rereads the lesson files.
+- The course is data: one Lua table per lesson in tutor/truth-table/ (title,
+  aim, steps with text, template, expect, note, solution), replacing
+  tutor/truth-table-tutor.md and spec/tutor_steps.lua. spec/tutor.lua replays
+  each step's solution in its scratch buffer and requires the result to equal
+  the step's expectation.
+- Add truth-table.tutor_page (pure Lua): render a step as the lesson pane's
+  text, joining hard-wrapped prose into one line per paragraph or list item so
+  the window wraps it to its own width.
 - Add :TruthTableTutor: a logic course in ten lessons (tutor/truth-table-tutor.md),
   opened as a scratch copy in a new tab; every exercise runs on the tutorial's
   own lines. Running the command again returns to the copy, and ! starts a fresh
