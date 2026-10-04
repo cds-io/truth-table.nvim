@@ -43,6 +43,37 @@ describe("standalone predicate pipeline", function()
     end)
 end)
 
+describe("tree helpers", function()
+    local function parse(source) return assert(predicate.parse_expression(source)) end
+    local function headings(nodes)
+        local out = {}
+        for i, node in ipairs(nodes) do out[i] = predicate.ast_to_heading(node) end
+        return out
+    end
+
+    it("unparen strips every layer of parentheses and nothing else", function()
+        assert.are.equal("var", predicate.unparen(parse("((a))")).type)
+        assert.are.equal("or", predicate.unparen(parse("(a or (b))")).type)
+        local bare = parse("a and b")
+        assert.are.equal(bare, predicate.unparen(bare))
+    end)
+
+    it("operands reads a run of one operator flat, through its parentheses", function()
+        local ast = parse("a or (b or c) or d and e or (f or g) or (h and i)")
+        assert.are.same({ "a", "b", "c", "d ∧ e", "f", "g", "h ∧ i" }, headings(predicate.operands(ast, "or")))
+        assert.are.same({ predicate.ast_to_heading(ast) }, headings(predicate.operands(ast, "and")))
+    end)
+
+    it("fold builds a left-nested chain, splicing in operands that are chains of the operator", function()
+        local chain = predicate.fold("and", { parse("a"), parse("(b and c)"), parse("d or e") })
+        assert.are.equal("a ∧ b ∧ c ∧ (d ∨ e)", predicate.ast_to_heading(chain))
+        assert.are.equal("and", chain.left.type)
+        assert.are.equal("or", predicate.unparen(chain.right).type)
+        local single = parse("a")
+        assert.are.equal(single, predicate.fold("or", { single }))
+    end)
+end)
+
 describe("operator-driven rendering", function()
     local function variable(name) return { type = "var", name = name } end
     local function binary(kind, left, right) return { type = kind, left = left, right = right } end
@@ -82,6 +113,81 @@ describe("operator-driven rendering", function()
                     end
                 end
             end
+        end
+    end)
+
+    it("renders one form per tree: an operand of a different operator is parenthesised", function()
+        for source, heading in pairs({
+            ["a and b or c"] = "(a ∧ b) ∨ c",
+            ["(a and b) or c"] = "(a ∧ b) ∨ c",
+            ["a or b and c"] = "a ∨ (b ∧ c)",
+            ["S or A and not C or G and not C"] = "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)",
+            ["a and b implies c or d"] = "(a ∧ b) → (c ∨ d)",
+            ["a xor b and c"] = "a ⊕ (b ∧ c)",
+            ["a iff b or c"] = "a ⇔ (b ∨ c)",
+            ["not (a or b) and c"] = "¬(a ∨ b) ∧ c",
+        }) do
+            assert.are.equal(heading, predicate.ast_to_heading(assert(predicate.parse_expression(source))), source)
+        end
+    end)
+
+    it("writes a run of ∧ or of ∨ flat however it was grouped, and drops the parentheses nothing needs", function()
+        for source, heading in pairs({
+            ["a and b and c"] = "a ∧ b ∧ c",
+            ["(a and b) and c"] = "a ∧ b ∧ c",
+            ["a and (b and c)"] = "a ∧ b ∧ c",
+            ["(a or b) or ((c or d) or e)"] = "a ∨ b ∨ c ∨ d ∨ e",
+            ["a and (b and (c or (d or e)))"] = "a ∧ b ∧ (c ∨ d ∨ e)",
+            ["((a)) and (not (b))"] = "a ∧ ¬b",
+            ["(a or b)"] = "a ∨ b",
+            ["not (a)"] = "¬a",
+            ["not (not a)"] = "¬¬a",
+            ["not ((a or b))"] = "¬(a ∨ b)",
+        }) do
+            assert.are.equal(heading, predicate.ast_to_heading(assert(predicate.parse_expression(source))), source)
+        end
+    end)
+
+    it("keeps the grouping of →, ⊕ and ⇔ visible on either side", function()
+        for source, heading in pairs({
+            ["a implies b implies c"] = "(a → b) → c",
+            ["a implies (b implies c)"] = "a → (b → c)",
+            ["a iff b iff c"] = "(a ⇔ b) ⇔ c",
+            ["a iff (b iff c)"] = "a ⇔ (b ⇔ c)",
+            ["a xor b xor c"] = "(a ⊕ b) ⊕ c",
+            ["a xor (b xor c)"] = "a ⊕ (b ⊕ c)",
+        }) do
+            assert.are.equal(heading, predicate.ast_to_heading(assert(predicate.parse_expression(source))), source)
+        end
+    end)
+
+    it("gives every grouping of a ∧ or ∨ run the same tree", function()
+        local flat = assert(predicate.canonical(assert(predicate.parse_expression("a or b or c or d"))))
+        for _, source in ipairs({ "a or (b or (c or d))", "(a or b) or (c or d)", "a or ((b or c) or d)" }) do
+            assert.are.same(flat, assert(predicate.canonical(assert(predicate.parse_expression(source)))), source)
+        end
+    end)
+
+    it("is a tree transform: canonical puts paren nodes exactly where the text shows them", function()
+        local tree = assert(predicate.canonical(assert(predicate.parse_expression("((a)) and b or not (c)"))))
+        assert.are.same({
+            type = "or",
+            left = { type = "paren", expr = {
+                type = "and", left = { type = "var", name = "a" }, right = { type = "var", name = "b" },
+            } },
+            right = { type = "not", operand = { type = "var", name = "c" } },
+        }, tree)
+        local again = assert(predicate.canonical(tree))
+        assert.are.same(tree, again)
+    end)
+
+    it("renders its own output back to itself", function()
+        for _, source in ipairs({
+            "a and b or c", "not (not a or b) and (c implies d implies e)", "a or (b or c) or d and e xor f",
+            "((a and (b))) iff not ((c)) or :h3 and 1", "a ∧ ⊤ ∨ ⊥",
+        }) do
+            local heading = predicate.ast_to_heading(assert(predicate.parse_expression(source)))
+            assert.are.equal(heading, predicate.ast_to_heading(assert(predicate.parse_expression(heading))), source)
         end
     end)
 
@@ -194,7 +300,7 @@ describe("truth constants", function()
 
     it("reads the words true and false as ⊤ and ⊥", function()
         local ast = assert(predicate.parse_expression("A and true or false"))
-        assert.are.equal("A ∧ ⊤ ∨ ⊥", predicate.ast_to_heading(ast))
+        assert.are.equal("(A ∧ ⊤) ∨ ⊥", predicate.ast_to_heading(ast))
         assert.are.same({ "A" }, assert(predicate.variables(ast)))
         for a = 0, 1 do
             assert.are.equal(a, predicate.eval_ast(ast, { A = a }))

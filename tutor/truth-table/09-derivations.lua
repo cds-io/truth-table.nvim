@@ -24,7 +24,7 @@ not (g or h) or (not g and k)
 ]],
             expect = [[
 not (g or h) or (not g and k)
-≡ ¬g ∧ ¬h ∨ (¬g ∧ k)             | by De Morgan
+≡ (¬g ∧ ¬h) ∨ (¬g ∧ k)           | by De Morgan
 ≡ ¬g ∧ (¬h ∨ k)                  | by distributivity
 ]],
             note = [[
@@ -42,7 +42,7 @@ cursor. To write a step by hand, `equiv@` followed by a space gives the symbol.
                     run = { "TruthTableDeMorgan", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ ¬g ∧ ¬h ∨ (¬g ∧ k)             | by De Morgan",
+                    on = "≡ (¬g ∧ ¬h) ∨ (¬g ∧ k)           | by De Morgan",
                     at = "¬g",
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },

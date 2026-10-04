@@ -296,22 +296,51 @@ function M.eval_ast(node, ctx)
     end
 end
 
-local function precedence(node)
-    local operator = BY_NAME[node.type]
-    return operator and operator.precedence or #OPERATORS + 1
+-- ---------------------------------------------------------------------------
+-- Taking trees apart and putting them together, for every module that does.
+-- ---------------------------------------------------------------------------
+
+function M.unparen(node)
+    while node.type == "paren" do
+        node = node.expr
+    end
+    return node
 end
 
--- Parentheses in the source are preserved; generated trees gain the grouping
--- needed to parse back with the same meaning, including right-nested chains.
-local function render_ast(node, reference_text)
-    local function child_heading(child, right)
-        local heading = render_ast(child, reference_text)
-        if precedence(child) < precedence(node)
-            or (right and precedence(child) == precedence(node)) then
-            return "(" .. heading .. ")"
-        end
-        return heading
+local function collect(node, op, out)
+    local inner = M.unparen(node)
+    if inner.type == op then
+        collect(inner.left, op, out)
+        collect(inner.right, op, out)
+    else
+        out[#out + 1] = node
     end
+    return out
+end
+
+-- Operands of the `op` chain rooted at `node`, left to right. Parentheses
+-- around a run of the same operator are transparent; any other operand is
+-- kept whole, parentheses included.
+function M.operands(node, op)
+    return collect(node, op, {})
+end
+
+-- Left-nested chain of `op` over `operands`, splicing in any operand that is
+-- itself an `op` chain so the result reads flat.
+function M.fold(op, operands)
+    local flat = {}
+    for _, operand in ipairs(operands) do
+        collect(operand, op, flat)
+    end
+    local chain = flat[1]
+    for i = 2, #flat do
+        chain = { type = op, left = chain, right = flat[i] }
+    end
+    return chain
+end
+
+-- Print a tree as it stands: parentheses come from its paren nodes alone.
+local function render_ast(node, reference_text)
     if node.type == "paren" then
         return "(" .. render_ast(node.expr, reference_text) .. ")"
     elseif node.type == "reference" then
@@ -323,20 +352,27 @@ local function render_ast(node, reference_text)
     elseif node.type == "literal" then
         return node.symbol or tostring(node.value)
     elseif node.type == "not" then
-        return M.SYMBOLS["not"] .. child_heading(node.operand, false)
+        return M.SYMBOLS["not"] .. render_ast(node.operand, reference_text)
     elseif BINARY[node.type] then
-        return child_heading(node.left, false) .. " " .. M.SYMBOLS[node.type] .. " " .. child_heading(node.right, true)
+        local left, right = render_ast(node.left, reference_text), render_ast(node.right, reference_text)
+        return left .. " " .. M.SYMBOLS[node.type] .. " " .. right
     end
 end
 
+-- Headings and expressions are rendered from the canonical tree, so one
+-- expression has one text however its source grouped it.
+local function render(node, reference_text)
+    return render_ast(assert(M.canonical(node)), reference_text)
+end
+
 function M.ast_to_heading(node)
-    return render_ast(node, function(name)
+    return render(node, function(name)
         return "“" .. name .. "”"
     end)
 end
 
 local function ast_to_expression(node)
-    return render_ast(node, function(name)
+    return render(node, function(name)
         return "[" .. name .. "]"
     end)
 end
@@ -397,6 +433,43 @@ function M.transform_ast(node, fn)
         return nil, "Unknown AST node: " .. tostring(node.type)
     end
     return fn(copy)
+end
+
+-- A run of ∧ or of ∨ means the same however it is grouped, and reads
+-- correctly flat. ⊕ and ⇔ are associative too, but a flat run of either
+-- misreads (A ⇔ B ⇔ C is true when A is true and B and C are false), so
+-- their grouping stays visible, like that of →.
+local FLAT = { ["and"] = true, ["or"] = true }
+
+local function grouped(operand)
+    return BINARY[operand.type] and { type = "paren", expr = operand } or operand
+end
+
+-- The canonical form of a tree: one tree, and so one text, for every way of
+-- grouping and parenthesising the same expression. The source's parentheses
+-- are dropped; a run of ∧ or of ∨ becomes one left-nested chain; and an
+-- operand that is itself a binary expression is parenthesised, so a mix of
+-- operators reads without recalling the binding order: (A ∧ B) ∨ C.
+function M.canonical(node)
+    -- The traversal is post-order, so a node's operands are canonical before
+    -- the node is: any parentheses they had are gone, and a run among them
+    -- is already one chain.
+    return M.transform_ast(node, function(copy)
+        if copy.type == "paren" then
+            return copy.expr
+        elseif copy.type == "not" then
+            return { type = "not", operand = grouped(copy.operand) }
+        elseif FLAT[copy.type] then
+            local operands = {}
+            for i, operand in ipairs(M.operands(copy, copy.type)) do
+                operands[i] = grouped(operand)
+            end
+            return M.fold(copy.type, operands)
+        elseif BINARY[copy.type] then
+            return { type = copy.type, left = grouped(copy.left), right = grouped(copy.right) }
+        end
+        return copy
+    end)
 end
 
 -- Resolve surface names once; evaluation uses row positions, never labels.
@@ -478,21 +551,13 @@ function M.is_expression_input(args)
     return false
 end
 
-
-local function unparen(node)
-    while node.type == "paren" do
-        node = node.expr
-    end
-    return node
-end
-
 -- Root-only De Morgan rewrite, returning an independent tree. No automatic
 -- double-negation simplification: that is a separate refactoring operation.
 function M.de_morgan(node)
-    local root = unparen(node)
+    local root = M.unparen(node)
     local rewritten
     if root.type == "not" then
-        local operand = unparen(root.operand)
+        local operand = M.unparen(root.operand)
         if operand.type == "and" or operand.type == "or" then
             rewritten = {
                 type = operand.type == "and" and "or" or "and",
@@ -501,7 +566,7 @@ function M.de_morgan(node)
             }
         end
     elseif root.type == "and" or root.type == "or" then
-        local left, right = unparen(root.left), unparen(root.right)
+        local left, right = M.unparen(root.left), M.unparen(root.right)
         if left.type == "not" and right.type == "not" then
             rewritten = { type = "not", operand = {
                 type = root.type == "and" and "or" or "and",
@@ -512,9 +577,7 @@ function M.de_morgan(node)
     if not rewritten then
         return nil, "No De Morgan rewrite applies to the whole expression"
     end
-    return M.transform_ast(rewritten, function(copy)
-        return copy
-    end)
+    return M.canonical(rewritten)
 end
 
 function M.de_morgan_expression(input)

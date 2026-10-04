@@ -71,7 +71,7 @@ a or (not a and b)
             note = [[
 Read the justifications down the right: the derivation is three laws you
 already had. The second law of the pair goes the same way: distributing `a`
-into `¬a ∨ b` gives `a ∧ ¬a ∨ a ∧ b`, then `0 ∨ a ∧ b`, then `a ∧ b`.
+into `¬a ∨ b` gives `(a ∧ ¬a) ∨ (a ∧ b)`, then `0 ∨ (a ∧ b)`, then `a ∧ b`.
 
 Simplify applies one law per run, the nearest to the cursor: first a law that
 involves the operand under the cursor, then one inside the group the cursor is

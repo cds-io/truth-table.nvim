@@ -104,7 +104,7 @@ vim.cmd('TruthTableApplyStep')
 local pad = string.rep(' ', 24)
 assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
     head,
-    justified(pad .. '≡ S ∨ ¬C ∧ (A ∨ G)', bar, 'distributivity'),
+    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity'),
 }))
 local cursor = vim.api.nvim_win_get_cursor(0)
 assert(cursor[1] == 2 and cursor[2] == #(pad .. '≡ '))
@@ -112,8 +112,8 @@ vim.cmd('TruthTableCommute')
 vim.cmd('TruthTableApplyStep')
 assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
     head,
-    justified(pad .. '≡ S ∨ ¬C ∧ (A ∨ G)', bar, 'distributivity'),
-    justified(pad .. '≡ ¬C ∧ (A ∨ G) ∨ S', bar, 'commutativity'),
+    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity'),
+    justified(pad .. '≡ (¬C ∧ (A ∨ G)) ∨ S', bar, 'commutativity'),
 }))
 assert(vim.api.nvim_win_get_cursor(0)[1] == 3 and #marks() == 0)
 

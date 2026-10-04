@@ -41,10 +41,10 @@ describe("rewrite.target", function()
     end)
 
     it("takes a whole group from its operator or parentheses", function()
-        assert.are.equal("(A ∧ ¬C)", target("∧"))
-        assert.are.equal("(A ∧ ¬C)", target("("))
-        assert.are.equal("(A ∧ ¬C)", target(")"))
-        assert.are.equal("(G ∧ ¬C)", target("∧", 2))
+        assert.are.equal("A ∧ ¬C", target("∧"))
+        assert.are.equal("A ∧ ¬C", target("("))
+        assert.are.equal("A ∧ ¬C", target(")"))
+        assert.are.equal("G ∧ ¬C", target("∧", 2))
     end)
 
     it("has no target on the root chain's operators or outside the expression", function()
@@ -111,7 +111,7 @@ describe("rewrite.factor", function()
     it("pulls a shared operand out of the terms that have it", function()
         assert.are.equal("S ∨ (¬C ∧ (A ∨ G))", run("factor", "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)", "¬C"))
         assert.are.equal("S ∨ (¬C ∧ (A ∨ G))", run("factor", "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)", "¬C", 2))
-        assert.are.equal("S ∨ ¬C ∧ (A ∨ G)", run("factor", "S ∨ A ∧ ¬C ∨ G ∧ ¬C", "¬C"))
+        assert.are.equal("S ∨ (¬C ∧ (A ∨ G))", run("factor", "S ∨ A ∧ ¬C ∨ G ∧ ¬C", "¬C"))
     end)
 
     it("factors ∨ out of ∧ as well", function()
@@ -119,15 +119,15 @@ describe("rewrite.factor", function()
     end)
 
     it("keeps multi-operand remainders together", function()
-        assert.are.equal("¬C ∧ (A ∧ B ∨ G)", run("factor", "A ∧ B ∧ ¬C ∨ G ∧ ¬C", "¬C"))
+        assert.are.equal("¬C ∧ ((A ∧ B) ∨ G)", run("factor", "A ∧ B ∧ ¬C ∨ G ∧ ¬C", "¬C"))
     end)
 
     it("puts the new term where the first participating term was", function()
-        assert.are.equal("X ∨ B ∧ (A ∨ C) ∨ Y", run("factor", "X ∨ A ∧ B ∨ Y ∨ C ∧ B", "B"))
+        assert.are.equal("X ∨ (B ∧ (A ∨ C)) ∨ Y", run("factor", "X ∨ A ∧ B ∨ Y ∨ C ∧ B", "B"))
     end)
 
     it("removes only the first occurrence within a term", function()
-        assert.are.equal("A ∧ (A ∧ B ∨ C)", run("factor", "A ∧ A ∧ B ∨ A ∧ C", "A"))
+        assert.are.equal("A ∧ ((A ∧ B) ∨ C)", run("factor", "A ∧ A ∧ B ∨ A ∧ C", "A"))
     end)
 
     it("matches the factor with parentheses ignored", function()
@@ -162,31 +162,31 @@ describe("rewrite.factor", function()
     it("is order-sensitive about the factor's own shape", function()
         local out, err = run("factor", "(A ∨ B) ∧ C ∨ (B ∨ A) ∧ D", "(")
         assert.is_nil(out)
-        assert.are.equal("Fewer than two terms share (A ∨ B)", err)
+        assert.are.equal("Fewer than two terms share A ∨ B", err)
     end)
 end)
 
 describe("rewrite.distribute", function()
     it("multiplies the target into the group on its right", function()
-        assert.are.equal("¬C ∧ A ∨ ¬C ∧ G", run("distribute", "¬C ∧ (A ∨ G)", "¬C"))
+        assert.are.equal("(¬C ∧ A) ∨ (¬C ∧ G)", run("distribute", "¬C ∧ (A ∨ G)", "¬C"))
     end)
 
     it("falls back to the group on its left, keeping its side", function()
-        assert.are.equal("A ∧ ¬C ∨ G ∧ ¬C", run("distribute", "(A ∨ G) ∧ ¬C", "¬C"))
+        assert.are.equal("(A ∧ ¬C) ∨ (G ∧ ¬C)", run("distribute", "(A ∨ G) ∧ ¬C", "¬C"))
     end)
 
     it("merges into the parent chain, keeping the term's parentheses", function()
         assert.are.equal("S ∨ (¬C ∧ A) ∨ (¬C ∧ G)", run("distribute", "S ∨ (¬C ∧ (A ∨ G))", "¬C"))
-        assert.are.equal("S ∨ ¬C ∧ A ∨ ¬C ∧ G", run("distribute", "S ∨ ¬C ∧ (A ∨ G)", "¬C"))
+        assert.are.equal("S ∨ (¬C ∧ A) ∨ (¬C ∧ G)", run("distribute", "S ∨ ¬C ∧ (A ∨ G)", "¬C"))
         assert.are.equal("(¬C ∧ A) ∨ (¬C ∧ G) ∨ S", run("distribute", "(¬C ∧ (A ∨ G)) ∨ S", "¬C"))
     end)
 
     it("keeps the products grouped beside other operands", function()
-        assert.are.equal("X ∧ (¬C ∧ A ∨ ¬C ∧ G)", run("distribute", "X ∧ ¬C ∧ (A ∨ G)", "¬C"))
+        assert.are.equal("X ∧ ((¬C ∧ A) ∨ (¬C ∧ G))", run("distribute", "X ∧ ¬C ∧ (A ∨ G)", "¬C"))
     end)
 
     it("distributes a group over a group one step at a time", function()
-        assert.are.equal("(A ∨ B) ∧ C ∨ (A ∨ B) ∧ D", run("distribute", "(A ∨ B) ∧ (C ∨ D)", "("))
+        assert.are.equal("((A ∨ B) ∧ C) ∨ ((A ∨ B) ∧ D)", run("distribute", "(A ∨ B) ∧ (C ∨ D)", "("))
     end)
 
     it("distributes ∨ over ∧", function()
@@ -194,7 +194,7 @@ describe("rewrite.distribute", function()
     end)
 
     it("keeps the grouping a negation needs", function()
-        assert.are.equal("¬(¬C ∧ A ∨ ¬C ∧ G)", run("distribute", "¬(¬C ∧ (A ∨ G))", "¬C"))
+        assert.are.equal("¬((¬C ∧ A) ∨ (¬C ∧ G))", run("distribute", "¬(¬C ∧ (A ∨ G))", "¬C"))
     end)
 
     it("refuses without a neighbouring dual group", function()
@@ -233,7 +233,7 @@ describe("rewrite.xor", function()
     end)
 
     it("leaves the other terms in place and parenthesises the result beside them", function()
-        assert.are.equal("(A ⊕ B) ∨ A ∧ C", run("xor", "¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C", "¬A"))
+        assert.are.equal("(A ⊕ B) ∨ (A ∧ C)", run("xor", "¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C", "¬A"))
         assert.are.equal("X ∨ (A ⊕ B) ∨ Y", run("xor", "X ∨ ¬A ∧ B ∨ Y ∨ A ∧ ¬B", "¬B"))
     end)
 
@@ -355,7 +355,7 @@ describe("rewrite.simplify", function()
         check({
             { "a ∨ (¬a ∧ b)", "a", "a ∨ b", "absorption" },
             { "a ∧ (¬a ∨ b)", "a", "a ∧ b", "absorption" },
-            { "¬a ∨ a ∧ b ∧ c", "¬", "¬a ∨ b ∧ c", "absorption" },
+            { "¬a ∨ a ∧ b ∧ c", "¬", "¬a ∨ (b ∧ c)", "absorption" },
             { "a ∨ (¬a ∧ b ∧ c)", "b", "a ∨ (b ∧ c)", "absorption" },
         })
     end)
@@ -364,7 +364,7 @@ describe("rewrite.simplify", function()
         check({
             { "(a ∧ b) ∨ (¬a ∧ b)", "b", "b", "reduction" },
             { "(a ∨ b) ∧ (¬a ∨ b)", "b", "b", "reduction" },
-            { "a ∧ b ∧ c ∨ c ∧ ¬a ∧ b ∨ d", "c", "b ∧ c ∨ d", "reduction" },
+            { "a ∧ b ∧ c ∨ c ∧ ¬a ∧ b ∨ d", "c", "(b ∧ c) ∨ d", "reduction" },
             { "(a ∧ b ∧ c) ∨ (a ∧ ¬b ∧ c) ∨ d", "b", "(a ∧ c) ∨ d", "reduction" },
         })
     end)
@@ -381,8 +381,8 @@ describe("rewrite.simplify", function()
 
     it("prefers a match involving the operand under the cursor", function()
         check({
-            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "c", "a ∨ a ∧ b ∨ c", "absorption" },
-            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "a", "a ∨ c ∨ c ∧ d", "absorption" },
+            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "c", "a ∨ (a ∧ b) ∨ c", "absorption" },
+            { "a ∨ a ∧ b ∨ c ∨ c ∧ d", "a", "a ∨ c ∨ (c ∧ d)", "absorption" },
             { "(a ∨ ¬a) ∧ (b ∨ ¬b)", "b", "(a ∨ ¬a) ∧ 1", "complement" },
         })
     end)

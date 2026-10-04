@@ -88,7 +88,7 @@ describe("karnaugh.derive", function()
 
     it("renders the cover as a sum of products in the predicate language", function()
         local analysis = assert(karnaugh.derive(example(), 4))
-        assert.are.equal("¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C", analysis.formula)
+        assert.are.equal("(¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)", analysis.formula)
         -- The formula is a predicate the plugin can parse and evaluate back.
         local parsed = assert(predicate.parse_expression(analysis.formula))
         assert.are.equal(analysis.formula, predicate.ast_to_heading(parsed))
@@ -230,7 +230,7 @@ describe("karnaugh.render", function()
             "|  A  |  0  |  0  |  0  |  1  |  1  |",
             "|     |  1  |  1  |  1  |  1  |  0  |",
             "",
-            "F ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C",
+            "F ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)",
         }, karnaugh.render(analysis))
     end)
 
@@ -258,7 +258,7 @@ describe("karnaugh.render", function()
         assert.are.equal("|     | 01  |  0  |  0  |  1  |  0  |", lines[7])
         assert.are.equal("|     | 11  |  0  |  0  |  1  |  0  |", lines[8])
         assert.are.equal("|     | 10  |  1  |  1  |  1  |  1  |", lines[9])
-        assert.are.equal("F ≡ A ∧ ¬B ∨ C ∧ D", lines[#lines])
+        assert.are.equal("F ≡ (A ∧ ¬B) ∨ (C ∧ D)", lines[#lines])
     end)
 
     it("marks don't-care cells with X", function()
