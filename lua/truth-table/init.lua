@@ -201,10 +201,24 @@ function M.setup(opts)
     })
 
     vim.api.nvim_create_user_command("TruthTableTutor", function(command)
-        require("truth-table.tutor").open(command.bang)
+        require("truth-table.tutor").open({
+            fresh = command.bang,
+            lesson = command.args ~= "" and command.args or nil,
+        })
     end, {
         bang = true,
-        desc = "Open the tutorial as a scratch copy (! for a fresh copy)",
+        nargs = "?",
+        desc = "Open the tutorial at your place (! to start over, a number to jump to that lesson)",
+    })
+    vim.api.nvim_create_user_command("TruthTableTutorNext", function()
+        require("truth-table.tutor").step(1)
+    end, {
+        desc = "Go to the tutorial's next step",
+    })
+    vim.api.nvim_create_user_command("TruthTableTutorPrev", function()
+        require("truth-table.tutor").step(-1)
+    end, {
+        desc = "Go to the tutorial's previous step",
     })
 
     local ok, wk = pcall(require, "which-key")

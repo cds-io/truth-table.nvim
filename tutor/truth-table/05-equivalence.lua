@@ -1,0 +1,166 @@
+return {
+    title = "Equivalence, tautology, contradiction",
+    aim = "Use a table to test whether two expressions mean the same thing.",
+    steps = {
+        {
+            text = [[
+Two expressions are *logically equivalent* when they have the same truth value
+in every row: no state of the world can tell them apart. The table is the test.
+Here is a claim to check: `a → b` says the same thing as `¬a ∨ b`. Build the
+table from the line in the scratch pane (`:.TruthTable`, `<leader>ttn`).
+]],
+            template = [[
+a implies b | not a or b
+]],
+            expect = [[
+|  a  |  b  | a → b | ¬a ∨ b |
+|:---:|:---:|:-----:|:------:|
+|  0  |  0  |   1   |   1    |
+|  0  |  1  |   1   |   1    |
+|  1  |  0  |   0   |   0    |
+|  1  |  1  |   1   |   1    |
+]],
+            note = [[
+The two computed columns match row for row, so the claim holds. Equivalence is
+written `≡`: `a → b ≡ ¬a ∨ b`.
+]],
+            solution = {
+                { on = "a implies b | not a or b", run = { ".TruthTable" } },
+            },
+        },
+        {
+            text = [[
+There is a second way to see it. `⇔` is true when its two sides agree, so the
+`⇔` of two equivalent expressions is true in every row. An expression that is
+true in every row is a *tautology*.
+
+With the cursor in the table, add that column. `:h3` and `:h4` refer to the
+third and fourth columns by position, which saves retyping them:
+
+    :TruthTableExpand :h3 iff :h4
+]],
+            template = [[
+|  a  |  b  | a → b | ¬a ∨ b |
+|:---:|:---:|:-----:|:------:|
+|  0  |  0  |   1   |   1    |
+|  0  |  1  |   1   |   1    |
+|  1  |  0  |   0   |   0    |
+|  1  |  1  |   1   |   1    |
+]],
+            expect = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” |
+|:---:|:---:|:-----:|:------:|:------------------:|
+|  0  |  0  |   1   |   1    |         1          |
+|  0  |  1  |   1   |   1    |         1          |
+|  1  |  0  |   0   |   0    |         1          |
+|  1  |  1  |   1   |   1    |         1          |
+]],
+            note = [[
+All ones: the two expressions agree in every state of the world.
+]],
+            solution = {
+                { on = "|  a  |  b  | a → b | ¬a ∨ b |", run = { "TruthTableExpand :h3 iff :h4" } },
+            },
+        },
+        {
+            text = [[
+The opposite of a tautology is a *contradiction*, an expression that is false
+in every row. The simplest one says a thing is both true and not true. With the
+cursor in the table:
+
+    :TruthTableExpand a and not a
+]],
+            template = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” |
+|:---:|:---:|:-----:|:------:|:------------------:|
+|  0  |  0  |   1   |   1    |         1          |
+|  0  |  1  |   1   |   1    |         1          |
+|  1  |  0  |   0   |   0    |         1          |
+|  1  |  1  |   1   |   1    |         1          |
+]],
+            expect = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |
+|:---:|:---:|:-----:|:------:|:------------------:|:------:|
+|  0  |  0  |   1   |   1    |         1          |   0    |
+|  0  |  1  |   1   |   1    |         1          |   0    |
+|  1  |  0  |   0   |   0    |         1          |   0    |
+|  1  |  1  |   1   |   1    |         1          |   0    |
+]],
+            note = [[
+All zeros, whatever `a` and `b` are.
+]],
+            solution = {
+                {
+                    on = "|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” |",
+                    run = { "TruthTableExpand a and not a" },
+                },
+            },
+        },
+        {
+            text = [[
+Three table commands are worth knowing while this table is in front of you, all
+with the cursor inside it. The first: `:TruthTableToggle` (`<leader>ttt`)
+switches the cells between `0`/`1` and `F`/`T`. Run it once.
+]],
+            template = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |
+|:---:|:---:|:-----:|:------:|:------------------:|:------:|
+|  0  |  0  |   1   |   1    |         1          |   0    |
+|  0  |  1  |   1   |   1    |         1          |   0    |
+|  1  |  0  |   0   |   0    |         1          |   0    |
+|  1  |  1  |   1   |   1    |         1          |   0    |
+]],
+            expect = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |
+|:---:|:---:|:-----:|:------:|:------------------:|:------:|
+|  F  |  F  |   T   |   T    |         T          |   F    |
+|  F  |  T  |   T   |   T    |         T          |   F    |
+|  T  |  F  |   F   |   F    |         T          |   F    |
+|  T  |  T  |   T   |   T    |         T          |   F    |
+]],
+            note = [[
+Running it again switches back.
+]],
+            solution = {
+                {
+                    on = "|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |",
+                    run = { "TruthTableToggle" },
+                },
+            },
+        },
+        {
+            text = [[
+The second: `:TruthTableDropColumn` (`<leader>ttc`) removes the column under
+the cursor. Put the cursor in the `a ∧ ¬a` column and run it; the table returns
+to the five columns it had before.
+]],
+            template = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |
+|:---:|:---:|:-----:|:------:|:------------------:|:------:|
+|  0  |  0  |   1   |   1    |         1          |   0    |
+|  0  |  1  |   1   |   1    |         1          |   0    |
+|  1  |  0  |   0   |   0    |         1          |   0    |
+|  1  |  1  |   1   |   1    |         1          |   0    |
+]],
+            expect = [[
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” |
+|:---:|:---:|:-----:|:------:|:------------------:|
+|  0  |  0  |   1   |   1    |         1          |
+|  0  |  1  |   1   |   1    |         1          |
+|  1  |  0  |   0   |   0    |         1          |
+|  1  |  1  |   1   |   1    |         1          |
+]],
+            note = [[
+The third, `:TruthTableDropRow` (`<leader>ttr`), removes the row under the
+cursor in the same way. The lesson on Karnaugh maps puts that to use.
+]],
+            solution = {
+                {
+                    on = "|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |",
+                    at = "a ∧ ¬a",
+                    run = { "TruthTableDropColumn" },
+                },
+            },
+        },
+    },
+}
