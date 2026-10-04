@@ -3,20 +3,6 @@ truth-table.nvim changes
 
 Unreleased
 ----------
-- The tutor is framed around refactoring code, with examples adapted from the
-  logic-exercises companion repo. Equivalence: a merge of two `return true`
-  branches that the table shows to be wrong in two rows. De Morgan: a login
-  check and a banner condition turned from reasons to reject into
-  requirements, the second finishing with a double negation. Rearranging: a
-  distributed pull-request rule factored back (∨ out of ∧), and a note on
-  when commuting is safe in code. Derivations: a form condition taken through
-  De Morgan twice and two double negations. Exclusive or: a retry function
-  derived to (T ⊕ E) ∧ R, and its table against the `||` version. Karnaugh
-  maps: the same condition, where the map finds nothing shorter. Code to
-  logic: two new steps on reading a function with several returns as one
-  expression, the second on guard clauses.
-- The reference lesson lists the double negation law and the rules for
-  reading a function as an expression.
 - Add :TruthTableSimplify (<leader>ttz): preview one collapsing law at the
   nearest match to the cursor and name it. The laws are complement (A ∨ ¬A to
   1), domination (A ∨ 1 to 1), identity (A ∨ 0 to A), idempotence, absorption
@@ -35,10 +21,6 @@ Unreleased
 - rewrite.commute, factor, distribute, xor and de_morgan return the law's name
   as a second value. derivation.step and derivation.replace take the rewrite
   as { text, law } where they took the text; add derivation.justification.
-- Tutor: the lessons on derivations, Karnaugh maps and code show justified
-  steps; the lesson on absorption and reduction derives each law with
-  :TruthTableSimplify steps and then takes it in one move; the reference
-  sheet names the laws as the previews do.
 - The predicate language reads ⊤ and ⊥ as the constants 1 and 0, so what the
   true@ and false@ abbreviations insert is now an expression (it was a parse
   error). A constant renders as typed: `a or ⊤` gives the heading a ∨ ⊤, and
@@ -47,20 +29,31 @@ Unreleased
   ∧, and are reserved: `:TruthTable true false` is now an expression (and a
   parse error) where it made two variables, and an existing column with either
   name is reached from an expression by its :hN reference.
-- Tutor lesson 6 opens with both spellings of the constants: its scratch pane
-  holds the `or` laws once with 1 and 0 and once with ⊤ and ⊥, and the two
-  tables agree cell for cell.
 - The tutor covers the laws of Boolean algebra a logic-simplification course
-  lists. New lesson 6, "Constants and complements": the identity, domination
-  and idempotence laws for `or` and `and`, duality, and a ∨ ¬a ≡ 1,
-  a ∧ ¬a ≡ 0, each checked with a table. New lesson 10, "Absorption and
-  reduction": both forms of absorption and both reduction laws, the latter
-  derived with :TruthTableDistribute or :TruthTableFactor followed by
-  hand-written complement and identity steps. The rearranging lesson gains a
-  step on the associative laws, the Karnaugh lesson names its groups as
-  reductions, and the reference lesson opens with a sheet of every law beside
-  its dual. The course is now 14 lessons; the lesson files after 05 are
-  renumbered.
+  lists, in 14 lessons (the lesson files after 05 are renumbered). New lesson
+  6, "Constants and complements": the two spellings of the constants, the
+  identity, domination and idempotence laws for `or` and `and`, duality, and
+  a ∨ ¬a ≡ 1, a ∧ ¬a ≡ 0, each checked with a table. New lesson 10,
+  "Absorption and reduction": absorption by table, then its second form and
+  reduction derived with :TruthTableSimplify steps and taken in one move. The
+  rearranging lesson gains the associative laws, the Karnaugh lesson names its
+  groups as reductions, every derivation shows justified steps, and the
+  reference lesson opens with a sheet of the laws under the names the
+  previews give them.
+- The tutor is framed around refactoring code, with examples adapted from the
+  logic-exercises companion repo. Equivalence: a merge of two `return true`
+  branches that the table shows to be wrong in two rows. De Morgan: a login
+  check and a banner condition turned from reasons to reject into
+  requirements, the second finishing with a double negation. Rearranging: a
+  distributed pull-request rule factored back (∨ out of ∧), and a note on
+  when commuting is safe in code. Derivations: a form condition taken through
+  De Morgan twice and two double negations. Exclusive or: a retry function
+  derived to (T ⊕ E) ∧ R, and its table against the `||` version. Karnaugh
+  maps: the same condition, where the map finds nothing shorter. Code to
+  logic: two new steps on reading a function with several returns as one
+  expression (`if (c) return true; rest` is c ∨ rest, `if (c) return false;
+  rest` is ¬c ∧ rest), the second on guard clauses; the reference lesson
+  lists the rules.
 - spec/tutor.lua evaluates every law a lesson states (`left ≡ right` in a
   fenced block of a step's text) over all values of its variables.
 - :TruthTableTutor shows the course in two panes: the lesson on the left, one
