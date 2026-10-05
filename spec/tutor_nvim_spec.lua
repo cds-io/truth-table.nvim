@@ -25,6 +25,13 @@ local files = vim.fn.glob(vim.fn.getcwd() .. "/tutor/truth-table/*.lua", true, t
 table.sort(files)
 local course = vim.tbl_map(dofile, files)
 
+-- The size of the course as it stands. These are exact on purpose: a lesson
+-- file that goes missing, a step that loses its solution, or a fenced block
+-- whose laws the reader below no longer recognises changes a count, where a
+-- floor would let it through. A change to the course that is meant changes
+-- the number here with it.
+local COURSE = { lessons = 19, exercises = 54, laws = 47 }
+
 -- Both sides have the same value under every assignment of their variables.
 local function equivalent(left, right, label)
     local sides = {}
@@ -108,8 +115,8 @@ local function tab_count()
 end
 
 describe("the course", function()
-    it("has at least 10 lessons", function()
-        assert.is_true(#course >= 10, #course .. " lessons")
+    it(("has %d lessons"):format(COURSE.lessons), function()
+        assert.are.equal(COURSE.lessons, #course)
     end)
 
     it("gives every lesson a title, an aim and steps, and every step its text", function()
@@ -136,20 +143,20 @@ describe("the course", function()
         end
     end)
 
-    it("has at least 20 exercises", function()
+    it(("has %d exercises"):format(COURSE.exercises), function()
         local exercises = 0
         for _, lesson in ipairs(course) do
             for _, step in ipairs(lesson.steps) do
                 exercises = exercises + (step.solution and 1 or 0)
             end
         end
-        assert.is_true(exercises >= 20, exercises .. " exercises")
+        assert.are.equal(COURSE.exercises, exercises)
     end)
 
     -- A law is `left ≡ right` on a line of a fenced block in a step's text; a
     -- line may hold several, two or more spaces apart (the reference lists each
     -- law beside its dual, after its name).
-    it("states at least 40 laws, each holding under every assignment", function()
+    it(("states %d laws, each holding under every assignment"):format(COURSE.laws), function()
         local laws = 0
         for number, lesson in ipairs(course) do
             for index, step in ipairs(lesson.steps) do
@@ -170,7 +177,7 @@ describe("the course", function()
                 end
             end
         end
-        assert.is_true(laws >= 40, laws .. " laws")
+        assert.are.equal(COURSE.laws, laws)
     end)
 end)
 

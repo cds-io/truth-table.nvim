@@ -169,12 +169,13 @@ describe("a rewrite at the cursor", function()
 end)
 
 describe("a refusal", function()
-    it("warns and shows no preview when the cursor is on an operator", function()
+    it("warns, shows no preview and leaves the buffer alone when the cursor is on an operator", function()
         set({ "  S ∨ (¬C ∧ (A ∨ G))" })
         on("∨")
         vim.cmd("TruthTableFactor")
         assert.are.equal(0, #marks())
         assert.are.equal("Put the cursor on an operand", notified)
+        assert.are.same({ "  S ∨ (¬C ∧ (A ∨ G))" }, lines())
     end)
 
     -- Factor and Distribute are easy to reach for the wrong way round: a
@@ -321,9 +322,8 @@ describe("a table heading", function()
         local updated = lines()
         assert.are.equal("¬A ∨ ¬B", core.split_row(updated[1])[2])
         assert.are.equal("  ", updated[1]:sub(1, 2))
-        for i = 2, #updated do
-            assert.are.equal(indented[i], updated[i], "row " .. i)
-        end
+        -- Compared whole: a row that went missing fails here too.
+        assert.are.same(vim.list_slice(indented, 2), vim.list_slice(updated, 2))
     end)
 
     it("refuses a De Morgan rewrite that would duplicate another heading, with no text edits", function()
@@ -349,9 +349,7 @@ describe("a table heading", function()
         vim.cmd("TruthTableApply")
         local renamed = lines()
         assert.are.equal("B ∧ A", core.split_row(renamed[1])[3])
-        for i = 2, #renamed do
-            assert.are.equal(heading_table[i], renamed[i], "row " .. i)
-        end
+        assert.are.same(vim.list_slice(heading_table, 2), vim.list_slice(renamed, 2))
     end)
 
     it("does not count the padding inside its cell as an operand", function()

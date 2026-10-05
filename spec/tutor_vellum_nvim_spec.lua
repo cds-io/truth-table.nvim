@@ -57,12 +57,7 @@ describe("the lesson pane with the installed vellum", function()
     -- Each mark is checked against its line as it is read, so a render that
     -- comes back at all has every mark inside its line.
     for _, width in ipairs({ 104, 70, 50 }) do
-        local widest = width >= 104
-        local name = ("renders every step with marks at width %d"):format(width)
-        if widest then
-            name = name .. ", where no letter or digit goes missing"
-        end
-        it(name, function()
+        it(("renders every step with marks at width %d, and no letter or digit goes missing"):format(width), function()
             for number, lesson in ipairs(course) do
                 for index in ipairs(lesson.steps) do
                     local label = ("lesson %d step %d at width %d"):format(number, index, width)
@@ -70,9 +65,7 @@ describe("the lesson pane with the installed vellum", function()
                     local lines, marks = styled.render(markdown, width)
                     assert.is_truthy(lines, label .. ": " .. table.concat(warnings, "; "))
                     assert.is_true(#marks > 0, label .. ": " .. table.concat(warnings, "; "))
-                    if widest then
-                        assert.are.equal(alnum(markdown), alnum(lines), label .. ": text went missing")
-                    end
+                    assert.are.equal(alnum(markdown), alnum(lines), label .. ": text went missing")
                 end
             end
         end)
