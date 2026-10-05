@@ -616,8 +616,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
   turns a step into the lesson pane's Markdown, and tutor_vellum.lua turns
   that into styled lines when vellum.nvim is installed (nothing when it is
-  absent or fails, and tutor.lua then shows the Markdown). spec/tutor.lua
-  replays each
+  absent or fails, and tutor.lua then shows the Markdown).
+  spec/tutor_nvim_spec.lua replays each
   step's solution and requires the scratch buffer to end as its expectation,
   and evaluates every law a lesson states (`left ≡ right` in a fenced block)
   over all values of its variables.
@@ -638,12 +638,12 @@ An empty table loses its display encoding when serialized to Markdown.
 
 Run make check for the complete local check (requires Busted, nlua, Neovim,
 and Selene). make test runs pure specs under plain Lua; make test-nvim runs
-the specs named _nvim_spec.lua, busted specs that need an editor
-(abbreviation setup), with Neovim as the interpreter through nlua; make
-test-integration runs headless command checks and verifies rewrite previews,
-the tutorial's lesson pane with and without vellum.nvim, and automatic
-plugin loading during startup. Set
-TRUTH_TABLE_TEST_VELLUM to an installed vellum's directory to also render every
-step of the course through it. make lint checks source modules.
+the specs named _nvim_spec.lua, busted specs that need an editor, each file
+in a Neovim of its own, with Neovim as the interpreter through nlua: commands
+and keymaps, rewrite previews, abbreviation setup, the tutorial's exercises,
+its lesson pane with and without vellum.nvim, and automatic plugin loading
+during startup. Set TRUTH_TABLE_TEST_VELLUM to an installed vellum's
+directory to also render every step of the course through it. make lint
+checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:

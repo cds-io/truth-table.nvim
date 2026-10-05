@@ -6,8 +6,14 @@ Unreleased
 - Tests: `make test-nvim` runs busted inside Neovim, through nlua, for specs
   that need an editor (`spec/*_nvim_spec.lua`); `make check` includes it and
   so requires nlua (`luarocks --lua-version 5.1 --local install nlua`). The
-  pure specs still run under plain Lua and skip those files. The abbreviation
-  checks are the first to move from a headless script to named cases.
+  pure specs still run under plain Lua and skip those files. Every check
+  that was a headless script is now such a spec, with named cases that show
+  both values on a failure: abbreviations, commands and keymaps, rewrite
+  previews, the tutor and its replay of every lesson, the lesson pane with
+  vellum, and startup (which starts a second Neovim with
+  spec/startup_init.lua as its init file). Each spec file runs in a Neovim of
+  its own. `make test-integration` is gone; `make check` is test, test-nvim
+  and lint.
 - Keymap descriptions open with their family (`Table: new`, `Rewrite: factor
   operand out`, `Apply: in place`), and the keys are registered with
   which-key family by family, so a which-key popup lists them grouped when its
@@ -27,7 +33,7 @@ Unreleased
   - README and help list vellum.nvim as an optional dependency: an
     `optional = true` entry in this plugin's `dependencies`, which lazy.nvim
     acts on once vellum has a spec of its own.
-  - `make test-integration` checks the pane against a stand-in for vellum;
+  - `make test-nvim` checks the pane against a stand-in for vellum;
     TRUTH_TABLE_TEST_VELLUM=<vellum's directory> also renders every step of
     the course through the installed one.
 - A step written by :TruthTableFactor is justified `distributivity
