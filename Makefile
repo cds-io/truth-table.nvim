@@ -18,9 +18,15 @@ test:
 # starts under plain Lua and runs itself again under nlua, which finds
 # busted's modules through the paths luarocks names. nlua runs whatever is
 # on a stdin that is no terminal as Lua once the specs are done, so it gets
-# an empty one.
+# an empty one. Each file gets a Neovim of its own: a spec sets the plugin
+# up, replaces vim.notify and opens windows as it needs, and the next one
+# starts clean.
 test-nvim:
-	eval "$$($(LUAROCKS) --lua-version 5.1 path)" && $(BUSTED) --run=nvim --lua=$(NLUA) </dev/null
+	@eval "$$($(LUAROCKS) --lua-version 5.1 path)" && \
+	for spec in spec/*_nvim_spec.lua; do \
+		echo "$$spec"; \
+		$(BUSTED) --run=nvim --lua=$(NLUA) "$$spec" </dev/null || exit 1; \
+	done
 
 test-integration:
 	$(NVIM) --headless -u NONE -i NONE -l spec/integration.lua
