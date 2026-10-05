@@ -3,6 +3,24 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Tutor: with vellum.nvim installed, the lesson pane shows each step
+  rendered (prose wrapped to the pane's width, 100 columns at most; the title
+  in a band; code in shaded panels with syntax colours), painted by the tutor
+  from vellum's renderer, with no `:Vellum` preview involved. The pane is
+  drawn again when its width or the colorscheme changes. Without vellum the
+  pane shows the step's Markdown as before; it does the same, with one
+  warning per session, when vellum raises an error or returns a highlight
+  outside its line.
+  - The rendered pane's filetype is `truth-table-tutor` where the Markdown
+    pane's is `markdown`, and it turns off line numbers, the sign, fold and
+    status columns, 'list', 'spell' and 'colorcolumn' for its window. The
+    scratch pane keeps the reader's settings.
+  - README and help list vellum.nvim as an optional dependency: an
+    `optional = true` entry in this plugin's `dependencies`, which lazy.nvim
+    acts on once vellum has a spec of its own.
+  - `make test-integration` checks the pane against a stand-in for vellum;
+    TRUTH_TABLE_TEST_VELLUM=<vellum's directory> also renders every step of
+    the course through the installed one.
 - A step written by :TruthTableFactor is justified `distributivity
   (factoring)` and one written by :TruthTableDistribute `distributivity
   (distributing)`, where both said `distributivity`: the line now tells which
