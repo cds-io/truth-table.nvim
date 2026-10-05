@@ -836,7 +836,7 @@ without the next file inheriting any of it:
 
 | Spec | Covers | Its cases |
 |---|---|---|
-| `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | run in order; each starts from the `setup` call it names |
+| `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | independent; each starts from the defaults the plugin entry point installs |
 | `integration_nvim_spec.lua` | commands and default keymaps, malformed tables left alone | independent; each writes its buffer |
 | `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals | independent; each in a fresh buffer |
 | `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | one reader's session, in order; then one case per lesson |
