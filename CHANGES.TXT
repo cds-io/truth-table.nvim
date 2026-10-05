@@ -6,7 +6,9 @@ Unreleased
 - Add truth-table.fp: map(list, fn), filter(list, keep) and
   reduce(list, initial, fn) for the pure modules, which run under plain Lua
   5.1 and so without vim.iter. Each returns a new value and leaves its list
-  alone; map raises an error on a nil result. Nothing uses the module yet.
+  alone; map raises an error on a nil result. The pure modules use it where
+  a loop was one of the three (table formatting, the canonical form, Karnaugh
+  covers, dropping a row or column); behaviour is unchanged.
 - Tests: `make test-nvim` runs busted inside Neovim, through nlua, for specs
   that need an editor (`spec/*_nvim_spec.lua`); `make check` includes it and
   so requires nlua (`luarocks --lua-version 5.1 --local install nlua`). The

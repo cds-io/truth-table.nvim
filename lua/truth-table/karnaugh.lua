@@ -2,7 +2,7 @@
 -- Pure Lua 5.1 (busted runs PUC Lua, Neovim runs LuaJIT): no bit library, so
 -- implicants are strings over "0", "1" and "-" with one character per input,
 -- first input first. A "-" means the variable does not appear in the term.
-local result = require("truth-table.result")
+local fp = require("truth-table.fp")
 local model = require("truth-table.table_model")
 local markdown = require("truth-table.markdown")
 local predicate = require("truth-table.predicate")
@@ -156,6 +156,9 @@ local function sort_terms(terms)
     return terms
 end
 
+-- A loop where the rest of the module would use fp.filter: the cover search
+-- calls this for every candidate at every node, and the closure a filter
+-- needs per call cost about 6% of the Karnaugh spec's run time under Lua 5.1.
 local function without_covered(term, patterns)
     local rest = {}
     for _, pattern in ipairs(patterns) do
@@ -192,12 +195,10 @@ end
 local SEARCH_BUDGET = 5000
 
 local function literal_count(terms)
-    local count = 0
-    for _, term in ipairs(terms) do
+    return fp.reduce(terms, 0, function(count, term)
         local _, literals = term:gsub("[01]", "")
-        count = count + literals
-    end
-    return count
+        return count + literals
+    end)
 end
 
 local function better_cover(candidate, best)
@@ -290,15 +291,13 @@ local function minimal_cover(primes, minterms)
             end
         end
     end
-    local uncovered, chosen = {}, {}
+    local chosen = {}
     for _, prime in ipairs(cover) do
         chosen[prime] = true
     end
-    for _, pattern in ipairs(minterms) do
-        if not covered[pattern] then
-            uncovered[#uncovered + 1] = pattern
-        end
-    end
+    local uncovered = fp.filter(minterms, function(pattern)
+        return not covered[pattern]
+    end)
     if #uncovered > 0 then
         local candidates = {}
         for _, prime in ipairs(primes) do
@@ -343,11 +342,9 @@ local function cover_ast(cover, inputs)
     if #cover == 0 then
         return { type = "literal", value = 0 }
     end
-    local terms = {}
-    for i, term in ipairs(cover) do
-        terms[i] = term_ast(term, inputs)
-    end
-    return predicate.fold("or", terms)
+    return predicate.fold("or", fp.map(cover, function(term)
+        return term_ast(term, inputs)
+    end))
 end
 
 -- Analyse column `column` of a table model. Returns:
@@ -395,7 +392,7 @@ function M.derive(tbl, column)
         end
     end
     table.sort(minterms)
-    local minterm_patterns = result.traverse(minterms, function(index)
+    local minterm_patterns = fp.map(minterms, function(index)
         return index_pattern(index, width)
     end)
     local primes = sort_terms(prime_implicants(terms))

@@ -7,6 +7,7 @@
 -- law it applied, or nil and the reason it does not apply.
 local predicate = require("truth-table.predicate")
 local SYMBOLS = require("truth-table.symbols")
+local fp = require("truth-table.fp")
 local M = {}
 
 -- A chain is a maximal run of one of these operators, read as a flat operand
@@ -352,13 +353,9 @@ local function constant(node)
 end
 
 local function without(items, dropped)
-    local kept = {}
-    for index, item in ipairs(items) do
-        if index ~= dropped then
-            kept[#kept + 1] = item
-        end
-    end
-    return kept
+    return fp.filter(items, function(_, index)
+        return index ~= dropped
+    end)
 end
 
 -- A term's factors: its operands when it is a chain of `op`, else itself.

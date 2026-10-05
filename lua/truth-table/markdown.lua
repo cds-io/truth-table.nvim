@@ -1,4 +1,5 @@
 -- Markdown codec for Boolean tables. Width measurement is an explicit dependency.
+local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local model = require("truth-table.table_model")
 local M = {}
@@ -25,37 +26,32 @@ function M.center_pad(str, width, display_width)
 end
 
 local function format_valid(headers, rows, display_width)
-    local widths = {}
-    for i, h in ipairs(headers) do
-        widths[i] = math.max(3, display_width(h))
-    end
+    local widths = fp.map(headers, function(header)
+        return math.max(3, display_width(header))
+    end)
     for _, row in ipairs(rows) do
         for i, cell in ipairs(row) do
             widths[i] = math.max(widths[i], display_width(cell))
         end
     end
 
-    local hdr_cells = {}
-    for i, h in ipairs(headers) do
-        hdr_cells[i] = " " .. M.center_pad(h, widths[i], display_width) .. " "
+    local function line(cells)
+        return "|" .. table.concat(cells, "|") .. "|"
     end
-    local heading = "|" .. table.concat(hdr_cells, "|") .. "|"
-
-    local sep_cells = {}
-    for i = 1, #headers do
-        sep_cells[i] = ":" .. string.rep("-", widths[i]) .. ":"
+    -- A heading or data row: each cell centred in its column.
+    local function padded(cells)
+        return line(fp.map(cells, function(cell, i)
+            return " " .. M.center_pad(cell, widths[i], display_width) .. " "
+        end))
     end
-    local separator = "|" .. table.concat(sep_cells, "|") .. "|"
+    local separator = line(fp.map(widths, function(width)
+        return ":" .. string.rep("-", width) .. ":"
+    end))
 
-    local lines = { heading, separator }
+    local lines = { padded(headers), separator }
     for _, row in ipairs(rows) do
-        local cells = {}
-        for i, cell in ipairs(row) do
-            cells[i] = " " .. M.center_pad(cell, widths[i], display_width) .. " "
-        end
-        lines[#lines + 1] = "|" .. table.concat(cells, "|") .. "|"
+        lines[#lines + 1] = padded(row)
     end
-
     return lines
 end
 
@@ -268,9 +264,7 @@ end
 function M.format(tbl, display_width)
     local normalized, err = model.normalize(tbl)
     return result.bind(normalized, err, function(valid)
-        local headers = result.traverse(valid.headers, function(header)
-            return M.escape_heading(header)
-        end)
+        local headers = fp.map(valid.headers, M.escape_heading)
         return format_valid(headers, model.render_rows(valid), display_width or M.display_width)
     end)
 end

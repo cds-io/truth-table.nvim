@@ -1,5 +1,6 @@
 -- Predicate language: source -> AST -> bound AST -> Boolean value.
 -- No table rendering or editor dependencies. Fallible operations use value, error.
+local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local M = {}
 
@@ -460,11 +461,7 @@ function M.canonical(node)
         elseif copy.type == "not" then
             return { type = "not", operand = grouped(copy.operand) }
         elseif FLAT[copy.type] then
-            local operands = {}
-            for i, operand in ipairs(M.operands(copy, copy.type)) do
-                operands[i] = grouped(operand)
-            end
-            return M.fold(copy.type, operands)
+            return M.fold(copy.type, fp.map(M.operands(copy, copy.type), grouped))
         elseif BINARY[copy.type] then
             return { type = copy.type, left = grouped(copy.left), right = grouped(copy.right) }
         end
