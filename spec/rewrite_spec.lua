@@ -443,6 +443,46 @@ describe("rewrite.moves", function()
         }, moves(source))
     end)
 
+    local function results(source, law)
+        local found = {}
+        for _, move in ipairs(moves(source)) do
+            if move[1] == law then
+                found[#found + 1] = move[2]
+            end
+        end
+        return found
+    end
+
+    it("distributes into either neighbouring group, retaining the cursor preference", function()
+        local source = "(A ∨ B) ∧ C ∧ (D ∨ E)"
+        local expected = {
+            "(A ∨ B) ∧ ((C ∧ D) ∨ (C ∧ E))",
+            "((A ∧ C) ∨ (B ∧ C)) ∧ (D ∨ E)",
+        }
+        assert.are.same(expected, results(source, "distributivity (distributing)"))
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal(expected[1], predicate.ast_to_heading(assert(rewrite.distribute(ast, (source:find("C"))))))
+    end)
+
+    it("lists every complementary pair, including later repeated operands", function()
+        assert.are.same({
+            "1 ∨ A ∨ ¬A", "1 ∨ ¬A ∨ A", "A ∨ 1 ∨ ¬A", "A ∨ ¬A ∨ 1",
+        }, results("A ∨ ¬A ∨ A ∨ ¬A", "complement"))
+    end)
+
+    it("lists every duplicate and reduction partner", function()
+        assert.are.same({ "A ∨ B ∨ A", "A ∨ A ∨ B" }, results("A ∨ A ∨ B ∨ A", "idempotence"))
+        assert.are.same({
+            "B ∨ C ∨ (¬A ∧ B)", "B ∨ (¬A ∧ B) ∨ C",
+        }, results("(A ∧ B) ∨ (¬A ∧ B) ∨ C ∨ (¬A ∧ B)", "reduction"))
+    end)
+
+    it("recognises each complementary partner, without changing the input", function()
+        assert.are.same({
+            "(A ⇔ B) ∨ C ∨ (¬A ∧ ¬B)", "(A ⇔ B) ∨ (¬A ∧ ¬B) ∨ C",
+        }, results("(A ∧ B) ∨ (¬A ∧ ¬B) ∨ C ∨ (¬A ∧ ¬B)", "definition of ⇔"))
+    end)
+
     it("orders the families: the shrinking laws first, the swaps last", function()
         assert.are.same({
             { "reduction", "b" },
@@ -490,6 +530,11 @@ end)
 -- input is never modified.
 describe("rewrite soundness", function()
     local corpus = {
+        "(A ∨ B) ∧ C ∧ (D ∨ E)",
+        "A ∨ ¬A ∨ A ∨ ¬A",
+        "A ∨ A ∨ B ∨ A",
+        "(A ∧ B) ∨ (¬A ∧ B) ∨ C ∨ (¬A ∧ B)",
+        "(A ∧ B) ∨ (¬A ∧ ¬B) ∨ C ∨ (¬A ∧ ¬B)",
         "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)",
         "S ∨ A ∧ ¬C ∨ G ∧ ¬C",
         "(A ∨ B) ∧ (A ∨ C) ∧ D",
