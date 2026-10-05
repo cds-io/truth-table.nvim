@@ -748,8 +748,9 @@ budget, greedy beyond it) and renders the map and the formula.
 - `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
 Only `nil` means failure; zero and false remain successful values.
 - `fp.lua` is `map`, `filter` and `reduce` over lists, for the pure modules:
-plain Lua 5.1 has none of the three, and `vim.iter` needs the editor. Each
-returns a new value and takes its function last; `map` refuses a `nil` result,
+plain Lua 5.1 has none of the three, and `vim.iter` needs the editor. Map and
+filter return fresh arrays; reduce returns the final accumulator. Each takes
+its function last; `map` refuses a `nil` result,
 which would leave a hole that `ipairs` stops at.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De

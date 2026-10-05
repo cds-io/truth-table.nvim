@@ -1,8 +1,9 @@
 -- map, filter and reduce over lists, for the pure modules: they run under
 -- plain Lua 5.1, which has none of the three, and without `vim`, so without
 -- vim.iter. A list is a sequence (items at 1..n, no holes), read with ipairs.
--- Each function returns a new value and leaves its list alone. The function
--- argument comes last, so one written out over several lines reads as a block.
+-- Map and filter return fresh arrays; reduce returns the final accumulator.
+-- The helpers do not modify the input list. The function argument comes last,
+-- so one written out over several lines reads as a block.
 local M = {}
 
 -- fn(item, index) for each item, in order. A nil result is an error: it would
