@@ -546,26 +546,43 @@ on it, and the `solution` that the test suite replays.
 
 ## Keymaps
 
-`setup()` registers these by default:
+`setup()` registers these by default, in three families:
 
-| Key | Action |
-|---|---|
-| `<leader>ttn` | run `:TruthTable` on the current line, or prefill `:TruthTable ` when it is blank |
-| `<leader>ttn` (visual) | run `:TruthTable` on the selected lines |
-| `<leader>tte` | prefill `:TruthTableExpand ` |
-| `<leader>ttd` | toggle De Morgan preview |
-| `<leader>ttf` | toggle factor preview |
-| `<leader>ttx` | toggle distribute preview |
-| `<leader>tto` | toggle xor-recognition preview |
-| `<leader>ttz` | toggle simplify preview |
-| `<leader>tts` | toggle commute preview (swap with the next operand) |
-| `<leader>ttS` | toggle commute preview (swap with the previous operand) |
-| `<leader>tta` | apply the preview in place |
-| `<leader>ttA` | apply the preview as a `≡` step with its justification |
-| `<leader>ttt` | toggle `0/1 ↔ F/T` |
-| `<leader>ttr` | drop row |
-| `<leader>ttc` | drop column |
-| `<leader>ttk` | Karnaugh map and formula for the column |
+| Key | Family | Action |
+|---|---|---|
+| `<leader>ttn` | Table | run `:TruthTable` on the current line, or prefill `:TruthTable ` when it is blank |
+| `<leader>ttn` (visual) | Table | run `:TruthTable` on the selected lines |
+| `<leader>tte` | Table | prefill `:TruthTableExpand ` |
+| `<leader>ttt` | Table | toggle `0/1 ↔ F/T` |
+| `<leader>ttr` | Table | drop row |
+| `<leader>ttc` | Table | drop column |
+| `<leader>ttk` | Table | Karnaugh map and formula for the column |
+| `<leader>ttd` | Rewrite | toggle De Morgan preview |
+| `<leader>ttf` | Rewrite | toggle factor preview (the operand moves out of its terms) |
+| `<leader>ttx` | Rewrite | toggle distribute preview (the operand moves into the group) |
+| `<leader>tts` | Rewrite | toggle commute preview (swap with the next operand) |
+| `<leader>ttS` | Rewrite | toggle commute preview (swap with the previous operand) |
+| `<leader>tto` | Rewrite | toggle xor-recognition preview |
+| `<leader>ttz` | Rewrite | toggle simplify preview |
+| `<leader>tta` | Apply | apply the preview in place |
+| `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
+
+Each keymap's description opens with its family (`Table: new`,
+`Rewrite: factor operand out`, `Apply: in place`), so the grouping shows in a
+[which-key](https://github.com/folke/which-key.nvim) popup. By default
+which-key lists a popup by key, which interleaves the families. To list them
+in the order above, add `"manual"` to which-key's `sort` option: it follows
+the order mappings were registered in, and the plugin registers its keys
+family by family.
+
+```lua
+require("which-key").setup({
+    sort = { "local", "order", "group", "manual", "alphanum", "mod" },
+})
+```
+
+`sort` applies to every which-key popup: keys that other plugins register
+through which-key will also appear in their registration order.
 
 Factor and Distribute are the one law used from either side, and easy to
 reach for the wrong way round. When one refuses and the other applies at the

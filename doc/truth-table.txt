@@ -450,24 +450,41 @@ Examples: >
 ==============================================================================
 6. KEYMAPS                                                *truth-table-keymaps*
 
-`setup()` registers these normal-mode keymaps by default:
+`setup()` registers these normal-mode keymaps by default, in three families:
 
+  Table ~
     <leader>ttn   run `:TruthTable` on the current line (new table)
     <leader>ttn   (visual) run `:TruthTable` on the selected lines
     <leader>tte   prefill `:TruthTableExpand `  (expand)
-    <leader>ttd   |:TruthTableDeMorgan|
-    <leader>ttf   |:TruthTableFactor|
-    <leader>ttx   |:TruthTableDistribute|
-    <leader>tto   |:TruthTableXor|
-    <leader>ttz   |:TruthTableSimplify|
-    <leader>tts   |:TruthTableCommute|
-    <leader>ttS   |:TruthTableCommute| with !
-    <leader>tta   |:TruthTableApply|
-    <leader>ttA   |:TruthTableApplyStep|
     <leader>ttt   |:TruthTableToggle|
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|
     <leader>ttk   |:TruthTableKarnaugh|
+  Rewrite ~
+    <leader>ttd   |:TruthTableDeMorgan|
+    <leader>ttf   |:TruthTableFactor|
+    <leader>ttx   |:TruthTableDistribute|
+    <leader>tts   |:TruthTableCommute|
+    <leader>ttS   |:TruthTableCommute| with !
+    <leader>tto   |:TruthTableXor|
+    <leader>ttz   |:TruthTableSimplify|
+  Apply ~
+    <leader>tta   |:TruthTableApply|
+    <leader>ttA   |:TruthTableApplyStep|
+
+                                                        *truth-table-which-key*
+Each keymap's description opens with its family (`Table: new`,
+`Rewrite: factor operand out`, `Apply: in place`), so the grouping shows in a
+which-key popup. By default which-key lists a popup by key, which interleaves
+the families. To list them in the order above, add "manual" to which-key's
+`sort` option: it follows the order mappings were registered in, and the
+plugin registers its keys family by family. >
+
+    require("which-key").setup({
+        sort = { "local", "order", "group", "manual", "alphanum", "mod" },
+    })
+<
+`sort` applies to every which-key popup.
 
 When |:TruthTableFactor| or |:TruthTableDistribute| refuses and the other one
 applies at the cursor, the refusal names it.

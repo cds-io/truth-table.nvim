@@ -132,6 +132,40 @@ local function cmd_karnaugh()
     vim.api.nvim_buf_set_lines(0, bounds.end_line, bounds.end_line, false, lines)
 end
 
+local PREFIX = "<leader>tt"
+
+-- On a nonblank line the line is the argument, so the mapping on `A and B`
+-- builds its table in place, the same as the visual mapping on a selection.
+-- A blank line has nothing to read; prefill the command.
+local function new_table()
+    if vim.api.nvim_get_current_line():match("^%s*$") then
+        return ":TruthTable "
+    end
+    return ":.TruthTable<CR>"
+end
+
+-- The default keymaps, by family: tables, then rewrites, then the two ways
+-- to apply a preview. Each description opens with its family, so the grouping
+-- shows in a key-sorted popup too; the order is the one which-key is given.
+local KEYMAPS = {
+    { key = "n", rhs = new_table, desc = "Table: new", expr = true },
+    { key = "n", rhs = ":TruthTable<CR>", desc = "Table: new from selection", mode = "x" },
+    { key = "e", rhs = ":TruthTableExpand ", desc = "Table: expand with columns" },
+    { key = "t", rhs = "<cmd>TruthTableToggle<CR>", desc = "Table: toggle 0/1 ↔ F/T" },
+    { key = "r", rhs = "<cmd>TruthTableDropRow<CR>", desc = "Table: drop row" },
+    { key = "c", rhs = "<cmd>TruthTableDropColumn<CR>", desc = "Table: drop column" },
+    { key = "k", rhs = "<cmd>TruthTableKarnaugh<CR>", desc = "Table: Karnaugh map for column" },
+    { key = "d", rhs = "<cmd>TruthTableDeMorgan<CR>", desc = "Rewrite: De Morgan" },
+    { key = "f", rhs = "<cmd>TruthTableFactor<CR>", desc = "Rewrite: factor operand out" },
+    { key = "x", rhs = "<cmd>TruthTableDistribute<CR>", desc = "Rewrite: distribute operand in" },
+    { key = "s", rhs = "<cmd>TruthTableCommute<CR>", desc = "Rewrite: swap with next operand" },
+    { key = "S", rhs = "<cmd>TruthTableCommute!<CR>", desc = "Rewrite: swap with previous operand" },
+    { key = "o", rhs = "<cmd>TruthTableXor<CR>", desc = "Rewrite: recognise ⊕ or ⇔" },
+    { key = "z", rhs = "<cmd>TruthTableSimplify<CR>", desc = "Rewrite: simplify at the cursor" },
+    { key = "a", rhs = "<cmd>TruthTableApply<CR>", desc = "Apply: in place" },
+    { key = "A", rhs = "<cmd>TruthTableApplyStep<CR>", desc = "Apply: as a ≡ step" },
+}
+
 -- Register commands, keymaps, insert-mode abbreviations, and (if present)
 -- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
 -- terminal-accurate. Idempotent: the last call wins, including for the
@@ -224,39 +258,23 @@ function M.setup(opts)
         desc = "Go to the tutorial's previous step",
     })
 
-    local ok, wk = pcall(require, "which-key")
-    if ok then
-        -- selene: allow(mixed_table)
-        -- which-key's spec is intentionally mixed: positional key + named group.
-        wk.add({
-            { "<leader>tt", group = "[T]ruth Table" },
-        })
+    for _, map in ipairs(KEYMAPS) do
+        vim.keymap.set(map.mode or "n", PREFIX .. map.key, map.rhs, { desc = map.desc, expr = map.expr })
     end
 
-    -- On a nonblank line the line is the argument, so the mapping on
-    -- `A and B` builds its table in place, the same as the visual mapping on
-    -- a selection. A blank line has nothing to read; prefill the command.
-    vim.keymap.set("n", "<leader>ttn", function()
-        if vim.api.nvim_get_current_line():match("^%s*$") then
-            return ":TruthTable "
+    local ok, wk = pcall(require, "which-key")
+    if ok then
+        -- which-key lists a popup by key unless its `sort` option includes
+        -- "manual", which follows the order mappings were added in: this one.
+        -- selene: allow(mixed_table)
+        -- which-key's spec is intentionally mixed: positional key + named fields.
+        local spec = { { PREFIX, group = "[T]ruth Table" } }
+        for _, map in ipairs(KEYMAPS) do
+            -- selene: allow(mixed_table)
+            spec[#spec + 1] = { PREFIX .. map.key, desc = map.desc, mode = map.mode or "n" }
         end
-        return ":.TruthTable<CR>"
-    end, { expr = true, desc = "New truth table" })
-    vim.keymap.set("x", "<leader>ttn", ":TruthTable<CR>", { desc = "New truth table from selection" })
-    vim.keymap.set("n", "<leader>tte", ":TruthTableExpand ", { desc = "Expand truth table" })
-    vim.keymap.set("n", "<leader>ttd", "<cmd>TruthTableDeMorgan<CR>", { desc = "Preview De Morgan rewrite" })
-    vim.keymap.set("n", "<leader>ttf", "<cmd>TruthTableFactor<CR>", { desc = "Preview factoring out operand" })
-    vim.keymap.set("n", "<leader>ttx", "<cmd>TruthTableDistribute<CR>", { desc = "Preview distributing operand" })
-    vim.keymap.set("n", "<leader>tto", "<cmd>TruthTableXor<CR>", { desc = "Preview exclusive-or recognition" })
-    vim.keymap.set("n", "<leader>ttz", "<cmd>TruthTableSimplify<CR>", { desc = "Preview simplifying at the cursor" })
-    vim.keymap.set("n", "<leader>tts", "<cmd>TruthTableCommute<CR>", { desc = "Preview swap with next operand" })
-    vim.keymap.set("n", "<leader>ttS", "<cmd>TruthTableCommute!<CR>", { desc = "Preview swap with previous operand" })
-    vim.keymap.set("n", "<leader>tta", "<cmd>TruthTableApply<CR>", { desc = "Apply rewrite in place" })
-    vim.keymap.set("n", "<leader>ttA", "<cmd>TruthTableApplyStep<CR>", { desc = "Apply rewrite as a ≡ step" })
-    vim.keymap.set("n", "<leader>ttt", "<cmd>TruthTableToggle<CR>", { desc = "Toggle 0/1 ↔ F/T" })
-    vim.keymap.set("n", "<leader>ttr", "<cmd>TruthTableDropRow<CR>", { desc = "Drop truth table row" })
-    vim.keymap.set("n", "<leader>ttc", "<cmd>TruthTableDropColumn<CR>", { desc = "Drop truth table column" })
-    vim.keymap.set("n", "<leader>ttk", "<cmd>TruthTableKarnaugh<CR>", { desc = "Karnaugh map for column" })
+        wk.add(spec)
+    end
     M.configured = true
 end
 

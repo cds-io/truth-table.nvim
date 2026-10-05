@@ -12,6 +12,11 @@ for _, command in ipairs({ 'TruthTable', 'TruthTableExpand', 'TruthTableToggle',
     assert(vim.api.nvim_get_commands({})[command], command)
 end
 assert(vim.fn.maparg('<leader>ttt', 'n') == '<Cmd>TruthTableToggle<CR>')
+-- Each description opens with its family, so a key-sorted popup still shows
+-- which keys belong together.
+for key, family in pairs({ n = 'Table', e = 'Table', k = 'Table', d = 'Rewrite', f = 'Rewrite', z = 'Rewrite', a = 'Apply', A = 'Apply' }) do
+    assert(vim.fn.maparg('<leader>tt' .. key, 'n', false, true).desc:find('^' .. family .. ': '), key)
+end
 for key, command in pairs({ f = 'TruthTableFactor', x = 'TruthTableDistribute', s = 'TruthTableCommute', S = 'TruthTableCommute!',
     a = 'TruthTableApply', A = 'TruthTableApplyStep', d = 'TruthTableDeMorgan', o = 'TruthTableXor',
     z = 'TruthTableSimplify' }) do
