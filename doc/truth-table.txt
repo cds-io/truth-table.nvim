@@ -636,10 +636,13 @@ headings; malformed/non-Boolean tables and empty expressions are rejected.
 Computed columns retain stored values when source variable columns are dropped.
 An empty table loses its display encoding when serialized to Markdown.
 
-Run make check for the complete local check (requires Busted, Neovim, and Selene).
-make test runs pure specs; make test-integration runs headless command checks and
-verifies rewrite previews, abbreviation setup, the tutorial's lesson pane with
-and without vellum.nvim, and automatic plugin loading during startup. Set
+Run make check for the complete local check (requires Busted, nlua, Neovim,
+and Selene). make test runs pure specs under plain Lua; make test-nvim runs
+the specs named _nvim_spec.lua, busted specs that need an editor
+(abbreviation setup), with Neovim as the interpreter through nlua; make
+test-integration runs headless command checks and verifies rewrite previews,
+the tutorial's lesson pane with and without vellum.nvim, and automatic
+plugin loading during startup. Set
 TRUTH_TABLE_TEST_VELLUM to an installed vellum's directory to also render every
 step of the course through it. make lint checks source modules.
 

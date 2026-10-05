@@ -1,9 +1,17 @@
 return {
-    default = {
+    _all = {
         verbose = true,
         ROOT = { "spec" },
-        pattern = "_spec",
         -- Resolve require("truth-table.core") against this project's lua/ tree.
         lpath = "./lua/?.lua;./lua/?/init.lua",
+    },
+    -- The pure specs, under plain Lua: no `vim` global to lean on.
+    default = {
+        pattern = "_spec",
+        ["exclude-pattern"] = "_nvim_spec",
+    },
+    -- The editor specs, inside Neovim: `busted --run=nvim --lua=nlua`.
+    nvim = {
+        pattern = "_nvim_spec",
     },
 }
