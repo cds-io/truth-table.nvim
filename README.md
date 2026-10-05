@@ -47,7 +47,7 @@ plugin works the same without it:
 
 | Plugin | What it adds |
 |---|---|
-| [which-key.nvim](https://github.com/folke/which-key.nvim) | a group label for the `<leader>tt` keys |
+| [which-key.nvim](https://github.com/folke/which-key.nvim) | a group label for the `<leader>tt` keys, and the keys registered family by family, for a popup that lists them in that order (see [Keymaps](#keymaps)) |
 | [vellum.nvim](https://github.com/blackhat-7/vellum.nvim) | the [tutorial](#tutorial)'s lesson pane rendered, where it otherwise shows the lesson's Markdown |
 
 The `dependencies` entry above is how the spec says "vellum, if you have it".
