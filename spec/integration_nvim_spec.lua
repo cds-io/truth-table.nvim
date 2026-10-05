@@ -36,7 +36,7 @@ describe("the plugin entry point", function()
             "TruthTable", "TruthTableExpand", "TruthTableToggle", "TruthTableDropRow", "TruthTableDropColumn",
             "TruthTableKarnaugh", "TruthTableDeMorgan", "TruthTableDeMorganApply", "TruthTableFactor",
             "TruthTableDistribute", "TruthTableCommute", "TruthTableApply", "TruthTableApplyStep", "TruthTableXor",
-            "TruthTableSimplify", "TruthTableTutor",
+            "TruthTableSimplify", "TruthTableRewrites", "TruthTableTutor",
         }) do
             assert.is_truthy(commands[command], command)
         end
@@ -46,7 +46,7 @@ describe("the plugin entry point", function()
         for key, command in pairs({
             t = "TruthTableToggle", f = "TruthTableFactor", x = "TruthTableDistribute", s = "TruthTableCommute",
             S = "TruthTableCommute!", a = "TruthTableApply", A = "TruthTableApplyStep", d = "TruthTableDeMorgan",
-            o = "TruthTableXor", z = "TruthTableSimplify",
+            o = "TruthTableXor", z = "TruthTableSimplify", l = "TruthTableRewrites",
         }) do
             assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>tt" .. key, "n"), key)
         end
@@ -55,7 +55,8 @@ describe("the plugin entry point", function()
     -- A key-sorted popup still shows which keys belong together.
     it("opens each key's description with its family", function()
         for key, family in pairs({
-            n = "Table", e = "Table", k = "Table", d = "Rewrite", f = "Rewrite", z = "Rewrite", a = "Apply", A = "Apply",
+            n = "Table", e = "Table", k = "Table", d = "Rewrite", f = "Rewrite", z = "Rewrite", l = "Rewrite",
+            a = "Apply", A = "Apply",
         }) do
             local description = vim.fn.maparg("<leader>tt" .. key, "n", false, true).desc
             assert.is_truthy(description:find("^" .. family .. ": "), key .. ": " .. description)
