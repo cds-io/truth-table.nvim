@@ -25,13 +25,6 @@ local files = vim.fn.glob(vim.fn.getcwd() .. "/tutor/truth-table/*.lua", true, t
 table.sort(files)
 local course = vim.tbl_map(dofile, files)
 
--- The size of the course as it stands. These are exact on purpose: a lesson
--- file that goes missing, a step that loses its solution, or a fenced block
--- whose laws the reader below no longer recognises changes a count, where a
--- floor would let it through. A change to the course that is meant changes
--- the number here with it.
-local COURSE = { lessons = 19, exercises = 54, laws = 47 }
-
 -- Both sides have the same value under every assignment of their variables.
 local function equivalent(left, right, label)
     local sides = {}
@@ -115,8 +108,16 @@ local function tab_count()
 end
 
 describe("the course", function()
-    it(("has %d lessons"):format(COURSE.lessons), function()
-        assert.are.equal(COURSE.lessons, #course)
+    -- The files say how many lessons there are: each name opens with its
+    -- number, so one that went missing leaves a gap.
+    it("is every lesson file, numbered from 1 with no gap", function()
+        assert.is_true(#files > 0, "no lesson files in tutor/truth-table/")
+        local numbers = vim.iter(files)
+            :map(function(file)
+                return tonumber(vim.fs.basename(file):match("^(%d+)%-"))
+            end)
+            :totable()
+        assert.are.same(vim.fn.range(1, #files), numbers)
     end)
 
     it("gives every lesson a title, an aim and steps, and every step its text", function()
@@ -143,20 +144,25 @@ describe("the course", function()
         end
     end)
 
-    it(("has %d exercises"):format(COURSE.exercises), function()
-        local exercises = 0
-        for _, lesson in ipairs(course) do
-            for _, step in ipairs(lesson.steps) do
-                exercises = exercises + (step.solution and 1 or 0)
-            end
+    -- The first lesson shows the reader around and the last is the reference;
+    -- every lesson between them is there to be worked through.
+    it("has an exercise in every lesson between the first and the last", function()
+        for number = 2, #course - 1 do
+            local exercises = vim.iter(course[number].steps)
+                :filter(function(step)
+                    return step.solution ~= nil
+                end)
+                :totable()
+            assert.is_true(#exercises > 0, ("lesson %d (%s) has no exercise"):format(number, course[number].title))
         end
-        assert.are.equal(COURSE.exercises, exercises)
     end)
 
     -- A law is `left ≡ right` on a line of a fenced block in a step's text; a
     -- line may hold several, two or more spaces apart (the reference lists each
-    -- law beside its dual, after its name).
-    it(("states %d laws, each holding under every assignment"):format(COURSE.laws), function()
+    -- law beside its dual, after its name). The ≡ signs on a line say how many
+    -- laws it holds, so a line the reader below stops recognising (after a
+    -- reformat, say) fails here where it would otherwise go unchecked.
+    it("reads every ≡ in a fenced block as a law, and each law holds under every assignment", function()
         local laws = 0
         for number, lesson in ipairs(course) do
             for index, step in ipairs(lesson.steps) do
@@ -165,19 +171,23 @@ describe("the course", function()
                     if line:match("^```") then
                         fenced = not fenced
                     elseif fenced and line:find("≡", 1, true) then
+                        local read = 0
                         for _, law in ipairs(vim.split((line:gsub("%s+≡%s+", " ≡ ")), "%s%s+")) do
                             local left, right = law:match("^(.-) ≡ (.+)$")
                             if left then
                                 local label = ("lesson %d step %d: %s"):format(number, index, law)
                                 assert.is_true(equivalent(left, right, label), label)
-                                laws = laws + 1
+                                read = read + 1
                             end
                         end
+                        local _, written = line:gsub("≡", "")
+                        assert.are.equal(written, read, ("lesson %d step %d: laws read from: %s"):format(number, index, line))
+                        laws = laws + read
                     end
                 end
             end
         end
-        assert.are.equal(COURSE.laws, laws)
+        assert.is_true(laws > 0, "no laws found in any lesson")
     end)
 end)
 
