@@ -763,7 +763,7 @@ panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
 turns a step into the lesson pane's Markdown, and `tutor_vellum.lua` turns
 that into styled lines when vellum.nvim is installed (and into nothing when it
 is absent or fails, which is `tutor.lua`'s cue to show the Markdown).
-`spec/tutor.lua` replays every
+`spec/tutor_nvim_spec.lua` replays every
 step's `solution` in its scratch buffer and requires the result to be the
 step's own `expect` block, so the course stays true as the plugin changes. It
 also evaluates every law a lesson states (`left ≡ right` in a fenced block)
@@ -805,9 +805,9 @@ luarocks --local install busted
 make check BUSTED=/path/to/busted
 ```
 
-The specs named `*_nvim_spec.lua` need an editor: they call `vim.*`, register
-abbreviations, type into a buffer. They are busted specs too, run with Neovim
-as the Lua interpreter:
+The specs named `*_nvim_spec.lua` need an editor: they run commands, read
+extmarks, type into a buffer, open the tutor's panes. They are busted specs
+too, run with Neovim as the Lua interpreter:
 
 ```sh
 luarocks --lua-version 5.1 --local install nlua
@@ -825,26 +825,39 @@ which fails in its own way when missing:
   implements; a rock built for another Lua version is invisible to it.
 - The target takes `LUA_PATH` and `LUA_CPATH` from `luarocks path`, since the
   Neovim process finds busted's own modules through them.
-- nlua runs the `nvim` that is first on `PATH` (the Makefile's `NVIM` variable
-  does not reach it), and after the specs it runs whatever arrives on a stdin
-  that is not a terminal as Lua. The target gives it an empty stdin; without
-  one, a run whose stdin is a pipe that stays open waits on it forever.
+- nlua runs the `nvim` that is first on `PATH`, and after the specs it runs
+  whatever arrives on a stdin that is not a terminal as Lua. The target gives
+  it an empty stdin; without one, a run whose stdin is a pipe that stays open
+  waits on it forever.
 
-Run `make test-integration` for the checks that are still plain scripts under
-`nvim --headless -l`: Neovim command checks, malformed-table buffer
-preservation, rewrite preview/apply behavior, the tutorial's exercises, the
-tutorial's lesson pane with and without vellum.nvim, and automatic startup.
-A script stops at its first failed `assert` and reports the line; a busted
-spec names the case and shows the two values, which is the reason to move a
-script over when it is next touched. `spec/abbreviations_nvim_spec.lua` is
-the first one moved.
+Each of those files gets a Neovim of its own (the target runs busted once per
+file), so a spec can set the plugin up, replace `vim.notify` and open tabs
+without the next file inheriting any of it:
 
-The lesson-pane check uses a stand-in for vellum, so it runs anywhere. To also
-render every step of the course through an installed vellum, name its
-directory:
+| Spec | Covers | Its cases |
+|---|---|---|
+| `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | independent; each starts from the defaults the plugin entry point installs |
+| `integration_nvim_spec.lua` | commands and default keymaps, malformed tables left alone | independent; each writes its buffer |
+| `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals | independent; each in a fresh buffer |
+| `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | fresh sessions for navigation; one independent case per lesson |
+| `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and a stand-in | scoped renderer modules; one continuous stand-in lifecycle case |
+| `startup_nvim_spec.lua` | Neovim loading `plugin/` by itself | independent |
+
+The startup spec is the odd one: a spec runs inside a Neovim that has already
+started, so it starts a second one with `spec/startup_init.lua` as its init
+file, once bare and once after `setup({ abbreviations = false })`, and reads
+what that Neovim reports about itself.
+
+In the tutor spec a lesson whose replay fails puts the reader on the next
+lesson before it gives up, so one wrong lesson is one failed case (the Next
+that normally moves the reader on is the last thing a lesson's case does).
+
+The lesson-pane spec uses a stand-in for vellum, so it runs anywhere, and
+reports the installed-vellum case as pending. To render every step of the
+course through an installed vellum as well, name its directory:
 
 ```sh
-TRUTH_TABLE_TEST_VELLUM=~/.local/share/nvim/lazy/vellum.nvim make test-integration
+TRUTH_TABLE_TEST_VELLUM=~/.local/share/nvim/lazy/vellum.nvim make test-nvim
 ```
 
 Lint (optional when running individual checks, requires [selene](https://github.com/Kampfkarren/selene)):
