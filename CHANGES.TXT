@@ -3,6 +3,24 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Add :TruthTableRewrites (`<leader>ttl`, `Rewrite: list every rewrite and
+  pick one`): a menu of every rewrite the expression under the cursor allows,
+  each entry its result and its law (`b  | by reduction`), through
+  vim.ui.select. The pick is written at once: on an expression line as the
+  next `≡` step with its justification, the cursor moving onto it; on a table
+  heading, in place. Where the rewrite keys try one law at the cursor, the
+  menu holds every law at every place it applies, including the collapsing
+  laws :TruthTableSimplify passes over for a nearer match. Each result is
+  listed once, the laws that shrink the expression first and the swaps last.
+  - Add rewrite.moves(ast): the list behind the menu, as { law, tree, text }
+    entries. The operand rewrites (commute, factor, distribute, xor) are now
+    written against an operand's path from the root, so one body serves the
+    cursor commands and the enumeration; their public signatures are as they
+    were.
+  - A term with the same factors as the focus is left to idempotence: the
+    absorption law no longer claims it. :TruthTableSimplify behaves as before
+    (idempotence was already tried first); the change keeps the menu from
+    listing a dropped duplicate as `absorption`.
 - Add truth-table.fp: map(list, fn), filter(list, keep) and
   reduce(list, initial, fn) for the pure modules, which run under plain Lua
   5.1 and so without vim.iter. Map and filter return fresh arrays; reduce

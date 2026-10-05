@@ -76,6 +76,8 @@ Rewrites, each a preview at the cursor that names its law:
 - `:TruthTableApply` (`<leader>tta`): replace the expression with the preview.
 - `:TruthTableApplyStep` (`<leader>ttA`): add the preview below as a `≡` step
   with its `| by` justification.
+- `:TruthTableRewrites` (`<leader>ttl`): list every rewrite of the expression,
+  wherever it applies, and add the one you pick as a `≡` step.
 
 The tutor:
 

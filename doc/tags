@@ -10,6 +10,7 @@
 :TruthTableExpand	truth-table.txt	/*:TruthTableExpand*
 :TruthTableFactor	truth-table.txt	/*:TruthTableFactor*
 :TruthTableKarnaugh	truth-table.txt	/*:TruthTableKarnaugh*
+:TruthTableRewrites	truth-table.txt	/*:TruthTableRewrites*
 :TruthTableSimplify	truth-table.txt	/*:TruthTableSimplify*
 :TruthTableToggle	truth-table.txt	/*:TruthTableToggle*
 :TruthTableTutor	truth-table.txt	/*:TruthTableTutor*
