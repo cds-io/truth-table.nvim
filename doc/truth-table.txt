@@ -157,7 +157,7 @@ lists or blockquotes are not supported.
     group directly to its right, or failing that directly to its left. With
     the cursor on ¬C: >
 
-        ¬C ∧ (A ∨ G)   ⇒   ¬C ∧ A ∨ ¬C ∧ G
+        ¬C ∧ (A ∨ G)   ⇒   (¬C ∧ A) ∨ (¬C ∧ G)
 <
     Works for ∧ over ∨ and for ∨ over ∧.
 
@@ -167,13 +167,13 @@ lists or blockquotes are not supported.
     spelled out as two terms. With the cursor anywhere in either term: >
 
         R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))   ⇒   R ∧ (T ⊕ E)
-        A ∧ B ∨ ¬A ∧ ¬B             ⇒   A ⇔ B
+        (A ∧ B) ∨ (¬A ∧ ¬B)         ⇒   A ⇔ B
         (A ∨ B) ∧ (¬A ∨ ¬B)         ⇒   A ⊕ B
 <
     Both terms have exactly two operands, each the negation of its
     counterpart, in either order. Use |:TruthTableFactor| first when the terms
     share a third operand. Beside other terms the result is parenthesised,
-    since ⊕ and ⇔ bind looser than ∨.
+    like any operand with an operator of its own (|truth-table-canonical|).
 
                                                           *:TruthTableCommute*
 :TruthTableCommute[!]
@@ -186,19 +186,20 @@ lists or blockquotes are not supported.
     Toggle a preview that applies one collapsing law, a law whose right-hand
     side is smaller than its left, and names it: >
 
-        complement        A ∨ ¬A ⇒ 1            A ∧ ¬A ⇒ 0
-        domination        A ∨ 1 ⇒ 1             A ∧ 0 ⇒ 0
-        identity          A ∨ 0 ⇒ A             A ∧ 1 ⇒ A
-        idempotence       A ∨ A ⇒ A             A ∧ A ⇒ A
-        absorption        A ∨ A ∧ B ⇒ A         A ∧ (A ∨ B) ⇒ A
-                          A ∨ ¬A ∧ B ⇒ A ∨ B    A ∧ (¬A ∨ B) ⇒ A ∧ B
-        reduction         A ∧ B ∨ ¬A ∧ B ⇒ B    (A ∨ B) ∧ (¬A ∨ B) ⇒ B
-        negation          ¬1 ⇒ 0                ¬0 ⇒ 1
+        complement        A ∨ ¬A ⇒ 1                A ∧ ¬A ⇒ 0
+        domination        A ∨ 1 ⇒ 1                 A ∧ 0 ⇒ 0
+        identity          A ∨ 0 ⇒ A                 A ∧ 1 ⇒ A
+        idempotence       A ∨ A ⇒ A                 A ∧ A ⇒ A
+        absorption        A ∨ (A ∧ B) ⇒ A           A ∧ (A ∨ B) ⇒ A
+                          A ∨ (¬A ∧ B) ⇒ A ∨ B      A ∧ (¬A ∨ B) ⇒ A ∧ B
+        reduction         (A ∧ B) ∨ (¬A ∧ B) ⇒ B    (A ∨ B) ∧ (¬A ∨ B) ⇒ B
+        negation          ¬1 ⇒ 0                    ¬0 ⇒ 1
         double negation   ¬¬A ⇒ A
 <
     The nearest match to the cursor wins, searched in four rounds: a law that
-    involves the operand under the cursor (on A in `A ∨ A ∧ B ∨ C ∨ C ∧ D`, A
-    absorbs `A ∧ B` and `C ∧ D` stays); then a law anywhere inside what the
+    involves the operand under the cursor (on A in
+    `A ∨ (A ∧ B) ∨ C ∨ (C ∧ D)`, A absorbs `A ∧ B` and `C ∧ D` stays); then a
+    law anywhere inside what the
     cursor selects (a cursor on a parenthesis selects the group); then a law
     in a chain around the cursor, with any of its operands; then a law
     anywhere in the expression, innermost and leftmost first. At any one
@@ -219,7 +220,8 @@ lists or blockquotes are not supported.
     law at the end of it. For tables, replace only the selected header cell,
     leaving separators and stored data values untouched. Duplicate headings
     are rejected. Explicit references to the old header label must be updated
-    by the user after renaming. Output uses logic symbols.
+    by the user after renaming. Output is in canonical form
+    (|truth-table-canonical|).
     :TruthTableDeMorganApply is an alias.
 
                                                         *:TruthTableApplyStep*
@@ -258,7 +260,8 @@ writes its formula line as `target ≡ formula`, ready to step from.
 Every preview ends in its justification, `| by` and the name of the law the
 rewrite applies, and |:TruthTableApplyStep| writes it after the step. The
 names are those of |:TruthTableSimplify|, plus `distributivity` (factor and
-distribute are the one law read in opposite directions), `commutativity`,
+distribute are the one law used from either side: one moves a shared operand
+out of its terms, the other moves an operand into a group), `commutativity`,
 `De Morgan`, and `definition of ⊕` or `definition of ⇔`. On an expression
 line everything from the first | on is a remark: a rewrite reads the
 expression before it, and a cursor in the remark means the line's last side.
@@ -374,6 +377,28 @@ Binary operators associate left, including implication. Use parentheses for
 A -> (B -> C). Parentheses `( )` override precedence. Whitespace is insignificant. Each
 operator can be typed as its symbol, so a rendered heading parses back to the
 expression it came from.
+
+                                                       *truth-table-canonical*
+Whatever you type, an expression is written back in one canonical form, in
+headings, previews and derivation steps alike: an operand that is itself a
+binary expression gets parentheses, a run of ∧ or of ∨ is written flat, and no
+other parenthesis is written. >
+
+    a and b or c             (a ∧ b) ∨ c
+    ((a)) and (not (b))      a ∧ ¬b
+    (a and b) and c          a ∧ b ∧ c
+    a and (b and c)          a ∧ b ∧ c
+    a iff b iff c            (a ⇔ b) ⇔ c
+    a implies b implies c    (a → b) → c
+<
+A run of ∧ or of ∨ means the same however it is grouped, so every grouping
+gets the one flat text. ⊕ and ⇔ are associative too, but a flat run of either
+misreads (`a ⇔ b ⇔ c` is true when a is true and the other two are false), so
+their grouping stays visible, like that of →, which is not associative. Two
+spellings of one expression get one heading, and |:TruthTableExpand| treats
+them as the same column. `require("truth-table.predicate").canonical(ast)` is
+the tree transform behind it: one tree for every grouping, with a run of ∧ or
+∨ nested to the left.
 
 Parse errors report a one-based byte position in the displayed expression.
 UTF-8 symbols occupy multiple bytes. Neovim cursor columns are zero-based;
@@ -515,7 +540,9 @@ an explicit later setup() can install it again.
 All pure modules support Lua 5.1 and have no vim dependency:
 
 - core.lua composes construction/expansion and exposes compatibility adapters.
-- predicate.lua owns parsing, binding, evaluation, and heading rendering.
+- predicate.lua owns parsing, binding, evaluation, the canonical form of a
+  tree, heading rendering, and the helpers that take a chain apart and put
+  one together (unparen, operands, fold).
 - table_model.lua owns numeric Boolean cells, display encoding, and pure edits.
 - markdown.lua parses/renders tables and escapes pipes, backslashes, and
   backticks so displayed headings retain their literal reference names.

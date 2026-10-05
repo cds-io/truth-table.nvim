@@ -49,20 +49,27 @@ compare the two computed columns.
 p or q and r | (p or q) and r
 ]],
             expect = [[
-|  p  |  q  |  r  | p ∨ q ∧ r | (p ∨ q) ∧ r |
-|:---:|:---:|:---:|:---------:|:-----------:|
-|  0  |  0  |  0  |     0     |      0      |
-|  0  |  0  |  1  |     0     |      0      |
-|  0  |  1  |  0  |     0     |      0      |
-|  0  |  1  |  1  |     1     |      1      |
-|  1  |  0  |  0  |     1     |      0      |
-|  1  |  0  |  1  |     1     |      1      |
-|  1  |  1  |  0  |     1     |      0      |
-|  1  |  1  |  1  |     1     |      1      |
+|  p  |  q  |  r  | p ∨ (q ∧ r) | (p ∨ q) ∧ r |
+|:---:|:---:|:---:|:-----------:|:-----------:|
+|  0  |  0  |  0  |      0      |      0      |
+|  0  |  0  |  1  |      0      |      0      |
+|  0  |  1  |  0  |      0      |      0      |
+|  0  |  1  |  1  |      1      |      1      |
+|  1  |  0  |  0  |      1      |      0      |
+|  1  |  0  |  1  |      1      |      1      |
+|  1  |  1  |  0  |      1      |      0      |
+|  1  |  1  |  1  |      1      |      1      |
 ]],
             note = [[
-They differ in the rows where `p` is true and `r` is false: `p ∨ q ∧ r` is true
-there because `p` alone is enough, while `(p ∨ q) ∧ r` needs `r`.
+The first heading answers the question: `p or q and r` was read as
+`p ∨ (q ∧ r)`. The plugin writes an expression back in one fixed form: an
+operand that has a connective of its own gets parentheses, so a heading can be
+read without recalling the binding order, and every other parenthesis is left
+out.
+
+The columns differ in the rows where `p` is true and `r` is false:
+`p ∨ (q ∧ r)` is true there because `p` alone is enough, while `(p ∨ q) ∧ r`
+needs `r`.
 ]],
             solution = {
                 { on = "p or q and r | (p or q) and r", run = { ".TruthTable" } },

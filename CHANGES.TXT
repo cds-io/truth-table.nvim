@@ -3,6 +3,31 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Expressions are written back in one canonical form, in headings, previews,
+  derivation steps and Karnaugh formula lines: an operand that is itself a
+  binary expression is parenthesised, a run of ∧ or of ∨ is written flat, and
+  no other parenthesis is written. So `a and b or c` renders as (a ∧ b) ∨ c
+  where it rendered as a ∧ b ∨ c; (a ∧ b) ∧ c and a ∧ (b ∧ c) both render as
+  a ∧ b ∧ c; a nested →, ⊕ or ⇔ is always marked ((a ⇔ b) ⇔ c, where it
+  rendered as a ⇔ b ⇔ c); and parentheses in the source no longer survive
+  rendering: ((a)) ∧ (¬(b)) is a ∧ ¬b.
+- Add predicate.canonical(ast): the tree transform behind the rendering. It
+  returns one tree for every grouping of an expression, with a run of ∧ or ∨
+  nested to the left and paren nodes exactly where the text has parentheses.
+  Rewrites return canonical trees, and rewrite.lua drops the code that
+  regrouped its results and chose their parentheses.
+- Add predicate.unparen, predicate.operands (the operands of a run of one
+  operator, through its parentheses) and predicate.fold (a left-nested chain
+  from a list of operands). rewrite.lua and karnaugh.lua use them in place of
+  their own copies.
+- Tutor: the distributive law is explained by what moves (distributing moves
+  an operand into a group, factoring moves a shared one out), where it spoke
+  of reading the law left to right or right to left.
+- Tutor: expected results, law statements and the reference sheet use the
+  canonical form. The lesson on connectives points out that the heading shows
+  how `p or q and r` was read, and the associativity step tests the law
+  through stored columns (“x ∨ y” ∨ z against x ∨ “y ∨ z”), since both
+  groupings typed directly are the one expression x ∨ y ∨ z.
 - Add :TruthTableSimplify (<leader>ttz): preview one collapsing law at the
   nearest match to the cursor and name it. The laws are complement (A ∨ ¬A to
   1), domination (A ∨ 1 to 1), identity (A ∨ 0 to A), idempotence, absorption

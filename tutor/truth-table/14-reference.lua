@@ -4,8 +4,8 @@ return {
     steps = {
         {
             text = [=[
-Laws, each with its dual beside it, under the name a preview or a step's
-`| by` gives it:
+Laws, each with its dual beside it (below it, for the distributive pair),
+under the name a preview or a step's `| by` gives it:
 
 ```text
 identity         a ∨ 0 ≡ a                      a ∧ 1 ≡ a
@@ -14,10 +14,11 @@ idempotence      a ∨ a ≡ a                      a ∧ a ≡ a
 complement       a ∨ ¬a ≡ 1                     a ∧ ¬a ≡ 0
 commutativity    a ∨ b ≡ b ∨ a                  a ∧ b ≡ b ∧ a
 associativity    (a ∨ b) ∨ c ≡ a ∨ (b ∨ c)      (a ∧ b) ∧ c ≡ a ∧ (b ∧ c)
-distributivity   a ∧ (b ∨ c) ≡ a ∧ b ∨ a ∧ c    a ∨ b ∧ c ≡ (a ∨ b) ∧ (a ∨ c)
-absorption       a ∨ a ∧ b ≡ a                  a ∧ (a ∨ b) ≡ a
-                 a ∨ ¬a ∧ b ≡ a ∨ b             a ∧ (¬a ∨ b) ≡ a ∧ b
-reduction        a ∧ b ∨ ¬a ∧ b ≡ b             (a ∨ b) ∧ (¬a ∨ b) ≡ b
+distributivity   a ∧ (b ∨ c) ≡ (a ∧ b) ∨ (a ∧ c)
+                 a ∨ (b ∧ c) ≡ (a ∨ b) ∧ (a ∨ c)
+absorption       a ∨ (a ∧ b) ≡ a                a ∧ (a ∨ b) ≡ a
+                 a ∨ (¬a ∧ b) ≡ a ∨ b           a ∧ (¬a ∨ b) ≡ a ∧ b
+reduction        (a ∧ b) ∨ (¬a ∧ b) ≡ b         (a ∨ b) ∧ (¬a ∨ b) ≡ b
 De Morgan        ¬(a ∧ b) ≡ ¬a ∨ ¬b             ¬(a ∨ b) ≡ ¬a ∧ ¬b
 double negation  ¬¬a ≡ a
 ```

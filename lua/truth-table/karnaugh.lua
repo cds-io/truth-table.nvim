@@ -318,14 +318,6 @@ local function minimal_cover(primes, minterms)
     return sort_terms(cover)
 end
 
-local function fold(nodes, operator)
-    local node = nodes[1]
-    for i = 2, #nodes do
-        node = { type = operator, left = node, right = nodes[i] }
-    end
-    return node
-end
-
 local function term_ast(term, inputs)
     local literals = {}
     for i = 1, #term do
@@ -344,7 +336,7 @@ local function term_ast(term, inputs)
     if #literals == 0 then
         return { type = "literal", value = 1 }
     end
-    return fold(literals, "and")
+    return predicate.fold("and", literals)
 end
 
 local function cover_ast(cover, inputs)
@@ -355,7 +347,7 @@ local function cover_ast(cover, inputs)
     for i, term in ipairs(cover) do
         terms[i] = term_ast(term, inputs)
     end
-    return fold(terms, "or")
+    return predicate.fold("or", terms)
 end
 
 -- Analyse column `column` of a table model. Returns:

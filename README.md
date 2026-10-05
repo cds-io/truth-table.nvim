@@ -142,6 +142,27 @@ are read too, and rendered as `⊥` / `⊤`. Operators, tightest binding first:
 
 Binary operators associate to the left, including implication. Use parentheses
 for `A -> (B -> C)`. Parentheses override precedence: `(A or B) and !C`.
+
+Whatever you type, the plugin writes an expression back in one *canonical
+form* (the single text that every grouping and parenthesisation of an
+expression is rendered as), in headings, previews and derivation steps alike.
+The rule is short: an operand that is itself a binary expression gets
+parentheses, a run of `∧` or of `∨` is written flat, and no other parenthesis
+is written.
+
+| Typed | Rendered | Why |
+|---|---|---|
+| `a and b or c` | `(a ∧ b) ∨ c` | a mix of operators reads without recalling the binding order |
+| `((a)) and (not (b))` | `a ∧ ¬b` | parentheses nothing needs are dropped |
+| `(a and b) and c` | `a ∧ b ∧ c` | a run of `∧` or of `∨` means the same however it is grouped |
+| `a and (b and c)` | `a ∧ b ∧ c` | so every grouping of the run gets the one flat text |
+| `a iff b iff c` | `(a ⇔ b) ⇔ c` | a flat run of `⇔` or `⊕` misreads: `a ⇔ b ⇔ c` is true when `a` is true and the other two are false |
+| `a implies b implies c` | `(a → b) → c` | `→` is not associative, so a nested one is always marked |
+
+So two spellings of one expression get one heading, and `:TruthTableExpand`
+treats them as the same column. `predicate.canonical(ast)` is the tree
+transform behind it: it returns one tree for every grouping, with a run of `∧`
+or `∨` nested to the left.
 Each operator can be typed as its symbol, so formula headings can be used as
 expressions. Headings generated from positional references describe stored column values.
 Use positional references again to read those values; see
@@ -217,7 +238,7 @@ is the one candidate. Surrounding parentheses are transparent. Each step is
 binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`. The preview
 is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
 renames its label: update explicit references to the old heading yourself. Stored
-column values remain unchanged. Output uses the predicate language's logic symbols;
+column values remain unchanged. Output is in canonical form;
 double negations are retained (`:TruthTableSimplify` removes one on request).
 
 ## Rewrites and derivations
@@ -230,7 +251,7 @@ applies:
 | Command | Cursor on | Example |
 |---|---|---|
 | `:TruthTableFactor` | an operand several terms share | `S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)` ⇒ `S ∨ (¬C ∧ (A ∨ G))` |
-| `:TruthTableDistribute` | an operand beside a parenthesised group | `¬C ∧ (A ∨ G)` ⇒ `¬C ∧ A ∨ ¬C ∧ G` |
+| `:TruthTableDistribute` | an operand beside a parenthesised group | `¬C ∧ (A ∨ G)` ⇒ `(¬C ∧ A) ∨ (¬C ∧ G)` |
 | `:TruthTableCommute` | any operand | `S ∨ (¬C ∧ (A ∨ G))` ⇒ `(¬C ∧ (A ∨ G)) ∨ S` |
 | `:TruthTableXor` | either of two complementary terms | `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))` ⇒ `R ∧ (T ⊕ E)` |
 | `:TruthTableSimplify` | anywhere; the nearest match wins | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B` |
@@ -249,13 +270,13 @@ operand order included, so `A ∧ B` and `B ∧ A` need a commute first.
 failing that directly to its left.
 - Commute swaps with the operand to the right; `:TruthTableCommute!` swaps to
 the left. At the end of a chain the direction flips.
-- Xor reads `¬A ∧ B ∨ A ∧ ¬B` as `A ⊕ B` and `A ∧ B ∨ ¬A ∧ ¬B` as `A ⇔ B`, along
-with the product-of-sums spellings `(A ∨ B) ∧ (¬A ∨ ¬B)` and
+- Xor reads `(¬A ∧ B) ∨ (A ∧ ¬B)` as `A ⊕ B` and `(A ∧ B) ∨ (¬A ∧ ¬B)` as
+`A ⇔ B`, along with the product-of-sums spellings `(A ∨ B) ∧ (¬A ∨ ¬B)` and
 `(¬A ∨ B) ∧ (A ∨ ¬B)`. The cursor can be anywhere in either term. Both terms
 have exactly two operands, so factor a shared operand out first:
-`¬T ∧ E ∧ R ∨ T ∧ ¬E ∧ R` becomes `R ∧ (¬T ∧ E ∨ T ∧ ¬E)`, then `R ∧ (T ⊕ E)`.
-Beside other terms the result is parenthesised, since `⊕` and `⇔` bind
-looser than `∨`: `(A ⊕ B) ∨ A ∧ C`.
+`(¬T ∧ E ∧ R) ∨ (T ∧ ¬E ∧ R)` becomes `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))`, then
+`R ∧ (T ⊕ E)`. Beside other terms the result is parenthesised, like any
+operand with an operator of its own: `(A ⊕ B) ∨ (A ∧ C)`.
 
 ### Simplify
 
@@ -268,9 +289,9 @@ right-hand side is smaller than its left) and the preview says which.
 | complement | `A ∨ ¬A` ⇒ `1`, `A ∧ ¬A` ⇒ `0` |
 | domination | `A ∨ 1` ⇒ `1`, `A ∧ 0` ⇒ `0` |
 | identity | `A ∨ 0` ⇒ `A`, `A ∧ 1` ⇒ `A` |
-| idempotence | `A ∨ A` ⇒ `A`, `A ∧ B ∨ B ∧ A` ⇒ `A ∧ B` |
-| absorption | `A ∨ A ∧ B` ⇒ `A`, `A ∨ ¬A ∧ B` ⇒ `A ∨ B`, and the duals |
-| reduction | `A ∧ B ∨ ¬A ∧ B` ⇒ `B`, `(A ∨ B) ∧ (¬A ∨ B)` ⇒ `B` |
+| idempotence | `A ∨ A` ⇒ `A`, `(A ∧ B) ∨ (B ∧ A)` ⇒ `A ∧ B` |
+| absorption | `A ∨ (A ∧ B)` ⇒ `A`, `A ∨ (¬A ∧ B)` ⇒ `A ∨ B`, and the duals |
+| reduction | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B`, `(A ∨ B) ∧ (¬A ∨ B)` ⇒ `B` |
 | negation | `¬1` ⇒ `0`, `¬⊥` ⇒ `⊤` |
 | double negation | `¬¬A` ⇒ `A` |
 
@@ -278,7 +299,7 @@ So, which law, and where? The nearest match to the cursor, searched in four
 rounds:
 
 1. a law that involves the operand under the cursor: on `A` in
-   `A ∨ A ∧ B ∨ C ∨ C ∧ D`, `A` absorbs `A ∧ B` and `C ∧ D` stays;
+   `A ∨ (A ∧ B) ∨ C ∨ (C ∧ D)`, `A` absorbs `A ∧ B` and `C ∧ D` stays;
 2. a law anywhere inside what the cursor selects (a cursor on a parenthesis
    selects the group);
 3. a law in a chain around the cursor, with any of its operands;
@@ -312,10 +333,11 @@ spelling of `⇔`. Steps apply to expression lines; a heading takes
 
 Each step ends in its *justification*: `| by` and the law that takes the line
 above to this one. The laws are named as in the table above, plus
-`distributivity` (factor and distribute are the one law read in opposite
-directions), `commutativity`, `De Morgan`, and `definition of ⊕` or `⇔`. The
-bar sits four columns clear of the wider of the two lines, or under the bar of
-the line above when that is further right, so the justifications of a
+`distributivity` (distributing moves an operand into a group and factoring
+moves a shared one out: the one law, used from either side), `commutativity`,
+`De Morgan`, and `definition of ⊕` or `⇔`. The bar sits four columns clear of
+the wider of the two lines, or under the bar of the line above when that is
+further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
 on is a remark: a rewrite reads the expression before it, and a cursor in the
 remark means the line's last side. Applying in place to a justified line adds
@@ -324,7 +346,7 @@ how it follows from the one above.
 
 N.B. Simplify takes one step per run and leaves the choice of steps to you; for
 a minimal form in one go, build the table and use `:TruthTableKarnaugh`. An
-in-place apply re-renders the whole side in logic symbols, as De Morgan does. A
+in-place apply re-renders the whole side in canonical form, as De Morgan does. A
 formula line written by an earlier version, `F = …`, reads as one
 biconditional; change its `=` to `≡` before stepping from it.
 
@@ -355,7 +377,7 @@ Karnaugh map for F:
 |  A  |  0  |  0  |  0  |  1  |  1  |
 |     |  1  |  1  |  1  |  1  |  0  |
 
-F ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+F ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
 ```
 
 Which columns are the inputs? The shortest run of columns, starting from the
@@ -601,7 +623,9 @@ an input spelling.
 The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
 
 - `core.lua` composes construction and expansion and preserves the public APIs.
-- `predicate.lua` owns parsing, binding, evaluation, and heading rendering.
+- `predicate.lua` owns parsing, binding, evaluation, the canonical form of a
+tree, heading rendering, and the helpers that take a chain apart and put one
+together (`unparen`, `operands`, `fold`).
 Operator definitions share aliases, precedence, symbols, and Boolean semantics.
 Binding and variable discovery share a pure post-order AST traversal.
 - `table_model.lua` owns numeric Boolean cells, display encoding, validation, and

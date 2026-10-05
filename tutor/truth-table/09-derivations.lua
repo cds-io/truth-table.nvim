@@ -24,12 +24,13 @@ not (g or h) or (not g and k)
 ]],
             expect = [[
 not (g or h) or (not g and k)
-≡ ¬g ∧ ¬h ∨ (¬g ∧ k)             | by De Morgan
+≡ (¬g ∧ ¬h) ∨ (¬g ∧ k)           | by De Morgan
 ≡ ¬g ∧ (¬h ∨ k)                  | by distributivity
 ]],
             note = [[
-Factoring is the distributive law read right to left, which is why the second
-step says distributivity.
+The second step says distributivity because factoring is the distributive law
+too: it moves the shared `¬g` out of the two terms, where distributing would
+move it into them. One law, used from either side.
 
 Everything from the `|` on is a remark for the reader: a rewrite reads only the
 expression before it, and on a line with several `≡`, only the side under the
@@ -42,7 +43,7 @@ cursor. To write a step by hand, `equiv@` followed by a space gives the symbol.
                     run = { "TruthTableDeMorgan", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ ¬g ∧ ¬h ∨ (¬g ∧ k)             | by De Morgan",
+                    on = "≡ (¬g ∧ ¬h) ∨ (¬g ∧ k)           | by De Morgan",
                     at = "¬g",
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },

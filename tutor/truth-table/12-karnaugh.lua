@@ -38,7 +38,7 @@ Karnaugh map for (A ⊕ B) ∨ (A ∧ C):
 |  A  |  0  |  0  |  0  |  1  |  1  |
 |     |  1  |  1  |  1  |  1  |  0  |
 
-(A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+(A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
 ]],
             note = [[
 The grid is a *Karnaugh map*: the column's values rearranged so that
@@ -66,18 +66,18 @@ exclusive-or pattern from the previous lesson. Put the cursor on `¬A`, preview
 `:TruthTableXor` (`<leader>tto`), and apply it as a step (`<leader>ttA`).
 ]],
             template = [[
-(A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
+(A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
 ]],
             expect = [[
-(A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C
-                  ≡ (A ⊕ B) ∨ A ∧ C            | by definition of ⊕
+(A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
+                  ≡ (A ⊕ B) ∨ (A ∧ C)                | by definition of ⊕
 ]],
             note = [[
-That is the expression the column was built from, up to a pair of parentheses.
+That is the expression the column was built from.
 ]],
             solution = {
                 {
-                    on = "(A ⊕ B) ∨ (A ∧ C) ≡ ¬A ∧ B ∨ A ∧ ¬B ∨ A ∧ C",
+                    on = "(A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)",
                     at = "¬A",
                     run = { "TruthTableXor", "TruthTableApplyStep" },
                 },
@@ -113,7 +113,7 @@ Karnaugh map for (T ⊕ E) ∧ R:
 |  T  |  0  |  0  |  0  |  1  |  0  |
 |     |  1  |  0  |  1  |  0  |  0  |
 
-(T ⊕ E) ∧ R ≡ ¬T ∧ E ∧ R ∨ T ∧ ¬E ∧ R
+(T ⊕ E) ∧ R ≡ (¬T ∧ E ∧ R) ∨ (T ∧ ¬E ∧ R)
 ]],
             note = [[
 The two ones sit on a diagonal. Neither has a neighbour to group with, so no
