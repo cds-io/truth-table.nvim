@@ -592,6 +592,7 @@ end
 -- Every way a law collapses a site, as { new, law } with `new` the site's
 -- replacement, in order of preference. A chain is tried with each of its
 -- operands from `first` to `last` as the focus: all of them by default.
+-- Without `every`, stop at the first match; the menu asks for all matches.
 local function collapses(node, first, last, every)
     if node.type == "not" then
         local inner = unparen(node.operand)
@@ -615,6 +616,9 @@ local function collapses(node, first, last, every)
             local kept = law.apply(items, at, node.type, every and add or nil)
             if kept then
                 add(kept)
+                if not every then
+                    return found
+                end
             end
         end
     end
