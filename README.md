@@ -74,7 +74,7 @@ Place the cursor on `¬C` and run `:TruthTableFactor`. The preview shows the
 result and the law that justifies it:
 
 ```text
-⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity
+⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity (factoring)
 ```
 
 Use `:TruthTableApply` to replace the expression, or `:TruthTableApplyStep` to
@@ -319,7 +319,7 @@ it as the next line of a derivation, then moves the cursor there:
 
 ```text
 (a and b) or (not a and b)
-≡ b ∧ (a ∨ ¬a)                | by distributivity
+≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)
 ≡ b ∧ 1                       | by complement
 ≡ b                           | by identity
 ```
@@ -333,15 +333,18 @@ spelling of `⇔`. Steps apply to expression lines; a heading takes
 
 Each step ends in its *justification*: `| by` and the law that takes the line
 above to this one. The laws are named as in the table above, plus
-`distributivity` (distributing moves an operand into a group and factoring
-moves a shared one out: the one law, used from either side), `commutativity`,
+`distributivity (factoring)` and `distributivity (distributing)` (factoring
+moves a shared operand out of its terms and distributing moves one into a
+group: the one law, used from either side, with the side named so that a step
+says which command wrote it), `commutativity`,
 `De Morgan`, and `definition of ⊕` or `⇔`. The bar sits four columns clear of
 the wider of the two lines, or under the bar of the line above when that is
 further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
 on is a remark: a rewrite reads the expression before it, and a cursor in the
 remark means the line's last side. Applying in place to a justified line adds
-the new law to it (`| by distributivity, complement`), so the line still says
+the new law to it (`| by distributivity (factoring), complement`), so the line
+still says
 how it follows from the one above.
 
 N.B. Simplify takes one step per run and leaves the choice of steps to you; for
@@ -422,6 +425,28 @@ turned from reasons to reject into requirements with De Morgan, a distributed
 rule factored back, and a retry condition that turns out to be an exclusive
 or.
 
+The examples up to that point are JavaScript. Five lessons are all Lua, four
+taken from a Neovim config (each excerpt links to its source at a fixed
+commit) and one from *Programming in Lua*, to show that a script gains as
+much as an application does: four guard clauses
+read back as one expression, two negations pulled into one named condition,
+the condition an `elseif` runs under worked out in seven steps, and a truth
+table for the `c and x or y` idiom, whose truthiness differs in one Boolean
+row from the intended ternary (`c ? x : y`) and whose returned values need a
+separate check, and a dispatch on type simplified by excluding impossible
+type combinations using domain knowledge.
+
+Each of those examples goes through the same five stages, since getting from
+code to an expression is a task of its own and so is getting back: name the
+checks (the smallest tests, a letter each), translate the code into an
+expression, rewrite it or compare it with a table, put the tests back and
+write the code, and review the before and after side by side (what the change buys, what it
+costs, and whether to take it). Guidance decreases across the Lua lessons:
+learners supply names, branch expressions, a verdict, and finally their own
+guard-based implementation before comparing it with the worked version.
+The verdicts differ: one review declines the rewrite and keeps a comment,
+and one calls it a matter of taste.
+
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
 the lesson's aim, what to do, and what you should see afterwards. The scratch
 pane, on the right, holds that step's starting text, and is where you run the
@@ -430,7 +455,7 @@ commands:
 ```text
 # 3. Connectives: not, and, or            │ p and q | p or q | not p
 │
-Lesson 3 of 14, step 1 of 2               │
+Lesson 3 of 19, step 1 of 2               │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │
@@ -478,6 +503,11 @@ on it, and the `solution` that the test suite replays.
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
 | `<leader>ttk` | Karnaugh map and formula for the column |
+
+Factor and Distribute are the one law used from either side, and easy to
+reach for the wrong way round. When one refuses and the other applies at the
+cursor, the refusal says so: `No neighbouring group to distribute Q into; to
+pull it out of the terms that share it, use :TruthTableFactor`.
 
 ## Abbreviations
 

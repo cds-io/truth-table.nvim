@@ -68,7 +68,7 @@ end
 set({ '  S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)' })
 on('¬C')
 vim.cmd('TruthTableFactor')
-assert(text() == ' ⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity')
+assert(text() == ' ⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity (factoring)')
 assert(vim.api.nvim_get_current_line() == '  S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C)')
 vim.cmd('TruthTableApply')
 assert(vim.api.nvim_get_current_line() == '  S ∨ (¬C ∧ (A ∨ G))' and #marks() == 0)
@@ -82,7 +82,7 @@ assert(#marks() == 0)
 vim.cmd('TruthTableCommute')
 on('¬C')
 vim.cmd('TruthTableDistribute')
-assert(#marks() == 1 and text() == ' ⇒ S ∨ (¬C ∧ A) ∨ (¬C ∧ G)  | by distributivity')
+assert(#marks() == 1 and text() == ' ⇒ S ∨ (¬C ∧ A) ∨ (¬C ∧ G)  | by distributivity (distributing)')
 vim.cmd('TruthTableDistribute')
 assert(#marks() == 0)
 
@@ -91,6 +91,25 @@ on('∨')
 notified = nil
 vim.cmd('TruthTableFactor')
 assert(#marks() == 0 and notified == 'Put the cursor on an operand')
+
+-- Factor and Distribute are easy to reach for the wrong way round: a refusal
+-- names the other when it applies at this cursor, and only then.
+set({ '(Q ∧ ¬C) ∨ (Q ∧ ¬L)' })
+on('Q')
+vim.cmd('TruthTableDistribute')
+assert(#marks() == 0)
+assert(notified == 'No neighbouring group to distribute Q into; to pull it out of the terms that share it, use :TruthTableFactor')
+set({ 'Q ∧ (¬C ∨ ¬L)' })
+on('Q')
+vim.cmd('TruthTableFactor')
+assert(#marks() == 0)
+assert(notified == 'Nothing to factor Q out of; to move it into the group beside it, use :TruthTableDistribute')
+set({ 'Q ∧ R' })
+on('Q')
+vim.cmd('TruthTableDistribute')
+assert(notified == 'No neighbouring group to distribute Q into')
+vim.cmd('TruthTableFactor')
+assert(notified == 'Nothing to factor Q out of')
 
 -- Steps build a derivation under the Karnaugh line; the cursor follows. Each
 -- step names its law, four columns clear of the wider line, and the next
@@ -104,7 +123,7 @@ vim.cmd('TruthTableApplyStep')
 local pad = string.rep(' ', 24)
 assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
     head,
-    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity'),
+    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity (factoring)'),
 }))
 local cursor = vim.api.nvim_win_get_cursor(0)
 assert(cursor[1] == 2 and cursor[2] == #(pad .. '≡ '))
@@ -112,7 +131,7 @@ vim.cmd('TruthTableCommute')
 vim.cmd('TruthTableApplyStep')
 assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
     head,
-    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity'),
+    justified(pad .. '≡ S ∨ (¬C ∧ (A ∨ G))', bar, 'distributivity (factoring)'),
     justified(pad .. '≡ (¬C ∧ (A ∨ G)) ∨ S', bar, 'commutativity'),
 }))
 assert(vim.api.nvim_win_get_cursor(0)[1] == 3 and #marks() == 0)
@@ -230,7 +249,7 @@ assert(text() == ' ⇒ b  | by identity')
 vim.cmd('TruthTableApplyStep')
 assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), {
     '(a and b) or (not a and b)',
-    '≡ b ∧ (a ∨ ¬a)                | by distributivity',
+    '≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)',
     '≡ b ∧ 1                       | by complement',
     '≡ b                           | by identity',
 }))

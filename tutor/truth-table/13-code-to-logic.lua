@@ -57,7 +57,9 @@ lesson on equivalence, in another function.
         },
         {
             text = [[
-Guard clauses are the second rule at work. This function rejects early:
+Guard clauses reject early. Translate this function in three moves:
+
+- **1. Start with the code.** Each guard is a reason to return false.
 
 ```js
 function canPublish({ hasFatalError, hasTitle, hasTags }) {
@@ -67,10 +69,45 @@ function canPublish({ hasFatalError, hasTitle, hasTags }) {
 }
 ```
 
-Each guard is a reason to reject. Reading from the top, with `F`, `T`, `G` for
-the checks, gives `¬F ∧ (¬¬T ∧ G)`: the second guard's own `!` sits under the
-rule's `¬`. (`∧` is associative, so the scratch pane leaves the parentheses
-out.) Simplify (`<leader>ttz`) and apply it as a step (`<leader>ttA`).
+- **2. Name the checks.** Replace `hasFatalError` with `F`, `hasTitle` with
+  `T`, and `hasTags` with `G`. Keep the control flow and the `!` unchanged.
+
+```js
+if (F) return false;
+if (!T) return false;
+return G;
+```
+
+- **3. Read what must hold for the result to be true.** Both guards must
+  let execution continue, and the final return must be true.
+- The first guard lets us continue only when `F` is false: `not F`.
+- The second guard lets us continue only when its test, `!T`, is false:
+  `not (not T)`. The guard contributes one negation; its test already has
+  another.
+- The final `return G` contributes `G`.
+- Join these requirements with `and` because **all three must hold**. If
+  either guard fires, the function returns false before reaching `G`.
+
+```text
+not F and
+not not T and
+G
+```
+
+Reading from the bottom makes the same construction explicit:
+
+```text
+return G                     G
+if (!T) return false; rest    not not T and G
+if (F) return false; rest     not F and (not not T and G)
+```
+
+- **Why `not c and rest`?** When `c` is true the guard returns false. When
+  `c` is false the result comes from the rest. The whole result is true only
+  when `c` is false **and** the rest is true.
+- **Now simplify.** `and` is associative, so the scratch pane writes the
+  expression on one line without the grouping parentheses. Simplify
+  (`<leader>ttz`) and apply it as a step (`<leader>ttA`).
 ]],
             template = [[
 not F and not not T and G
@@ -115,7 +152,7 @@ S or (A and not C) or (G and not C)
 ]],
             expect = [[
 S or (A and not C) or (G and not C)
-≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity
+≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity (factoring)
 ≡ (¬C ∧ (A ∨ G)) ∨ S                   | by commutativity
 ]],
             solution = {
@@ -125,7 +162,7 @@ S or (A and not C) or (G and not C)
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity",
+                    on = "≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity (factoring)",
                     at = "S",
                     run = { "TruthTableCommute", "TruthTableApplyStep" },
                 },
@@ -144,7 +181,7 @@ isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified
 ]],
             expect = [[
 isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
-≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity
+≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity (factoring)
 ≡ (¬isClassified ∧ (isAdmin ∨ hasGrant)) ∨ isSuperAdmin                              | by commutativity
 ]],
             note = [[
@@ -171,7 +208,7 @@ equivalence.
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity",
+                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity (factoring)",
                     at = "isSuperAdmin",
                     run = { "TruthTableCommute", "TruthTableApplyStep" },
                 },

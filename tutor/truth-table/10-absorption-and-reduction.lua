@@ -64,7 +64,7 @@ a or (not a and b)
 ]],
             expect = [[
 a or (not a and b)
-≡ (a ∨ ¬a) ∧ (a ∨ b)    | by distributivity
+≡ (a ∨ ¬a) ∧ (a ∨ b)    | by distributivity (distributing)
 ≡ 1 ∧ (a ∨ b)           | by complement
 ≡ a ∨ b                 | by identity
 ]],
@@ -80,7 +80,7 @@ on, then one anywhere on the line.
             solution = {
                 { on = "a or (not a and b)", at = "a", run = { "TruthTableDistribute", "TruthTableApplyStep" } },
                 {
-                    on = "≡ (a ∨ ¬a) ∧ (a ∨ b)    | by distributivity",
+                    on = "≡ (a ∨ ¬a) ∧ (a ∨ b)    | by distributivity (distributing)",
                     at = "(a",
                     run = { "TruthTableSimplify", "TruthTableApplyStep" },
                 },
@@ -133,7 +133,7 @@ when `a` is false, then `a` has no say. Derive it: with the cursor on either
 ]],
             expect = [[
 (a and b) or (not a and b)
-≡ b ∧ (a ∨ ¬a)                | by distributivity
+≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)
 ≡ b ∧ 1                       | by complement
 ≡ b                           | by identity
 ]],
@@ -146,7 +146,7 @@ Karnaugh maps, where every group of neighbouring cells is a reduction.
             solution = {
                 { on = "(a and b) or (not a and b)", at = "b", run = { "TruthTableFactor", "TruthTableApplyStep" } },
                 {
-                    on = "≡ b ∧ (a ∨ ¬a)                | by distributivity",
+                    on = "≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)",
                     at = "b",
                     run = { "TruthTableSimplify", "TruthTableApplyStep" },
                 },

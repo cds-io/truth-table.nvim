@@ -25,12 +25,13 @@ not (g or h) or (not g and k)
             expect = [[
 not (g or h) or (not g and k)
 ≡ (¬g ∧ ¬h) ∨ (¬g ∧ k)           | by De Morgan
-≡ ¬g ∧ (¬h ∨ k)                  | by distributivity
+≡ ¬g ∧ (¬h ∨ k)                  | by distributivity (factoring)
 ]],
             note = [[
-The second step says distributivity because factoring is the distributive law
-too: it moves the shared `¬g` out of the two terms, where distributing would
-move it into them. One law, used from either side.
+The second step says `distributivity (factoring)`. Factoring is the
+distributive law: it moves the shared `¬g` out of the two terms, where
+distributing would move it into them. One law, used from either side, and the
+justification names the side, so the line also says which command wrote it.
 
 Everything from the `|` on is a remark for the reader: a rewrite reads only the
 expression before it, and on a line with several `≡`, only the side under the

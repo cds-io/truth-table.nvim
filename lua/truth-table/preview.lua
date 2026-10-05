@@ -10,12 +10,22 @@ local pending, attached = {}, {}
 -- Each rewrite maps a located tree and a cursor byte to a new tree and the
 -- name of the law that justifies it. `command` groups the names one user
 -- command toggles; `whole` marks a rewrite that also works without a cursor
--- in the expression, on the whole of it.
+-- in the expression, on the whole of it. `opposite` names the rewrite a
+-- reader is likely to have meant when this one refuses, with the words that
+-- point to it.
 local REWRITES = {
     de_morgan = { command = "de_morgan", whole = true, run = rewrite.de_morgan },
     simplify = { command = "simplify", whole = true, run = rewrite.simplify },
-    factor = { command = "factor", run = rewrite.factor },
-    distribute = { command = "distribute", run = rewrite.distribute },
+    factor = {
+        command = "factor",
+        run = rewrite.factor,
+        opposite = { name = "distribute", hint = "to move it into the group beside it, use :TruthTableDistribute" },
+    },
+    distribute = {
+        command = "distribute",
+        run = rewrite.distribute,
+        opposite = { name = "factor", hint = "to pull it out of the terms that share it, use :TruthTableFactor" },
+    },
     xor = { command = "xor", run = rewrite.xor },
     commute = {
         command = "commute",
@@ -142,6 +152,12 @@ local function resolve(buf, kind)
     -- On success the second value is the law; on refusal, the reason.
     local tree, law = kind.run(ast, source.offset)
     if not tree then
+        -- Factor and Distribute are one law used from either side, and easy
+        -- to reach for the wrong way round: say so when the other applies.
+        local opposite = kind.opposite
+        if opposite and REWRITES[opposite.name].run(ast, source.offset) then
+            return nil, law .. "; " .. opposite.hint
+        end
         return nil, law
     end
     local heading = predicate.ast_to_heading(tree)

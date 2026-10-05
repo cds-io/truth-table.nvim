@@ -231,7 +231,7 @@ lists or blockquotes are not supported.
     cursor to the new expression: >
 
         (a and b) or (not a and b)
-        ≡ b ∧ (a ∨ ¬a)                | by distributivity
+        ≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)
         ≡ b ∧ 1                       | by complement
         ≡ b                           | by identity
 <
@@ -259,9 +259,11 @@ writes its formula line as `target ≡ formula`, ready to step from.
                                                    *truth-table-justification*
 Every preview ends in its justification, `| by` and the name of the law the
 rewrite applies, and |:TruthTableApplyStep| writes it after the step. The
-names are those of |:TruthTableSimplify|, plus `distributivity` (factor and
-distribute are the one law used from either side: one moves a shared operand
-out of its terms, the other moves an operand into a group), `commutativity`,
+names are those of |:TruthTableSimplify|, plus `distributivity (factoring)`
+and `distributivity (distributing)` (the one law used from either side: one
+moves a shared operand out of its terms, the other moves an operand into a
+group; the side is named so that a step says which command wrote it),
+`commutativity`,
 `De Morgan`, and `definition of ⊕` or `definition of ⇔`. On an expression
 line everything from the first | on is a remark: a rewrite reads the
 expression before it, and a cursor in the remark means the line's last side.
@@ -434,6 +436,9 @@ Examples: >
     <leader>ttr   |:TruthTableDropRow|
     <leader>ttc   |:TruthTableDropColumn|
     <leader>ttk   |:TruthTableKarnaugh|
+
+When |:TruthTableFactor| or |:TruthTableDistribute| refuses and the other one
+applies at the cursor, the refusal names it.
 
 Normal-mode ttn reads the current line as the argument and replaces it with
 the table; on a blank line it prefills `:TruthTable ` instead and leaves you
