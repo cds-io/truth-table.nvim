@@ -38,8 +38,10 @@ row), so they render in Markdown viewers with table support. Example: >
 2. REQUIREMENTS                                      *truth-table-requirements*
 
 - Neovim (uses `vim.api`, `vim.keymap`, `vim.fn.strdisplaywidth`).
-- Optional: which-key.nvim (a `<leader>tt` group label is registered if it is
-  installed; absence is handled gracefully).
+- Optional: which-key.nvim (if it is installed, a `<leader>tt` group label is
+  registered and the keys are added family by family, for a popup that lists
+  them in that order; see |truth-table-which-key|. Absence is handled
+  gracefully).
 - Optional: vellum.nvim (the tutorial's lesson pane is shown rendered if it is
   installed, and as Markdown otherwise; see |:TruthTableTutor|). vellum needs
   Neovim 0.12 or later.
