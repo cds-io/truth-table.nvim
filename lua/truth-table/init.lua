@@ -144,8 +144,8 @@ local function new_table()
     return ":.TruthTable<CR>"
 end
 
--- The default keymaps, by family: tables, then rewrites, then the two ways
--- to apply a preview. Each description opens with its family, so the grouping
+-- The default keymaps, by family: tables, then rewrites (the previews, then
+-- the menu of them all), then the two ways to apply a preview. Each description opens with its family, so the grouping
 -- shows in a key-sorted popup too; the order is the one which-key is given.
 local KEYMAPS = {
     { key = "n", rhs = new_table, desc = "Table: new", expr = true },
@@ -162,6 +162,7 @@ local KEYMAPS = {
     { key = "S", rhs = "<cmd>TruthTableCommute!<CR>", desc = "Rewrite: swap with previous operand" },
     { key = "o", rhs = "<cmd>TruthTableXor<CR>", desc = "Rewrite: recognise ⊕ or ⇔" },
     { key = "z", rhs = "<cmd>TruthTableSimplify<CR>", desc = "Rewrite: simplify at the cursor" },
+    { key = "l", rhs = "<cmd>TruthTableRewrites<CR>", desc = "Rewrite: list every rewrite and pick one" },
     { key = "a", rhs = "<cmd>TruthTableApply<CR>", desc = "Apply: in place" },
     { key = "A", rhs = "<cmd>TruthTableApplyStep<CR>", desc = "Apply: as a ≡ step" },
 }
@@ -226,6 +227,9 @@ function M.setup(opts)
     end, {
         bang = true,
         desc = "Toggle a preview swapping the operand under the cursor with the next one (! for the previous)",
+    })
+    vim.api.nvim_create_user_command("TruthTableRewrites", preview.choose, {
+        desc = "List every rewrite of the expression under the cursor and write the one picked as a ≡ step",
     })
     vim.api.nvim_create_user_command("TruthTableApply", preview.apply, {
         desc = "Apply the current rewrite preview in place",

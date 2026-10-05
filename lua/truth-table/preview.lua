@@ -1,4 +1,5 @@
--- Editor-only preview state. The source buffer remains unchanged until apply.
+-- Editor-only preview state. The source buffer remains unchanged until apply,
+-- or until a rewrite is picked from the menu of them.
 local predicate = require("truth-table.predicate")
 local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
@@ -128,7 +129,8 @@ local function line_source(line, at)
     }
 end
 
-local function resolve(buf, kind)
+-- The source the cursor selects and its located tree.
+local function source_at(buf)
     local position = vim.api.nvim_win_get_cursor(0)
     local at = { row = position[1], byte = position[2] + 1 }
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -146,6 +148,35 @@ local function resolve(buf, kind)
     if not ast then
         return nil, parse_err
     end
+    return source, ast
+end
+
+-- What writing `rewritten`, { text, law }, back to its source would put in
+-- the buffer, as it stands now.
+local function prepare(buf, source, rewritten)
+    local replacement, err = source.replace(rewritten)
+    if not replacement then
+        return nil, err
+    end
+    local preview = {
+        row = source.row - 1,
+        replacement = replacement,
+        heading = rewritten.text,
+        law = rewritten.law,
+        column = source.column,
+        tick = vim.api.nvim_buf_get_changedtick(buf),
+    }
+    if source.step then
+        preview.step, preview.step_column = source.step(rewritten)
+    end
+    return preview
+end
+
+local function resolve(buf, kind)
+    local source, ast = source_at(buf)
+    if not source then
+        return nil, ast
+    end
     if not kind.whole and not source.offset then
         return nil, "Put the cursor on the heading row to choose an operand"
     end
@@ -160,24 +191,11 @@ local function resolve(buf, kind)
         end
         return nil, law
     end
-    local heading = predicate.ast_to_heading(tree)
-    local rewritten = { text = heading, law = law }
-    local replacement, replace_err = source.replace(rewritten)
-    if not replacement then
-        return nil, replace_err
+    local preview, err = prepare(buf, source, { text = predicate.ast_to_heading(tree), law = law })
+    if not preview then
+        return nil, err
     end
-    local preview = {
-        row = source.row - 1,
-        replacement = replacement,
-        heading = heading,
-        law = law,
-        column = source.column,
-        command = kind.command,
-        tick = vim.api.nvim_buf_get_changedtick(buf),
-    }
-    if source.step then
-        preview.step, preview.step_column = source.step(rewritten)
-    end
+    preview.command = kind.command
     return preview
 end
 
@@ -223,6 +241,18 @@ local function current(buf)
     return preview
 end
 
+local function write_in_place(buf, preview)
+    vim.api.nvim_buf_set_lines(buf, preview.row, preview.row + 1, false, { preview.replacement })
+end
+
+-- Insert the step below the line it follows from, and put the window's
+-- cursor on its expression.
+local function write_step(win, preview)
+    local buf = vim.api.nvim_win_get_buf(win)
+    vim.api.nvim_buf_set_lines(buf, preview.row + 1, preview.row + 1, false, { preview.step })
+    vim.api.nvim_win_set_cursor(win, { preview.row + 2, preview.step_column })
+end
+
 function M.apply()
     local buf = vim.api.nvim_get_current_buf()
     local preview = current(buf)
@@ -231,7 +261,7 @@ function M.apply()
     end
     -- Clear state before editing so the attachment cannot invalidate a new mark.
     dismiss(buf)
-    vim.api.nvim_buf_set_lines(buf, preview.row, preview.row + 1, false, { preview.replacement })
+    write_in_place(buf, preview)
 end
 
 -- Insert the rewritten expression as the next line of a derivation and leave
@@ -247,8 +277,58 @@ function M.apply_step()
         return
     end
     dismiss(buf)
-    vim.api.nvim_buf_set_lines(buf, preview.row + 1, preview.row + 1, false, { preview.step })
-    vim.api.nvim_win_set_cursor(0, { preview.row + 2, preview.step_column })
+    write_step(0, preview)
+end
+
+-- List every rewrite of the expression the cursor selects, and write the one
+-- picked: below, as the next step of a derivation, or over a heading, which
+-- has no steps. The menu lists each result with its law, the bars in one
+-- column, as the steps of a derivation read.
+function M.choose()
+    local buf, win = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+    dismiss(buf)
+    local source, ast = source_at(buf)
+    if not source then
+        vim.notify(ast, vim.log.levels.WARN)
+        return
+    end
+    local moves = rewrite.moves(ast)
+    if #moves == 0 then
+        vim.notify("No rewrite applies to " .. source.expression, vim.log.levels.WARN)
+        return
+    end
+    local widest = 0
+    for _, move in ipairs(moves) do
+        widest = math.max(widest, vim.fn.strdisplaywidth(move.text))
+    end
+    local tick = vim.api.nvim_buf_get_changedtick(buf)
+    vim.ui.select(moves, {
+        prompt = "Rewrites of " .. source.expression,
+        kind = "truth-table.rewrite",
+        format_item = function(move)
+            local pad = widest - vim.fn.strdisplaywidth(move.text) + 2
+            return move.text .. string.rep(" ", pad) .. derivation.justification(move.law)
+        end,
+    }, function(move)
+        if not move then
+            return
+        end
+        -- A select UI may call back long after the menu opened.
+        local shown = vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf
+        if not shown or vim.api.nvim_buf_get_changedtick(buf) ~= tick then
+            vim.notify("The buffer changed while the menu was open; nothing was written", vim.log.levels.WARN)
+            return
+        end
+        local preview, err = prepare(buf, source, move)
+        if not preview then
+            vim.notify(err, vim.log.levels.WARN)
+        elseif preview.step then
+            write_step(win, preview)
+        else
+            write_in_place(buf, preview)
+            vim.notify("Renamed the heading; update explicit references to its old label if needed", vim.log.levels.INFO)
+        end
+    end)
 end
 
 return M

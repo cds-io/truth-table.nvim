@@ -264,6 +264,43 @@ lists or blockquotes are not supported.
     right. Steps apply to expression lines; a heading takes
     |:TruthTableApply| only.
 
+                                                         *:TruthTableRewrites*
+:TruthTableRewrites
+    List every rewrite of the expression the cursor selects, and write the one
+    you pick. Where the commands above each try one law at the cursor, this
+    starts from the expression: each entry is a result and the law that gives
+    it, as a step would read. For `(a and b) or (not a and b)`: >
+
+        b                                | by reduction
+        b ∧ (a ∨ ¬a)                     | by distributivity (factoring)
+        ((a ∧ b) ∨ ¬a) ∧ ((a ∧ b) ∨ b)   | by distributivity (distributing)
+        (a ∨ (¬a ∧ b)) ∧ (b ∨ (¬a ∧ b))  | by distributivity (distributing)
+        (¬a ∧ b) ∨ (a ∧ b)               | by commutativity
+        (b ∧ a) ∨ (¬a ∧ b)               | by commutativity
+        (a ∧ b) ∨ (b ∧ ¬a)               | by commutativity
+<
+    The list holds every law at every place it applies, so the cursor only
+    chooses the expression: a side of a line, or a table column from any of
+    its rows. That includes the collapsing laws |:TruthTableSimplify| passes
+    over for a nearer match. Each result is listed once, under the first law
+    that reaches it, and a rewrite that reads the same as the expression (a
+    swap of two equal operands) is left out. The laws that shrink the
+    expression come first, then De Morgan, ⊕ and ⇔ recognition, factoring,
+    distributing, and the swaps. The shrinking laws are listed innermost
+    place first, as |:TruthTableSimplify| tries them, and the others
+    outermost first; all of them left to right.
+
+    The pick is written at once, with no preview: on an expression line as
+    the next step of the derivation, the way |:TruthTableApplyStep| writes
+    one, with the cursor moved onto it and ready for the next menu; on a
+    table heading, which has no steps, in place, the way |:TruthTableApply|
+    renames one. Cancelling the menu writes nothing, as does a pick made
+    after the buffer changed under the menu. Opening the menu dismisses a
+    pending preview.
+
+    The menu is |vim.ui.select()|, so it looks like the other menus in your
+    setup; its `kind` is `truth-table.rewrite`.
+
                                                         *truth-table-rewrites*
 Rewrites and derivations ~
 
@@ -281,7 +318,8 @@ writes its formula line as `target ≡ formula`, ready to step from.
 
                                                    *truth-table-justification*
 Every preview ends in its justification, `| by` and the name of the law the
-rewrite applies, and |:TruthTableApplyStep| writes it after the step. The
+rewrite applies, and |:TruthTableApplyStep| writes it after the step; every
+entry of the |:TruthTableRewrites| menu ends in one too. The
 names are those of |:TruthTableSimplify|, plus `distributivity (factoring)`
 and `distributivity (distributing)` (the one law used from either side: one
 moves a shared operand out of its terms, the other moves an operand into a
@@ -470,6 +508,7 @@ Examples: >
     <leader>ttS   |:TruthTableCommute| with !
     <leader>tto   |:TruthTableXor|
     <leader>ttz   |:TruthTableSimplify|
+    <leader>ttl   |:TruthTableRewrites|  (list)
   Apply ~
     <leader>tta   |:TruthTableApply|
     <leader>ttA   |:TruthTableApplyStep|
@@ -609,12 +648,16 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - rewrite.lua finds the chain operand under a cursor byte and factors,
   distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, applies
   De Morgan at the nearest match, and applies the nearest collapsing law,
-  returning a fresh tree and the name of the law applied.
+  returning a fresh tree and the name of the law applied. `moves` lists what
+  all of them give from every place in a tree: each rewrite is written
+  against an operand's path from the root, which a cursor byte or a walk of
+  the tree supplies.
 - derivation.lua splits a line into sides at ≡, sets its `| by` justification
   apart, replaces one side, and builds an aligned, justified step line.
 - preview.lua resolves the expression under the cursor (a side of a line, or
   a heading), runs a rewrite on it, and manages per-buffer extmarks,
-  invalidation, and applying in place or as a step.
+  invalidation, and applying in place or as a step. It also shows the menu
+  of every rewrite and writes the pick through the same two paths.
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
   turns a step into the lesson pane's Markdown, and tutor_vellum.lua turns

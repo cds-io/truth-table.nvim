@@ -140,6 +140,7 @@ Start with small expressions.
 | `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction) |
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
+| `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -390,6 +391,55 @@ in-place apply re-renders the whole side in canonical form, as De Morgan does. A
 formula line written by an earlier version, `F = …`, reads as one
 biconditional; change its `=` to `≡` before stepping from it.
 
+### Every rewrite at once
+
+Each command above starts from a law: you choose De Morgan, or factoring, put
+the cursor where you think it applies, and the preview tells you whether you
+were right. `:TruthTableRewrites` (`<leader>ttl`) starts from the expression.
+It lists every rewrite the expression allows, each as its result and the law
+that gives it, and writes the one you pick. For `(a and b) or (not a and b)`:
+
+```text
+b                                | by reduction
+b ∧ (a ∨ ¬a)                     | by distributivity (factoring)
+((a ∧ b) ∨ ¬a) ∧ ((a ∧ b) ∨ b)   | by distributivity (distributing)
+(a ∨ (¬a ∧ b)) ∧ (b ∨ (¬a ∧ b))  | by distributivity (distributing)
+(¬a ∧ b) ∨ (a ∧ b)               | by commutativity
+(b ∧ a) ∨ (¬a ∧ b)               | by commutativity
+(a ∧ b) ∨ (b ∧ ¬a)               | by commutativity
+```
+
+So, what does "every" cover? Every law the plugin has, at every place in the
+expression where it applies: the cursor only chooses which expression (a side
+of a line, or a table column from any of its rows). That is a little more than
+the keys reach, since Simplify shows the one collapsing law nearest the cursor
+and the menu shows them all. Three rules keep the list readable:
+
+- A result appears once, under the first law that reaches it (swapping `a`
+  with `b` and swapping `b` with `a` are one entry).
+- A rewrite that reads the same as the expression is left out (swapping the
+  two operands of `A ∧ A`).
+- The laws that shrink the expression come first, then De Morgan, `⊕` and `⇔`
+  recognition, factoring, distributing, and the swaps, which are the most
+  numerous. The shrinking laws are listed innermost place first (the order
+  Simplify tries them in) and the others outermost first; all of them left to
+  right.
+
+A pick is written at once, with no preview in between. On an expression line
+it becomes the next step of the derivation, justified and aligned the way
+`:TruthTableApplyStep` writes one, and the cursor moves onto it, so the next
+`<leader>ttl` lists the rewrites of the step you just took. A table heading
+has no steps, so there the pick renames the heading in place, as
+`:TruthTableApply` does. Cancelling the menu writes nothing.
+
+The menu is `vim.ui.select`, so it looks like every other menu in your setup
+(telescope, snacks, fzf-lua, or the built-in numbered list); it passes
+`kind = "truth-table.rewrite"` for a UI that styles menus by kind.
+
+N.B. The list grows with the expression: a chain of five terms has around two
+dozen entries, most of them swaps at the bottom. A picker with fuzzy search
+narrows it by law name (`absorp`, `morgan`).
+
 ## Karnaugh maps
 
 Put the cursor in a column and run `:TruthTableKarnaugh`. Below the table you
@@ -564,6 +614,7 @@ on it, and the `solution` that the test suite replays.
 | `<leader>ttS` | Rewrite | toggle commute preview (swap with the previous operand) |
 | `<leader>tto` | Rewrite | toggle xor-recognition preview |
 | `<leader>ttz` | Rewrite | toggle simplify preview |
+| `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
 | `<leader>tta` | Apply | apply the preview in place |
 | `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
 
@@ -756,13 +807,17 @@ which would leave a hole that `ipairs` stops at.
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law
 (simplify): located trees in, fresh trees out, each with the name of the law
-applied.
+applied. `moves` lists what all of them give from every place in a tree: each
+rewrite is written against an operand's path from the root, which a cursor
+byte or a walk of the tree supplies.
 - `derivation.lua` splits a line into sides at `≡`, sets its `| by`
 justification apart, replaces one side, and builds an aligned, justified step
 line.
 - `preview.lua` resolves the expression under the cursor (one side of a line,
 or a heading), runs a rewrite on it, and manages per-buffer previews,
-extmarks, invalidation, and applying in place or as a step.
+extmarks, invalidation, and applying in place or as a step. It also shows the
+menu of every rewrite (`vim.ui.select`) and writes the pick through the same
+two paths.
 - `tutor.lua` reads the lessons in `tutor/truth-table/` and shows them in two
 panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
 turns a step into the lesson pane's Markdown, and `tutor_vellum.lua` turns
@@ -843,7 +898,7 @@ without the next file inheriting any of it:
 |---|---|---|
 | `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | independent; each starts from the defaults the plugin entry point installs |
 | `integration_nvim_spec.lua` | commands and default keymaps, malformed tables left alone | independent; each writes its buffer |
-| `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals | independent; each in a fresh buffer |
+| `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals, the menu of every rewrite | independent; each in a fresh buffer |
 | `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | fresh sessions for navigation; one independent case per lesson |
 | `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and a stand-in | scoped renderer modules; one continuous stand-in lifecycle case |
 | `startup_nvim_spec.lua` | Neovim loading `plugin/` by itself | independent |

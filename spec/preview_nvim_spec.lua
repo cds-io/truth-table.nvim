@@ -1,6 +1,7 @@
 -- Rewrite previews: a rewrite command shows its result as virtual text beside
 -- the line, and the buffer stays as it was until an apply command writes the
 -- result, in place or as the next step of a derivation.
+-- The menu of every rewrite skips the preview: a pick is written at once.
 -- The plugin keeps its pending preview per buffer, so every case starts in a
 -- fresh one: a preview that a failed case left behind cannot reach the next.
 -- Runs inside Neovim (make test-nvim): busted with nlua as its interpreter.
@@ -443,5 +444,145 @@ describe("Simplify", function()
         vim.cmd("TruthTableSimplify")
         vim.cmd("TruthTableApply")
         assert.are.equal("≡ b ∧ 1    | by distributivity, complement", vim.api.nvim_get_current_line())
+    end)
+end)
+
+-- :TruthTableRewrites shows its menu through vim.ui.select. The stand-in that
+-- takes its place for this group records the menu as it was shown and picks
+-- the entry whose result is `choosing`, or cancels when that is nil.
+describe("the rewrite menu", function()
+    local offered, choosing, while_open, select
+
+    setup(function()
+        select = vim.ui.select
+        vim.ui.select = function(items, opts, on_choice)
+            offered = { prompt = opts.prompt, kind = opts.kind }
+            local picked, index
+            for i, item in ipairs(items) do
+                offered[i] = opts.format_item(item)
+                if item.text == choosing then
+                    picked, index = item, i
+                end
+            end
+            if while_open then
+                while_open()
+            end
+            on_choice(picked, index)
+        end
+    end)
+
+    teardown(function()
+        vim.ui.select = select
+    end)
+
+    before_each(function()
+        offered, choosing, while_open = nil, nil, nil
+    end)
+
+    local function rewrites(pick)
+        offered, choosing = nil, pick
+        vim.cmd("TruthTableRewrites")
+    end
+
+    -- The entries of the menu, without its prompt and kind.
+    local function entries()
+        return { unpack(offered) }
+    end
+
+    local function format(headers, rows)
+        return assert(core.format_table(headers, rows))
+    end
+
+    local source = "(a and b) or (not a and b)"
+
+    it("lists every rewrite of the expression, each as its result and its law, the bars in one column", function()
+        local widest = vim.fn.strdisplaywidth("(a ∨ (¬a ∧ b)) ∧ (b ∨ (¬a ∧ b))")
+        set({ source }, 1, 4)
+        rewrites(nil)
+        assert.are.equal("Rewrites of " .. source, offered.prompt)
+        assert.are.equal("truth-table.rewrite", offered.kind)
+        assert.are.same({
+            justified("b", widest + 2, "reduction"),
+            justified("b ∧ (a ∨ ¬a)", widest + 2, "distributivity (factoring)"),
+            justified("((a ∧ b) ∨ ¬a) ∧ ((a ∧ b) ∨ b)", widest + 2, "distributivity (distributing)"),
+            justified("(a ∨ (¬a ∧ b)) ∧ (b ∨ (¬a ∧ b))", widest + 2, "distributivity (distributing)"),
+            justified("(¬a ∧ b) ∨ (a ∧ b)", widest + 2, "commutativity"),
+            justified("(b ∧ a) ∨ (¬a ∧ b)", widest + 2, "commutativity"),
+            justified("(a ∧ b) ∨ (b ∧ ¬a)", widest + 2, "commutativity"),
+        }, entries())
+    end)
+
+    it("writes the pick below as a justified step, and the cursor follows it", function()
+        set({ source }, 1, 4)
+        rewrites("b")
+        assert.are.same({
+            source,
+            justified("≡ b", vim.fn.strdisplaywidth(source) + 4, "reduction"),
+        }, lines())
+        assert.are.same({ 2, #"≡ " }, vim.api.nvim_win_get_cursor(0))
+        assert.is_nil(notified)
+    end)
+
+    it("reads the step the cursor is now on next, and shows no menu when no rewrite applies to it", function()
+        set({ source }, 1, 4)
+        rewrites("b")
+        rewrites("b")
+        assert.is_nil(offered)
+        assert.are.equal("No rewrite applies to b", notified)
+    end)
+
+    it("writes nothing when cancelled, and dismisses a pending preview as it opens", function()
+        set({ "A ∧ B" })
+        vim.cmd("TruthTableCommute")
+        assert.are.equal(1, #marks())
+        rewrites(nil)
+        assert.are.equal(1, #entries())
+        assert.are.equal(0, #marks())
+        assert.is_nil(notified)
+        assert.are.same({ "A ∧ B" }, lines())
+    end)
+
+    it("steps from the side of a derivation line that the cursor is on", function()
+        set({ "F ≡ A ∧ B" }, 1, 6)
+        rewrites("B ∧ A")
+        assert.are.same({ "F ≡ A ∧ B", "  ≡ B ∧ A    | by commutativity" }, lines())
+    end)
+
+    it("leaves a buffer that was edited while the menu was open as edited, and says so", function()
+        set({ "A ∧ B" })
+        while_open = function()
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { "C ∧ D" })
+        end
+        rewrites("B ∧ A")
+        assert.are.same({ "C ∧ D" }, lines())
+        assert.are.equal("The buffer changed while the menu was open; nothing was written", notified)
+    end)
+
+    -- A heading has no steps.
+    it("renames a table heading in place, from any row of its column", function()
+        local constant = format({ "A", "A ∨ ¬A" }, { { "0", "1" }, { "1", "1" } })
+        set(constant, 3, 10)
+        rewrites("1")
+        assert.are.same({ "1       | by complement", "¬A ∨ A  | by commutativity" }, entries())
+        local collapsed = lines()
+        assert.are.equal("1", core.split_row(collapsed[1])[2])
+        assert.are.same(vim.list_slice(constant, 2), vim.list_slice(collapsed, 2))
+        assert.are.equal("Renamed the heading; update explicit references to its old label if needed", notified)
+    end)
+
+    it("refuses a pick that would duplicate another heading, as a preview is refused", function()
+        local clash = format({ "A ∧ B", "B ∧ A" }, { { "1", "1" } })
+        set(clash)
+        on("A ∧")
+        rewrites("B ∧ A")
+        assert.is_truthy(notified:find("duplicate", 1, true), notified)
+        assert.are.same(clash, lines())
+    end)
+
+    it("is not shown when there is no expression under the cursor", function()
+        set({ "" })
+        rewrites(nil)
+        assert.is_nil(offered)
+        assert.are.equal("No expression under the cursor", notified)
     end)
 end)
