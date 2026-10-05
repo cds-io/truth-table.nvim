@@ -42,9 +42,13 @@ From code to an expression and back, in five stages:
 - **1. Name the checks.** Find the smallest tests the code makes and give
   each a letter.
 - **2. Translate.** Write the code as an expression in those letters.
-- **3. Rewrite.** Apply the laws, one step per line.
+- **3. Rewrite or compare.** Apply the laws, one step per line, or compare
+  expressions with a table. Exclude impossible rows only when an input
+  constraint justifies it; the result then holds under that constraint.
 - **4. Back into the code.** Put the tests back in place of the letters, turn
-  negated comparisons around (`¬(x < y)` is `x >= y`), and write it out.
+  negated comparisons around (`¬(x < y)` is `x >= y` for the positions in
+  these examples), and write it out. Check evaluation order and, when the
+  expression selects a value, the value returned as well as its truthiness.
 - **5. Review.** Before and after, side by side: what the change buys and
   what it costs.
 

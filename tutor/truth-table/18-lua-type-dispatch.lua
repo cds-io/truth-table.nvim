@@ -1,6 +1,6 @@
 return {
-    title = "Lua: a dispatch on type, and nothing to simplify",
-    aim = "Read the branches of a function that returns nothing, find that their conditions are already minimal, and restructure on the strength of that.",
+    title = "Lua: a dispatch on type, simplified with domain knowledge",
+    aim = "Use mutually exclusive types to simplify branch conditions, then choose and justify a structure for the code.",
     steps = {
         {
             text = [[
@@ -55,19 +55,14 @@ There is nothing to run in this step.
 
 The rule for branches, from the lesson on `elseif`: a branch runs when its own
 test holds and every test before it failed. An `if` nested inside a branch
-adds its test with `∧`. That gives each of the four things the function can do
-a condition:
+adds its test with `∧`. Use those rules and the code from the previous step
+to write the conditions for all four actions in your scratch pane: write a
+scalar, reuse a table's name, create a new table, and raise the error.
 
-```text
-write the value itself           N ∨ S
-write the table's earlier name   ¬(N ∨ S) ∧ T ∧ V
-write a new table and recurse    ¬(N ∨ S) ∧ T ∧ ¬V
-raise the error                  ¬(N ∨ S) ∧ ¬T
-```
-
-The two middle lines share `¬(N ∨ S) ∧ T`, the condition for reaching the
-inner `if` at all. Write that one out yourself, give it to `:TruthTable` (the
-scratch pane is empty), and compare your table with the one below.
+Then find the condition shared by the two table actions: what must hold to
+reach the inner `if` at all? Give that expression to `:TruthTable` and compare
+your table with the one below. The naming key is in the previous step; this
+time you supply the branch expressions.
 ]],
             expect = [[
 |  N  |  S  |  T  | ¬(N ∨ S) ∧ T |
@@ -84,6 +79,15 @@ scratch pane is empty), and compare your table with the one below.
             note = [[
 One row in eight. Look at the rows before reaching for a law, though: some of
 them describe a value that is a number and a table at once.
+
+Compare the four conditions you wrote with this key:
+
+```text
+write the value itself           N ∨ S
+write the table's earlier name   ¬(N ∨ S) ∧ T ∧ V
+write a new table and recurse    ¬(N ∨ S) ∧ T ∧ ¬V
+raise the error                  ¬(N ∨ S) ∧ ¬T
+```
 ]],
             solution = {
                 { run = { "TruthTable not (N or S) and T" } },
@@ -94,10 +98,12 @@ them describe a value that is a number and a table at once.
 **Stage 3 of 5: rewrite.**
 
 A value has exactly one type, so no two of `N`, `S` and `T` are ever true
-together. Four of the eight rows cannot happen: `0 1 1`, `1 0 1`, `1 1 0` and
-`1 1 1`. Remove them, with the cursor on each in turn (`:TruthTableDropRow`,
+together. This is domain knowledge supplied by Lua's type system, not a fact
+the Boolean table can discover. Identify the four rows that violate it and
+remove them, with the cursor on each in turn (`:TruthTableDropRow`,
 `<leader>ttr`). Then put the cursor in the last column and ask for the
-Karnaugh map (`:TruthTableKarnaugh`, `<leader>ttk`).
+Karnaugh map (`:TruthTableKarnaugh`, `<leader>ttk`). Keep `0 0 0`: the value
+can have a type other than number, string or table.
 ]],
             template = [[
 |  N  |  S  |  T  | ¬(N ∨ S) ∧ T |
@@ -134,11 +140,15 @@ Karnaugh map for ¬(N ∨ S) ∧ T:
 and with them in play the `¬(N ∨ S)` that the `elseif` contributed falls away:
 a table is never a number or a string, so saying so adds nothing.
 
-That settles the rewriting. Each branch already turns on a single check:
-`N ∨ S`, then `T` with or without `V`, then none of the three. The laws have
-nothing to shrink. As with the retry condition in the lesson on Karnaugh maps,
-that is an answer, and here it carries a second one: since the type tests
-cannot overlap, the order they are asked in is free.
+This is a simplification using domain knowledge: `¬(N ∨ S) ∧ T` becomes
+`T` on the inputs Lua can actually supply. They differ on some of the dropped
+rows, so this is not an unrestricted Boolean identity.
+
+The table actions now have conditions `T ∧ V` and `T ∧ ¬V`. The scalar
+action remains `N ∨ S`, and the error condition is `¬N ∧ ¬S ∧ ¬T`.
+The type cases cannot overlap. Because these type checks are also safe and
+have no effects, we can change their order without changing which action
+runs. Keep the `saved[value]` check inside the table case.
 ]],
             solution = {
                 { on = "|  0  |  1  |  1  |      0       |", run = { "TruthTableDropRow" } },
@@ -149,12 +159,44 @@ cannot overlap, the order they are asked in is free.
             },
         },
         {
-            text = [[
-**Stage 4 of 5: back into Lua.**
+            text = [=[
+**Stage 4 of 5: back into Lua** (your turn).
 
-The conditions stay as they are, so there is no expression to carry back. What
-the table established is that the type tests are independent of their order,
-and that is a licence to change the shape of the code around them.
+Use the simplified conditions in the scratch pane to write your own version
+of `save`. Go back to the first step for the original code. Keep its writes,
+saved-name bookkeeping, and recursive calls in the same order for each case.
+
+Try a guard structure: finish the scalar case early, reject unsupported
+types before accessing `saved[value]`, then finish the already-saved table
+case early. Leave creation of a new table at the top level. Give the type a
+local name so you ask for it once.
+
+Before moving on, review your version. Which conditions became simpler
+because of the type constraint? Which check still needs a guard before it?
+Would you keep the original or take your rewrite, and why?
+
+There is no plugin command to run. `]]` reveals one possible implementation,
+then its review. Your scratch work stays here for comparison.
+]=],
+            template = [[
+write the value itself           N ∨ S
+write the table's earlier name   T ∧ V
+write a new table and recurse    T ∧ ¬V
+raise the error                  ¬N ∧ ¬S ∧ ¬T
+
+N    type(value) == "number"
+S    type(value) == "string"
+T    type(value) == "table"
+V    saved[value]
+]],
+        },
+        {
+            text = [[
+**Stage 4 of 5: back into Lua** (compare your version).
+
+The table conditions lost their redundant exclusions of number and string.
+Now translate those simplified conditions back, preserving the safety of
+each check and the sequence of actions within each case.
 
 Put the tests back in place of the letters, branch by branch (the scratch
 pane holds the list). `type(value)` appears in every one, so give it a name
@@ -247,10 +289,16 @@ The verdict: a matter of taste at this size, and the original has a good
 claim to stay. It was written to be read beside an explanation, and its shape
 follows the cases one by one. Take the flat form when the dispatch grows.
 
-So, what did the logic contribute, with no law applied? The right to do this
-at all. The table, with its impossible rows removed, showed that the type
-tests cannot overlap, and so cannot depend on their order. That is the fact
-the restructuring rests on, and it took four dropped rows to establish.
+What did the logic contribute? It made the path conditions explicit, then
+simplified them under a known type constraint. Removing four rows encoded
+that constraint; it did not establish it. The resulting table checks the
+simplification on every remaining case.
+
+The restructuring also relies on facts about the code: the type checks are
+safe and have no effects, `saved[value]` is reached only for tables, and each
+case keeps its sequence of writes and updates. Compare your own review with
+those requirements. A smaller expression is part of the argument for a
+refactor, and the evaluation and actions complete it.
 
 That is the last of the Lua examples. The five stages are the same in any
 language: name the checks, translate, rewrite, translate back, and look at

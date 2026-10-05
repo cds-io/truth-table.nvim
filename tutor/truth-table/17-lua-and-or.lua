@@ -1,6 +1,6 @@
 return {
     title = "Lua: `and` and `or` as a ternary",
-    aim = "Test the `c and x or y` idiom against the ternary it stands in for, and know the one row where they part.",
+    aim = "Compare the truthiness and returned values of `c and x or y` with a ternary, then check what makes the idiom safe here.",
     steps = {
         {
             text = [[
@@ -55,9 +55,10 @@ The idiom is already an expression. The intent is a ternary, and written out
 with the connectives it is `(c ∧ x) ∨ (¬c ∧ y)`: `x` when `c` holds, `y`
 when it does not.
 
-Is the idiom the same thing? There is nothing to rewrite here; the question is
-whether two expressions agree, and a table answers that. The scratch pane
-holds both. Build the table (`:.TruthTable`, `<leader>ttn`).
+Do the idiom and the intent have the same truthiness? There is nothing to
+rewrite here; compare their Boolean expressions with a table. The scratch
+pane holds both. Build the table (`:.TruthTable`, `<leader>ttn`). This checks
+whether their results count as true, not whether they return the same value.
 ]],
             template = [[
 c and x or y | (c and x) or (not c and y)
@@ -75,10 +76,18 @@ c and x or y | (c and x) or (not c and y)
 |  1  |  1  |  1  |      1      |         1          |
 ]],
             note = [[
-One row differs: `c` true, `x` false, `y` true. The condition holds, and the
-idiom still falls through to `y`, because `c and x` came out false. That is
-the whole weakness of the idiom: it is a ternary only as long as `x` can
-never be `false` or `nil`.
+One Boolean row differs: `c` true, `x` false, `y` true. The condition holds,
+and the idiom still falls through to `y`, because `c and x` came out false.
+
+Lua's `and` and `or` return operand values, not necessarily Booleans. So
+agreement in the other rows is not enough to prove value equality. With
+`c = true`, `x = nil`, and `y = false`, both results count as false, but the
+idiom returns `false` and the intended ternary returns `nil`. The table
+cannot distinguish them.
+
+To use the idiom as a value selector, check that whenever `c` holds, `x`
+cannot be `false` or `nil`. If it can, the idiom selects `y` instead; that
+only gives the intended value when `y` happens to equal `x`.
 ]],
             solution = {
                 { on = "c and x or y | (c and x) or (not c and y)", run = { ".TruthTable" } },
@@ -88,17 +97,23 @@ never be `false` or `nil`.
             text = [[
 **Stage 4 of 5: back into Lua.**
 
-The table says where to look: the row where the condition holds and `x` is
-`false` or `nil`. Put the parts back in place of the letters:
+The table points to a risk; the value example widens it. Look at every case
+where the condition holds and `x` is `false` or `nil`, even if the truthiness
+columns agree. Put the parts back in place of the letters:
 
 ```text
-c true, x false or nil      vim.islist(result) holds, and result[1] is nil
+c true, x false or nil      vim.islist(result) holds, and result[1] is false or nil
 ```
 
-Can that happen? A list whose first item is `nil` is an empty list. The guard
-three lines up returns early when `result` is an empty table, so by the time
-this line runs, a list has a first item. The row is closed off, and the line
-is right.
+Can that happen? There are two premises to check. The empty-table guard
+excludes an empty list, so a list reaching this line has a first item. That
+rules out `nil`, but not `false`: `{false}` is a nonempty list, and the idiom
+would return the list itself instead of its first item.
+
+The second premise comes from the callback's input contract: a valid LSP
+location list contains location objects, not Boolean values. Those objects
+are tables, and tables count as true in Lua. With both premises, the idiom
+selects the intended value. The guard alone is not the whole argument.
 
 The form with no such row is an `if` statement, which is how Lua spells a
 ternary in full:
@@ -131,7 +146,7 @@ c    vim.islist(result)    the condition
 x    result[1]             the value wanted when the condition holds
 y    result                the value wanted when it fails
 
-The row where the idiom and the ternary differ:
+The Boolean row where the idiom and the ternary differ:
 
 |  c  |  x  |  y  | (c ∧ x) ∨ y | (c ∧ x) ∨ (¬c ∧ y) |
 |:---:|:---:|:---:|:-----------:|:------------------:|
@@ -139,8 +154,32 @@ The row where the idiom and the ternary differ:
 ]],
         },
         {
+            text = [=[
+**Stage 5 of 5: review** (your verdict).
+
+The scratch pane holds the two versions. Before reading the review, write
+your own verdict: keep the idiom or use the `if`? Give one benefit, one cost,
+and the two premises that make the idiom safe in this callback.
+
+Then consider a change in the input contract: the list may now contain
+`false`. Does the existing guard still make the idiom safe? State what each
+version would put in `loc` for `result = {false}`.
+
+There is no plugin command to run. `]]` reveals the review; `[[` returns to
+your verdict.
+]=],
+            template = [[
+local loc = vim.islist(result) and result[1] or result
+
+local loc = result
+if vim.islist(result) then
+  loc = result[1]
+end
+]],
+        },
+        {
             text = [[
-**Stage 5 of 5: review.**
+**Stage 5 of 5: review** (compare your verdict).
 
 This is the before and after: the scratch pane holds both. Consider the change
 the way a code reviewer would.
@@ -150,17 +189,17 @@ What changed, by count:
 ```text
                                     before    after
 lines                                    1        4
-rows where it does the wrong thing       1        0
+Boolean rows differing from intent       1        0
 ```
 
 What the long form buys:
 
-- **No row to worry about.** It is correct for every value `result[1]` can
-  have, whatever the code above it does.
-- **It survives a change elsewhere.** The idiom is right only because of the
-  guard three lines up. Remove or loosen that guard and the idiom starts
-  returning the empty list where a location was expected, with nothing at
-  this line to show for it.
+- **It selects the intended value**, even when `result[1]` is `false` or
+  `nil`, for a list reaching this line.
+- **It survives a change elsewhere.** The idiom relies on the empty-table
+  guard and on lists containing location objects. Remove that guard and it
+  starts returning the empty list where a location was expected, with
+  nothing at this line to show for it.
 
 What it costs:
 
@@ -169,11 +208,16 @@ What it costs:
 - **A variable that is assigned twice**, where the idiom gives `loc` its
   value once.
 
-The verdict: keep the idiom here. It is the common spelling, and the row it
-gets wrong is closed off a few lines above. What the table changes is what a
-reviewer looks for: every `c and x or y` comes with the question "can `x` be
-`false` or `nil`?", and a line such as `enabled and false or default` fails it
-at a glance.
+The verdict: keep the idiom here. It is the common spelling, and the guard
+plus the valid-location input contract rule out a falsey first item. If the
+contract allowed `{false}`, the idiom would put that table in `loc`; the
+`if` would put `false` there. In that case, use the `if`.
+
+What the exercise changes is what a reviewer looks for: every
+`c and x or y` comes with the question "when `c` holds, can `x` be `false`
+or `nil`?" A line such as `enabled and false or default` fails that check
+at a glance. A truth table exposes truthiness differences; checking the
+returned values completes the argument.
 ]],
             template = [[
 Before:

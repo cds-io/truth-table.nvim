@@ -431,17 +431,21 @@ commit) and one from *Programming in Lua*, to show that a script gains as
 much as an application does: four guard clauses
 read back as one expression, two negations pulled into one named condition,
 the condition an `elseif` runs under worked out in seven steps, and a truth
-table for the `c and x or y` idiom, which differs in one row from the ternary
-(`c ? x : y`) it stands in for, and a dispatch on type whose conditions turn
-out to be minimal already, once the rows that cannot happen are dropped.
+table for the `c and x or y` idiom, whose truthiness differs in one Boolean
+row from the intended ternary (`c ? x : y`) and whose returned values need a
+separate check, and a dispatch on type simplified by excluding impossible
+type combinations using domain knowledge.
 
 Each of those examples goes through the same five stages, since getting from
 code to an expression is a task of its own and so is getting back: name the
 checks (the smallest tests, a letter each), translate the code into an
-expression, rewrite it with the laws, put the tests back and write the code,
-and review the before and after side by side (what the change buys, what it
-costs, and whether to take it). The verdicts differ: one review declines the
-rewrite and keeps a comment, and one calls it a matter of taste.
+expression, rewrite it or compare it with a table, put the tests back and
+write the code, and review the before and after side by side (what the change buys, what it
+costs, and whether to take it). Guidance decreases across the Lua lessons:
+learners supply names, branch expressions, a verdict, and finally their own
+guard-based implementation before comparing it with the worked version.
+The verdicts differ: one review declines the rewrite and keeps a comment,
+and one calls it a matter of taste.
 
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
 the lesson's aim, what to do, and what you should see afterwards. The scratch

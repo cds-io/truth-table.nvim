@@ -3,7 +3,7 @@ return {
     aim = "Pull two negated conditions into one with De Morgan, and give the result a name.",
     steps = {
         {
-            text = [[
+            text = [=[
 **Stage 1 of 5: name the checks.**
 
 This condition comes from a filetype plugin that converts ASCII operators to
@@ -21,7 +21,20 @@ end
 
 Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/ftplugin/tla.lua#L125-L127
 
-The `if` makes three tests. Give each a letter:
+The `if` makes three tests. This time, name them yourself in the scratch
+pane: use `N`, `W` and `A`, in order of appearance, and write what each means.
+Then write the condition in those letters. Keep the parentheses and the
+negations where the code puts them.
+
+There is no plugin command to run yet. `]]` reveals the naming key and lets
+you check your translation with a table; `[[` brings you back to your work.
+]=],
+        },
+        {
+            text = [[
+**Stage 2 of 5: translate.**
+
+Compare your names with this key:
 
 ```text
 N    rule.needs_word_start     the rule applies only at the start of a word
@@ -30,25 +43,8 @@ A    rule.not_after == prev    the previous character is the one this rule
                                must not follow
 ```
 
-There is nothing to run in this step. Before moving on, look at the `if`
-again and decide how you would write it in those letters.
-]],
-        },
-        {
-            text = [[
-**Stage 2 of 5: translate.**
-
-This time the code is a single condition, so translating it is a matter of
-swapping each test for its letter and keeping `not`, `and`, `or` and the
-parentheses where they are:
-
-```text
-if not (rule.needs_word_start and prev:match '[%w_]') and not (rule.not_after == prev)
-   not (N                     and W                 ) and not (A                     )
-```
-
-The scratch pane is empty. Give your expression to `:TruthTable` and compare
-the table with the one below.
+The scratch pane is empty. Give the expression you wrote in the previous
+step to `:TruthTable` and compare the table with the one below.
 ]],
             expect = [[
 |  N  |  W  |  A  | ¬(N ∧ W) ∧ ¬A |

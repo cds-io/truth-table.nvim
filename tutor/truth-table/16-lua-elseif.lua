@@ -47,16 +47,11 @@ test holds and every test before it failed:
 - In `if a then X elseif b then Y else Z end`, `X` runs when `a`, `Y` runs
   when `¬a ∧ b`, and `Z` runs when `¬a ∧ ¬b`.
 
-Here `a` is the first test and `b` is `quote`:
-
-```text
-if comment and (not quote or comment < quote)      a  is  C and (not Q or L)
-elseif quote                                       b  is  Q
-```
-
-So the middle branch runs under `¬a ∧ b`. Write that out in the letters, give
-it to `:TruthTable` (the scratch pane is empty), and compare your table with
-the one below.
+Here `a` is the first test and `b` is `quote`. Use the code and naming key
+from the previous step to translate each one yourself. Then combine them
+with the reading rule for the middle branch. Give your expression to
+`:TruthTable` (the scratch pane is empty), and compare your table with the
+one below.
 ]],
             expect = [[
 |  C  |  Q  |  L  | ¬(C ∧ (¬Q ∨ L)) ∧ Q |
@@ -120,8 +115,17 @@ deals with that.
             text = [[
 **Stage 3 of 5: rewrite** (second of two steps).
 
-The scratch pane starts from where the last step ended. Four more moves, each
-applied as a step (`<leader>ttA`):
+The scratch pane starts from where the last step ended. The target is to
+remove the redundant inner `Q` while retaining the outer requirement that
+there is a quote: `Q ∧ (¬C ∨ ¬L)`.
+
+The inner `Q` is inside an `or` group, so idempotence cannot yet reach it
+from the outer `Q`. Distributing brings the two together; after idempotence
+removes the duplicate, factoring restores the compact form. The expression
+gets larger temporarily so the repeated check can be removed.
+
+Try to reach the target yourself, applying each move as a step
+(`<leader>ttA`). If you need a route, use these four moves:
 
 - Bring the outer `Q` to the front: cursor on the last `Q`, commute
   (`<leader>tts`).

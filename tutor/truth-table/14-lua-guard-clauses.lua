@@ -4,24 +4,35 @@ return {
     steps = {
         {
             text = [=[
-Nothing in this course depends on the language a condition is written in.
-The next five lessons take their examples from Lua: four from a Neovim
-config, the kind of script that rarely gets a second look, and one from a
-textbook. Each excerpt links to its source.
+## Working with Lua conditions
 
-Getting from code to an expression is a task of its own, and so is getting
-back. So every example goes through the same five stages, and every step
-says which stage it belongs to:
+- **What carries across.** The logic laws apply across languages.
+  Translating them back into code requires attention to the language's
+  values and evaluation rules.
+- **What we will work on.** Five Lua examples: four from a Neovim config,
+  the kind of script that rarely gets a second look, and one from a
+  textbook. Each excerpt links to its source.
+- **How we will work.** Getting from code to an expression is a task of
+  its own, and so is getting back. Every example uses the five stages below,
+  and every step says which stage it belongs to.
+
+### The five stages
 
 - **1. Name the checks.** Find the smallest tests the code makes and give
   each a letter.
 - **2. Translate.** Write the code as an expression in those letters.
-- **3. Rewrite.** Apply the laws, one step per line.
+- **3. Rewrite or compare.** Apply the laws, one step per line, or compare
+  expressions with a table. Use known input constraints when they matter.
 - **4. Back into Lua.** Put the tests back in place of the letters and write
   the code.
 - **5. Review.** Before and after, side by side: what the change buys and
   what it costs.
 
+Press `]]` to begin the first example.
+]=],
+        },
+        {
+            text = [=[
 **Stage 1 of 5: name the checks.**
 
 This function decides whether a cursor position lies inside a range that a
