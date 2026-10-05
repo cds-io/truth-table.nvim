@@ -3,6 +3,11 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Tests: `make test-nvim` runs busted inside Neovim, through nlua, for specs
+  that need an editor (`spec/*_nvim_spec.lua`); `make check` includes it and
+  so requires nlua (`luarocks --lua-version 5.1 --local install nlua`). The
+  pure specs still run under plain Lua and skip those files. The abbreviation
+  checks are the first to move from a headless script to named cases.
 - Keymap descriptions open with their family (`Table: new`, `Rewrite: factor
   operand out`, `Apply: in place`), and the keys are registered with
   which-key family by family, so a which-key popup lists them grouped when its

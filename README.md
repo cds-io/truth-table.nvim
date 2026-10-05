@@ -783,7 +783,7 @@ Existing string-cell APIs remain compatibility adapters.
 
 ## Testing
 
-Run the complete local check (requires Busted, Neovim, and Selene):
+Run the complete local check (requires Busted, nlua, Neovim, and Selene):
 
 ```sh
 make check
@@ -805,9 +805,39 @@ luarocks --local install busted
 make check BUSTED=/path/to/busted
 ```
 
-Run `make test-integration` for headless Neovim command checks, malformed-table
-buffer preservation, rewrite preview/apply behavior, the tutorial's exercises,
-the tutorial's lesson pane with and without vellum.nvim, and automatic startup.
+The specs named `*_nvim_spec.lua` need an editor: they call `vim.*`, register
+abbreviations, type into a buffer. They are busted specs too, run with Neovim
+as the Lua interpreter:
+
+```sh
+luarocks --lua-version 5.1 --local install nlua
+make test-nvim
+```
+
+[nlua](https://github.com/mfussenegger/nlua) is a small script that makes
+`nvim -l` answer to the command line of the `lua` program, which is what
+busted's `--lua` option expects. The pure specs stay under plain Lua
+(`make test` skips the `*_nvim_spec.lua` files), so a logic module that
+reaches for `vim` still fails there. Three details of the recipe, each of
+which fails in its own way when missing:
+
+- busted and nlua are installed for Lua 5.1, the version Neovim's LuaJIT
+  implements; a rock built for another Lua version is invisible to it.
+- The target takes `LUA_PATH` and `LUA_CPATH` from `luarocks path`, since the
+  Neovim process finds busted's own modules through them.
+- nlua runs the `nvim` that is first on `PATH` (the Makefile's `NVIM` variable
+  does not reach it), and after the specs it runs whatever arrives on a stdin
+  that is not a terminal as Lua. The target gives it an empty stdin; without
+  one, a run whose stdin is a pipe that stays open waits on it forever.
+
+Run `make test-integration` for the checks that are still plain scripts under
+`nvim --headless -l`: Neovim command checks, malformed-table buffer
+preservation, rewrite preview/apply behavior, the tutorial's exercises, the
+tutorial's lesson pane with and without vellum.nvim, and automatic startup.
+A script stops at its first failed `assert` and reports the line; a busted
+spec names the case and shows the two values, which is the reason to move a
+script over when it is next touched. `spec/abbreviations_nvim_spec.lua` is
+the first one moved.
 
 The lesson-pane check uses a stand-in for vellum, so it runs anywhere. To also
 render every step of the course through an installed vellum, name its
