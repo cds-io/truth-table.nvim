@@ -135,9 +135,9 @@ applied as a step (`<leader>ttA`):
             expect = [[
 (¬C ∨ (Q ∧ ¬L)) ∧ Q
 ≡ Q ∧ (¬C ∨ (Q ∧ ¬L))    | by commutativity
-≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity
+≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity (distributing)
 ≡ (Q ∧ ¬C) ∨ (Q ∧ ¬L)        | by idempotence
-≡ Q ∧ (¬C ∨ ¬L)              | by distributivity
+≡ Q ∧ (¬C ∨ ¬L)              | by distributivity (factoring)
 ]],
             note = [[
 `Q ∧ (¬C ∨ ¬L)`: a quote, and no comment before it. That is what the `elseif`
@@ -156,7 +156,7 @@ side:
                     run = { "TruthTableDistribute", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity",
+                    on = "≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity (distributing)",
                     at = "(Q",
                     run = { "TruthTableSimplify", "TruthTableApplyStep" },
                 },

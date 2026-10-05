@@ -115,7 +115,7 @@ S or (A and not C) or (G and not C)
 ]],
             expect = [[
 S or (A and not C) or (G and not C)
-≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity
+≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity (factoring)
 ≡ (¬C ∧ (A ∨ G)) ∨ S                   | by commutativity
 ]],
             solution = {
@@ -125,7 +125,7 @@ S or (A and not C) or (G and not C)
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity",
+                    on = "≡ S ∨ (¬C ∧ (A ∨ G))                   | by distributivity (factoring)",
                     at = "S",
                     run = { "TruthTableCommute", "TruthTableApplyStep" },
                 },
@@ -144,7 +144,7 @@ isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified
 ]],
             expect = [[
 isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
-≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity
+≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity (factoring)
 ≡ (¬isClassified ∧ (isAdmin ∨ hasGrant)) ∨ isSuperAdmin                              | by commutativity
 ]],
             note = [[
@@ -171,7 +171,7 @@ equivalence.
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity",
+                    on = "≡ isSuperAdmin ∨ (¬isClassified ∧ (isAdmin ∨ hasGrant))                              | by distributivity (factoring)",
                     at = "isSuperAdmin",
                     run = { "TruthTableCommute", "TruthTableApplyStep" },
                 },

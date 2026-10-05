@@ -17,8 +17,10 @@ local DUAL = { ["and"] = "or", ["or"] = "and" }
 
 local NO_TARGET = "Put the cursor on an operand"
 -- Distributing moves an operand into a group and factoring moves a shared
--- one out: the one law, used from either side.
-local DISTRIBUTIVITY = "distributivity"
+-- one out: the one law, used from either side. The justification names the
+-- side, so a step says which command wrote it.
+local DISTRIBUTING = "distributivity (distributing)"
+local FACTORING = "distributivity (factoring)"
 local DE_MORGAN = "De Morgan"
 
 local unparen, operands, fold = predicate.unparen, predicate.operands, predicate.fold
@@ -196,7 +198,7 @@ function M.factor(ast, byte)
 
     local factored = { type = inner.op, left = target, right = fold(outer.op, remainders) }
     table.insert(terms, position, factored)
-    return canonical(substitute(ast, path[outer.top], fold(outer.op, terms))), DISTRIBUTIVITY
+    return canonical(substitute(ast, path[outer.top], fold(outer.op, terms))), FACTORING
 end
 
 -- Multiply the target into the dual group next to it (right neighbour first):
@@ -230,11 +232,11 @@ function M.distribute(ast, byte)
         local items, first = chain.operands, math.min(at, group_at)
         items[first] = fold(dual, products)
         table.remove(items, first + 1)
-        return canonical(substitute(ast, path[chain.top], fold(chain.op, items))), DISTRIBUTIVITY
+        return canonical(substitute(ast, path[chain.top], fold(chain.op, items))), DISTRIBUTING
     end
 
     -- The products take the chain's place.
-    return canonical(substitute(ast, path[chain.top], fold(dual, products))), DISTRIBUTIVITY
+    return canonical(substitute(ast, path[chain.top], fold(dual, products))), DISTRIBUTING
 end
 
 -- When one of the two operands is the negation of the other (parentheses

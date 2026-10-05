@@ -50,7 +50,7 @@ on either `R`, `<leader>ttf`), recognise the exclusive or (cursor on `¬T`,
 ]],
             expect = [[
 (not T and E and R) or (T and not E and R)
-≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))                   | by distributivity
+≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))                   | by distributivity (factoring)
 ≡ R ∧ (T ⊕ E)                                 | by definition of ⊕
 ≡ (T ⊕ E) ∧ R                                 | by commutativity
 ]],
@@ -72,7 +72,7 @@ return exactlyOneFailure && hasRetries;
                     run = { "TruthTableFactor", "TruthTableApplyStep" },
                 },
                 {
-                    on = "≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))                   | by distributivity",
+                    on = "≡ R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))                   | by distributivity (factoring)",
                     at = "¬T",
                     run = { "TruthTableXor", "TruthTableApplyStep" },
                 },
