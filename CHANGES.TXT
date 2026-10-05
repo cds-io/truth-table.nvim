@@ -3,6 +3,10 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Keymap descriptions open with their family (`Table: new`, `Rewrite: factor
+  operand out`, `Apply: in place`), and the keys are registered with
+  which-key family by family, so a which-key popup lists them grouped when its
+  `sort` option includes "manual". The keys themselves are unchanged.
 - Tutor: with vellum.nvim installed, the lesson pane shows each step
   rendered (prose wrapped to the pane's width, 100 columns at most; the title
   in a band; code in shaded panels with syntax colours), painted by the tutor

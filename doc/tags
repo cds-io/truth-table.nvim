@@ -30,5 +30,6 @@ truth-table-predicates	truth-table.txt	/*truth-table-predicates*
 truth-table-requirements	truth-table.txt	/*truth-table-requirements*
 truth-table-rewrites	truth-table.txt	/*truth-table-rewrites*
 truth-table-symbols	truth-table.txt	/*truth-table-symbols*
+truth-table-which-key	truth-table.txt	/*truth-table-which-key*
 truth-table.setup()	truth-table.txt	/*truth-table.setup()*
 truth-table.txt	truth-table.txt	/*truth-table.txt*
