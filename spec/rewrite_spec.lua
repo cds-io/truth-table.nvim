@@ -407,6 +407,83 @@ describe("rewrite.simplify", function()
     end)
 end)
 
+-- The whole menu for one expression, as { law, text } pairs in order.
+describe("rewrite.moves", function()
+    local function moves(source)
+        local listed = {}
+        for i, move in ipairs(rewrite.moves(assert(predicate.parse_located(source)))) do
+            listed[i] = { move.law, move.text }
+        end
+        return listed
+    end
+
+    it("lists one entry per result, however many operands lead to it", function()
+        assert.are.same({ { "commutativity", "B ∧ A" } }, moves("A ∧ B"))
+    end)
+
+    it("leaves out a rewrite that gives the expression back", function()
+        assert.are.same({ { "idempotence", "A" } }, moves("A ∧ A"))
+    end)
+
+    it("has nothing for an expression no law applies to", function()
+        assert.are.same({}, moves("A"))
+        assert.are.same({}, moves("A → B"))
+    end)
+
+    it("lists the collapsing laws Simplify passes over for a nearer one", function()
+        local source = "A ∨ ¬A ∨ A"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("1 ∨ A", predicate.ast_to_heading(assert(rewrite.simplify(ast))))
+        assert.are.same({
+            { "complement", "1 ∨ A" },
+            { "idempotence", "A ∨ ¬A" },
+            { "complement", "A ∨ 1" },
+            { "commutativity", "¬A ∨ A ∨ A" },
+            { "commutativity", "A ∨ A ∨ ¬A" },
+        }, moves(source))
+    end)
+
+    it("orders the families: the shrinking laws first, the swaps last", function()
+        assert.are.same({
+            { "reduction", "b" },
+            { "distributivity (factoring)", "b ∧ (a ∨ ¬a)" },
+            { "distributivity (distributing)", "((a ∧ b) ∨ ¬a) ∧ ((a ∧ b) ∨ b)" },
+            { "distributivity (distributing)", "(a ∨ (¬a ∧ b)) ∧ (b ∨ (¬a ∧ b))" },
+            { "commutativity", "(¬a ∧ b) ∨ (a ∧ b)" },
+            { "commutativity", "(b ∧ a) ∨ (¬a ∧ b)" },
+            { "commutativity", "(a ∧ b) ∨ (b ∧ ¬a)" },
+        }, moves("(a and b) or (not a and b)"))
+    end)
+
+    it("applies De Morgan at every node, the outermost first", function()
+        assert.are.same({
+            { "De Morgan", "¬A ∨ ¬B" },
+            { "commutativity", "¬(B ∧ A)" },
+        }, moves("¬(A ∧ B)"))
+        local found = {}
+        for _, move in ipairs(moves("¬(A ∧ B) ∧ ¬(C ∨ D)")) do
+            if move[1] == "De Morgan" then
+                found[#found + 1] = move[2]
+            end
+        end
+        assert.are.same({
+            "¬((A ∧ B) ∨ C ∨ D)",
+            "(¬A ∨ ¬B) ∧ ¬(C ∨ D)",
+            "¬(A ∧ B) ∧ ¬C ∧ ¬D",
+        }, found)
+    end)
+
+    it("recognises ⊕ spelled out as two terms", function()
+        assert.are.same({ "definition of ⊕", "T ⊕ E" }, moves("(¬T ∧ E) ∨ (T ∧ ¬E)")[1])
+    end)
+
+    it("returns each move's tree, canonical and without spans", function()
+        local move = rewrite.moves(assert(predicate.parse_located("A ∧ B")))[1]
+        assert.are.equal("B ∧ A", predicate.ast_to_heading(move.tree))
+        assert.is_nil(move.tree.span)
+    end)
+end)
+
 -- Every rewrite, at every cursor byte of every expression here, either refuses
 -- with a message or returns a tree that means the same, and whose rendered
 -- text (what lands in the buffer) parses back to that same function. The
@@ -502,5 +579,49 @@ describe("rewrite soundness", function()
         end
         -- Guards the property against a rewrite that silently refuses everything.
         assert.is_true(rewritten > 200, "only " .. rewritten .. " rewrites ran")
+    end)
+
+    it("lists only moves that preserve meaning, each once", function()
+        local listed = 0
+        for _, source in ipairs(corpus) do
+            local ast = assert(predicate.parse_located(source))
+            local before = predicate.ast_to_heading(ast)
+            local variables = inputs(ast)
+            local seen = { [before] = true }
+            for _, move in ipairs(rewrite.moves(ast)) do
+                listed = listed + 1
+                local where = move.law .. " of " .. source .. " gave " .. move.text
+                assert.is_nil(seen[move.text], where)
+                seen[move.text] = true
+                assert.are.equal(move.text, predicate.ast_to_heading(move.tree), where)
+                assert.is_true(same_function(ast, move.tree, variables), where)
+                local reparsed = assert(predicate.parse_expression(move.text), where)
+                assert.are.equal(move.text, predicate.ast_to_heading(reparsed), where)
+                assert.is_nil(move.tree.span, where)
+            end
+            assert.are.equal(before, predicate.ast_to_heading(ast), source)
+        end
+        assert.is_true(listed > 200, "only " .. listed .. " moves listed")
+    end)
+
+    -- The menu is at least the keys: whatever a rewrite command gives from
+    -- some cursor position is an entry, unless it gives the expression back.
+    it("lists whatever a cursor rewrite reaches from any byte", function()
+        for _, source in ipairs(corpus) do
+            local ast = assert(predicate.parse_located(source))
+            local listed = { [predicate.ast_to_heading(ast)] = true }
+            for _, move in ipairs(rewrite.moves(ast)) do
+                listed[move.text] = true
+            end
+            for byte = 0, #source + 1 do
+                for name, fn in pairs(rewrites) do
+                    local tree = fn(ast, byte)
+                    if tree then
+                        local text = predicate.ast_to_heading(tree)
+                        assert.is_true(listed[text], name .. " at byte " .. byte .. " of " .. source .. " gave " .. text)
+                    end
+                end
+            end
+        end
     end)
 end)

@@ -1,5 +1,6 @@
 -- Cursor-targeted rewrites of a predicate AST: factor, distribute, commute,
--- exclusive-or recognition, De Morgan, and the collapsing laws (simplify).
+-- exclusive-or recognition, De Morgan, and the collapsing laws (simplify);
+-- and `moves`, every one of them the expression allows, wherever it applies.
 -- Pure: trees in, trees out. Inputs come from predicate.parse_located, whose
 -- node spans say where the cursor is; outputs are fresh trees without spans,
 -- in canonical form (predicate.canonical), which is where their grouping and
@@ -47,23 +48,47 @@ local function contains(node, byte)
     return node.span.start_byte <= byte and byte <= node.span.end_byte
 end
 
+local function children(node)
+    return node.type == "paren" and { node.expr }
+        or node.type == "not" and { node.operand }
+        or node.left and { node.left, node.right }
+        or {}
+end
+
 -- Nodes from the root down to the smallest one whose span holds `byte`.
 local function path_to(root, byte)
     local path, node = {}, root
     while node and contains(node, byte) do
         path[#path + 1] = node
-        local children = node.type == "paren" and { node.expr }
-            or node.type == "not" and { node.operand }
-            or node.left and { node.left, node.right }
-            or {}
+        local below = children(node)
         node = nil
-        for _, child in ipairs(children) do
+        for _, child in ipairs(below) do
             if contains(child, byte) then
                 node = child
             end
         end
     end
     return path
+end
+
+-- The path from the root down to every node, outermost first and left to
+-- right.
+local function paths(root)
+    local found, path = {}, {}
+    local function visit(node)
+        path[#path + 1] = node
+        local copy = {}
+        for depth, step in ipairs(path) do
+            copy[depth] = step
+        end
+        found[#found + 1] = copy
+        for _, child in ipairs(children(node)) do
+            visit(child)
+        end
+        path[#path] = nil
+    end
+    visit(root)
+    return found
 end
 
 local function is_operand(path, index)
@@ -81,6 +106,19 @@ local function locate(ast, byte)
         end
     end
     return nil, NO_TARGET
+end
+
+-- The operand rewrites take their target as a path and the target's index in
+-- it; the tree is path[1]. This makes one the rewrite of the operand under
+-- the cursor.
+local function at_cursor(rewrite_at)
+    return function(ast, byte, ...)
+        local path, index = locate(ast, byte)
+        if not path then
+            return nil, index
+        end
+        return rewrite_at(path, index, ...)
+    end
 end
 
 -- The chain that path[index] is an operand of, or nil. `top` is the chain's
@@ -143,11 +181,7 @@ end
 
 -- Swap the target with the operand on its right (left when `backward`). At
 -- the end of the chain the direction flips, so a target always has a partner.
-function M.commute(ast, byte, backward)
-    local path, index = locate(ast, byte)
-    if not path then
-        return nil, index
-    end
+local function commute_at(path, index, backward)
     local chain = chain_at(path, index)
     local items, from = chain.operands, chain.index
     local to = backward and from - 1 or from + 1
@@ -155,16 +189,13 @@ function M.commute(ast, byte, backward)
         to = backward and from + 1 or from - 1
     end
     items[from], items[to] = items[to], items[from]
-    return canonical(substitute(ast, path[chain.top], fold(chain.op, items))), "commutativity"
+    return canonical(substitute(path[1], path[chain.top], fold(chain.op, items))), "commutativity"
 end
+M.commute = at_cursor(commute_at)
 
 -- Pull the target out of every term of the enclosing dual chain that has it:
 -- A ∧ T ∨ G ∧ T becomes T ∧ (A ∨ G), and dually for ∨ over ∧.
-function M.factor(ast, byte)
-    local path, index = locate(ast, byte)
-    if not path then
-        return nil, index
-    end
+local function factor_at(path, index)
     local target = path[index]
     local label = predicate.ast_to_heading(target)
     local inner = chain_at(path, index)
@@ -199,16 +230,13 @@ function M.factor(ast, byte)
 
     local factored = { type = inner.op, left = target, right = fold(outer.op, remainders) }
     table.insert(terms, position, factored)
-    return canonical(substitute(ast, path[outer.top], fold(outer.op, terms))), FACTORING
+    return canonical(substitute(path[1], path[outer.top], fold(outer.op, terms))), FACTORING
 end
+M.factor = at_cursor(factor_at)
 
 -- Multiply the target into the dual group next to it (right neighbour first):
 -- T ∧ (A ∨ G) becomes T ∧ A ∨ T ∧ G, and dually for ∨ over ∧.
-function M.distribute(ast, byte)
-    local path, index = locate(ast, byte)
-    if not path then
-        return nil, index
-    end
+local function distribute_at(path, index)
     local target = path[index]
     local chain = chain_at(path, index)
     local dual = DUAL[chain.op]
@@ -233,12 +261,13 @@ function M.distribute(ast, byte)
         local items, first = chain.operands, math.min(at, group_at)
         items[first] = fold(dual, products)
         table.remove(items, first + 1)
-        return canonical(substitute(ast, path[chain.top], fold(chain.op, items))), DISTRIBUTING
+        return canonical(substitute(path[1], path[chain.top], fold(chain.op, items))), DISTRIBUTING
     end
 
     -- The products take the chain's place.
-    return canonical(substitute(ast, path[chain.top], fold(dual, products))), DISTRIBUTING
+    return canonical(substitute(path[1], path[chain.top], fold(dual, products))), DISTRIBUTING
 end
+M.distribute = at_cursor(distribute_at)
 
 -- When one of the two operands is the negation of the other (parentheses
 -- ignored): the un-negated one, and whether `a` was the negated one.
@@ -289,11 +318,7 @@ end
 -- ¬A ∧ B ∨ A ∧ ¬B becomes A ⊕ B, and A ∧ B ∨ ¬A ∧ ¬B becomes A ⇔ B. The
 -- product-of-sums spellings work the same way with the result flipped:
 -- (A ∨ B) ∧ (¬A ∨ ¬B) is A ⊕ B. The cursor can be anywhere in either term.
-function M.xor(ast, byte)
-    local path, index = locate(ast, byte)
-    if not path then
-        return nil, index
-    end
+local function xor_at(path, index)
     -- From the target outward, the first two-operand term of a dual chain
     -- that has a complementary partner in that chain.
     for at = index, 2, -1 do
@@ -309,7 +334,7 @@ function M.xor(ast, byte)
                         items[low] = recognised
                         table.remove(items, high)
                         local law = "definition of " .. predicate.SYMBOLS[recognised.type]
-                        return canonical(substitute(ast, path[chain.top], fold(chain.op, items))), law
+                        return canonical(substitute(path[1], path[chain.top], fold(chain.op, items))), law
                     end
                 end
             end
@@ -317,6 +342,7 @@ function M.xor(ast, byte)
     end
     return nil, "No pair of terms under the cursor forms ⊕ or ⇔"
 end
+M.xor = at_cursor(xor_at)
 
 -- De Morgan at the nearest node, from the cursor outward, where it applies:
 -- ¬(A ∧ B) becomes ¬A ∨ ¬B, and ¬A ∨ ¬B becomes ¬(A ∧ B) (dually for ∨).
@@ -469,11 +495,15 @@ local CHAIN_LAWS = {
         end
     end },
     -- A ∨ A ∧ B is A: the focus absorbs every term that contains it, or is
-    -- itself absorbed by a term it contains.
+    -- itself absorbed by a term it contains. A term with the focus's own
+    -- factors is idempotence's.
     { name = "absorption", apply = function(items, at, op)
+        local function absorbs(small, large)
+            return within(small, large, DUAL[op]) and not within(large, small, DUAL[op])
+        end
         local kept = {}
         for other, item in ipairs(items) do
-            if other == at or not within(items[at], item, DUAL[op]) then
+            if other == at or not absorbs(items[at], item) then
                 kept[#kept + 1] = item
             end
         end
@@ -481,7 +511,7 @@ local CHAIN_LAWS = {
             return kept
         end
         for other, item in ipairs(items) do
-            if other ~= at and within(item, items[at], DUAL[op]) then
+            if other ~= at and absorbs(item, items[at]) then
                 return without(items, at)
             end
         end
@@ -540,44 +570,54 @@ local function sites(node, parent_op, out)
     return out
 end
 
--- Apply the first law that fits at a site: the node to replace, its
--- replacement, and the law's name. With `on_path` (the nodes over the
--- cursor) a chain is tried only with its operand under the cursor as the
--- focus; without it, with each operand in turn.
-local function collapse(node, on_path)
+-- Every way a law collapses a site, as { new, law } with `new` the site's
+-- replacement, in order of preference. A chain is tried with each of its
+-- operands from `first` to `last` as the focus: all of them by default.
+local function collapses(node, first, last)
     if node.type == "not" then
         local inner = unparen(node.operand)
         if inner.type == "literal" then
             -- A constant typed as a symbol flips to the other symbol.
             local flipped = inner.value == 1 and SYMBOLS.BOTTOM or SYMBOLS.TOP
             local symbol = inner.symbol and flipped.unicode or nil
-            return node, { type = "literal", value = 1 - inner.value, symbol = symbol }, "negation"
+            return { { new = { type = "literal", value = 1 - inner.value, symbol = symbol }, law = "negation" } }
         elseif inner.type == "not" then
-            return node, inner.operand, "double negation"
+            return { { new = inner.operand, law = "double negation" } }
         end
-        return nil
+        return {}
     end
 
-    local items = operands(node, node.type)
-    local first, last = 1, #items
-    if on_path then
-        first = nil
-        for index, item in ipairs(items) do
-            if on_path[item] then
-                first, last = index, index
-            end
-        end
-        if not first then
-            return nil
-        end
-    end
-    for at = first, last do
+    local items, found = operands(node, node.type), {}
+    for at = first or 1, last or #items do
         for _, law in ipairs(CHAIN_LAWS) do
             local kept = law.apply(items, at, node.type)
             if kept then
-                return node, fold(node.type, kept), law.name
+                found[#found + 1] = { new = fold(node.type, kept), law = law.name }
             end
         end
+    end
+    return found
+end
+
+-- Apply the first law that fits at a site: the node to replace, its
+-- replacement, and the law's name. With `on_path` (the nodes over the
+-- cursor) a chain is tried only with its operand under the cursor as the
+-- focus; without it, with each operand in turn.
+local function collapse(node, on_path)
+    local focus
+    if on_path and node.type ~= "not" then
+        for index, item in ipairs(operands(node, node.type)) do
+            if on_path[item] then
+                focus = index
+            end
+        end
+        if not focus then
+            return nil
+        end
+    end
+    local collapsed = collapses(node, focus, focus)[1]
+    if collapsed then
+        return node, collapsed.new, collapsed.law
     end
 end
 
@@ -621,6 +661,65 @@ function M.simplify(ast, byte)
         end
     end
     return nil, "No simplification applies to this expression"
+end
+
+-- ---------------------------------------------------------------------------
+-- Moves: where a rewrite above answers for one cursor position, this lists
+-- what all of them give from every position.
+-- ---------------------------------------------------------------------------
+
+-- The operand rewrites, in the order their results are listed.
+local OPERAND_REWRITES = {
+    xor_at,
+    factor_at,
+    distribute_at,
+    commute_at,
+    function(path, index)
+        return commute_at(path, index, true)
+    end,
+}
+
+-- Every rewrite the expression allows, as { law, tree, text }: one entry per
+-- distinct result, `text` being the tree as a heading. The laws that shrink
+-- the expression come first, then De Morgan, ⊕ and ⇔ recognition, factoring,
+-- distributing and, the most numerous, the swaps. The shrinking laws go
+-- innermost site first, as simplify tries them, and the rest outermost
+-- first; all of them left to right. A result reached twice keeps its first
+-- law, and one that reads the same as the expression is left out.
+function M.moves(ast)
+    local found, seen = {}, { [predicate.ast_to_heading(ast)] = true }
+    local function add(tree, law)
+        local text = tree and predicate.ast_to_heading(tree)
+        if text and not seen[text] then
+            seen[text] = true
+            found[#found + 1] = { law = law, tree = tree, text = text }
+        end
+    end
+
+    for _, site in ipairs(sites(ast, nil, {})) do
+        for _, collapsed in ipairs(collapses(site)) do
+            add(canonical(substitute(ast, site, collapsed.new)), collapsed.law)
+        end
+    end
+
+    local everywhere, operand_paths = paths(ast), {}
+    for _, path in ipairs(everywhere) do
+        local node = path[#path]
+        local rewritten = predicate.de_morgan(node)
+        if rewritten then
+            add(canonical(substitute(ast, node, rewritten)), DE_MORGAN)
+        end
+        if is_operand(path, #path) then
+            operand_paths[#operand_paths + 1] = path
+        end
+    end
+
+    for _, rewrite_at in ipairs(OPERAND_REWRITES) do
+        for _, path in ipairs(operand_paths) do
+            add(rewrite_at(path, #path))
+        end
+    end
+    return found
 end
 
 return M
