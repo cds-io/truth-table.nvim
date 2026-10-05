@@ -3,6 +3,9 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- Remove release-please (its workflow, configuration and manifest). Nothing
+  installs this plugin by version, and the workflow failed on every push to
+  main. A version, when one is wanted, is a tag made by hand.
 - Add :TruthTableRewrites (`<leader>ttl`, `Rewrite: list every rewrite and
   pick one`): a menu of every rewrite the expression under the cursor allows,
   each entry its result and its law (`b  | by reduction`), through
