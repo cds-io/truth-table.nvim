@@ -32,12 +32,49 @@ With lazy.nvim:
 return {
     "cds-io/truth-table.nvim",
     lazy = false,
+    dependencies = {
+        { "blackhat-7/vellum.nvim", optional = true },
+    },
 }
 ```
 
-The plugin registers commands and default mappings automatically. which-key is
-optional. Eager loading makes the global insert-mode abbreviations available at
-startup; command-based lazy loading registers them when the plugin first loads.
+The plugin registers commands and default mappings automatically. Eager
+loading makes the global insert-mode abbreviations available at startup;
+command-based lazy loading registers them when the plugin first loads.
+
+Two other plugins are optional. Each is used when it is installed, and the
+plugin works the same without it:
+
+| Plugin | What it adds |
+|---|---|
+| [which-key.nvim](https://github.com/folke/which-key.nvim) | a group label for the `<leader>tt` keys |
+| [vellum.nvim](https://github.com/blackhat-7/vellum.nvim) | the [tutorial](#tutorial)'s lesson pane rendered, where it otherwise shows the lesson's Markdown |
+
+The `dependencies` entry above is how the spec says "vellum, if you have it".
+lazy.nvim drops an entry marked `optional = true` unless the same plugin has a
+spec of its own somewhere in your config, so on its own it installs nothing.
+To get the rendered lesson pane, give vellum that spec (it needs Neovim 0.12
+or later, Node.js for diagrams, and has its own
+[install notes](https://github.com/blackhat-7/vellum.nvim#install)):
+
+```lua
+return {
+    "blackhat-7/vellum.nvim",
+    ft = "markdown",
+    opts = {},
+}
+```
+
+| Your config has | vellum |
+|---|---|
+| the `optional = true` entry alone | stays uninstalled; the lesson pane shows Markdown |
+| the entry and vellum's own spec | loads when this plugin does, which with `lazy = false` is at startup |
+| vellum's own spec alone, with the entry removed | loads the first time the tutor draws a lesson (or on vellum's own triggers) |
+
+N.B. the third row works because the tutor asks for vellum only when it draws
+a lesson, and lazy.nvim loads a plugin the first time one of its modules is
+required. Take the entry out if you want vellum to keep the lazy-loading its
+own spec gives it.
 
 The logic modules use Lua 5.1. Editor integration uses Neovim APIs.
 
@@ -469,6 +506,32 @@ You should see:                           │
 |:---:|:---:|:-----:|:-----:|:---:|       │
 ```
 
+That picture is the lesson pane showing the step's Markdown. With
+[vellum.nvim](https://github.com/blackhat-7/vellum.nvim) installed, the pane
+shows the step rendered instead: prose wrapped to the pane's width (100 columns
+at most), the title in a band, code in shaded panels with syntax colours, and
+inline code set off from the prose, all in your colorscheme's colours. The
+pane has no line numbers or sign column, and it is drawn again when its width
+or the colorscheme changes.
+
+vellum is optional, and there is nothing to configure. The tutor asks for
+vellum's renderer each time it draws a step, and shows the Markdown whenever
+that comes back empty-handed:
+
+| vellum.nvim | Lesson pane |
+|---|---|
+| installed, and it renders the step | the rendered step (filetype `truth-table-tutor`) |
+| absent | the step's Markdown (filetype `markdown`) |
+| installed, and it raises an error or returns a highlight outside its line | the step's Markdown, with one warning per session giving the reason |
+
+The tutor calls the renderer vellum uses for its own `:Vellum` preview
+(`vellum.render`) and paints the result itself, so no preview window opens
+and a preview you have open keeps following your own buffers. That module is
+internal to vellum, with no promise of staying as it is; the third row of the
+table is there for the day it changes. It was tested against vellum v0.2.0
+(commit `c9a8665`). Diagrams and pictures are out of scope: the lessons
+contain neither.
+
 `:TruthTableTutorNext` and `:TruthTableTutorPrev` move one step (`]]` and `[[`
 inside the tutor), and `:TruthTableTutor 5` jumps to lesson 5. Every step keeps
 its own scratch buffer, so edit freely: `u` undoes back to the starting text,
@@ -680,7 +743,10 @@ or a heading), runs a rewrite on it, and manages per-buffer previews,
 extmarks, invalidation, and applying in place or as a step.
 - `tutor.lua` reads the lessons in `tutor/truth-table/` and shows them in two
 panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
-turns a step into the lesson pane's text. `spec/tutor.lua` replays every
+turns a step into the lesson pane's Markdown, and `tutor_vellum.lua` turns
+that into styled lines when vellum.nvim is installed (and into nothing when it
+is absent or fails, which is `tutor.lua`'s cue to show the Markdown).
+`spec/tutor.lua` replays every
 step's `solution` in its scratch buffer and requires the result to be the
 step's own `expect` block, so the course stays true as the plugin changes. It
 also evaluates every law a lesson states (`left ≡ right` in a fenced block)
@@ -724,7 +790,16 @@ make check BUSTED=/path/to/busted
 
 Run `make test-integration` for headless Neovim command checks, malformed-table
 buffer preservation, rewrite preview/apply behavior, the tutorial's exercises,
-and automatic startup.
+the tutorial's lesson pane with and without vellum.nvim, and automatic startup.
+
+The lesson-pane check uses a stand-in for vellum, so it runs anywhere. To also
+render every step of the course through an installed vellum, name its
+directory:
+
+```sh
+TRUTH_TABLE_TEST_VELLUM=~/.local/share/nvim/lazy/vellum.nvim make test-integration
+```
+
 Lint (optional when running individual checks, requires [selene](https://github.com/Kampfkarren/selene)):
 
 ```sh

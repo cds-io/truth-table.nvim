@@ -40,17 +40,38 @@ row), so they render in Markdown viewers with table support. Example: >
 - Neovim (uses `vim.api`, `vim.keymap`, `vim.fn.strdisplaywidth`).
 - Optional: which-key.nvim (a `<leader>tt` group label is registered if it is
   installed; absence is handled gracefully).
+- Optional: vellum.nvim (the tutorial's lesson pane is shown rendered if it is
+  installed, and as Markdown otherwise; see |:TruthTableTutor|). vellum needs
+  Neovim 0.12 or later.
 
 ==============================================================================
 3. INSTALLATION                                      *truth-table-installation*
 
 With lazy.nvim, pointing at the local clone: >
 
-    { dir = "~/dev/nvim-plugins/truth-table.nvim" }
+    {
+        dir = "~/dev/nvim-plugins/truth-table.nvim",
+        dependencies = {
+            { "blackhat-7/vellum.nvim", optional = true },
+        },
+    }
 <
 Load it eagerly (`lazy = false` in lazy.nvim): the insert-mode abbreviations
 in |truth-table-abbreviations| are global, and a plugin lazy-loaded on its
 commands would register them only after the first |:TruthTable|.
+
+The `dependencies` entry says "vellum.nvim, if you have it": lazy.nvim drops
+an entry marked `optional = true` unless the same plugin has a spec of its own
+somewhere in your config. To get the rendered lesson pane, give vellum that
+spec: >
+
+    { "blackhat-7/vellum.nvim", ft = "markdown", opts = {} }
+<
+With both, lazy.nvim loads vellum when this plugin loads, which with
+`lazy = false` is at startup. With vellum's own spec alone and the entry
+removed, vellum loads the first time the tutor draws a lesson: the tutor asks
+for it only then, and lazy.nvim loads a plugin the first time one of its
+modules is required.
 
 The plugin self-registers on load (plugin/truth-table.lua calls `setup()`), so
 no further configuration is required. See |truth-table-configuration| for
@@ -321,6 +342,17 @@ it; running a different rewrite command replaces it.
     lesson's first step. With [!] the course starts over: every scratch is
     reset and the lesson files are read again.
 
+    With vellum.nvim installed, the lesson pane shows the step rendered:
+    prose wrapped to the pane's width (100 columns at most), code in shaded
+    panels, in your colorscheme's colours, with no line numbers or sign
+    column. Its filetype is then `truth-table-tutor`. The pane is drawn
+    again when its width or the colorscheme changes. vellum is optional and
+    needs no configuration: without it the pane shows the step's Markdown
+    (filetype `markdown`), and it does the same, with one warning per
+    session giving the reason, if vellum raises an error or returns a
+    highlight outside its line. The tutor paints the pane itself from
+    vellum's renderer module, so no `:Vellum` preview opens.
+
     The course is data: one Lua table per lesson in tutor/truth-table/, read
     in file-name order. A lesson has a `title`, an `aim` and a list of
     `steps`; a step has its `text`, the scratch pane's `template`, the
@@ -563,7 +595,10 @@ All pure modules support Lua 5.1 and have no vim dependency:
   invalidation, and applying in place or as a step.
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
-  turns a step into the lesson pane's text. spec/tutor.lua replays each
+  turns a step into the lesson pane's Markdown, and tutor_vellum.lua turns
+  that into styled lines when vellum.nvim is installed (nothing when it is
+  absent or fails, and tutor.lua then shows the Markdown). spec/tutor.lua
+  replays each
   step's solution and requires the scratch buffer to end as its expectation,
   and evaluates every law a lesson states (`left ≡ right` in a fenced block)
   over all values of its variables.
@@ -584,7 +619,9 @@ An empty table loses its display encoding when serialized to Markdown.
 
 Run make check for the complete local check (requires Busted, Neovim, and Selene).
 make test runs pure specs; make test-integration runs headless command checks and
-verifies rewrite previews, abbreviation setup, and automatic plugin loading
-during startup. make lint checks source modules.
+verifies rewrite previews, abbreviation setup, the tutorial's lesson pane with
+and without vellum.nvim, and automatic plugin loading during startup. Set
+TRUTH_TABLE_TEST_VELLUM to an installed vellum's directory to also render every
+step of the course through it. make lint checks source modules.
 
  vim:tw=78:ts=8:ft=help:norl:
