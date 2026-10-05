@@ -3,6 +3,14 @@ truth-table.nvim changes
 
 Unreleased
 ----------
+- A step written by :TruthTableFactor is justified `distributivity
+  (factoring)` and one written by :TruthTableDistribute `distributivity
+  (distributing)`, where both said `distributivity`: the line now tells which
+  command wrote it.
+- When :TruthTableFactor or :TruthTableDistribute refuses and the other
+  applies at the cursor, the refusal names it (`No neighbouring group to
+  distribute Q into; to pull it out of the terms that share it, use
+  :TruthTableFactor`).
 - Tutor: add five lessons of Lua examples, four from a public Neovim config
   with each excerpt linked to its source at a fixed commit, and one quoted
   from Programming in Lua, section 12.1.2 (27 steps, 12 of them exercises;

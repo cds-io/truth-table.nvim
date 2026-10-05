@@ -74,7 +74,7 @@ Place the cursor on `¬C` and run `:TruthTableFactor`. The preview shows the
 result and the law that justifies it:
 
 ```text
-⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity
+⇒ S ∨ (¬C ∧ (A ∨ G))  | by distributivity (factoring)
 ```
 
 Use `:TruthTableApply` to replace the expression, or `:TruthTableApplyStep` to
@@ -319,7 +319,7 @@ it as the next line of a derivation, then moves the cursor there:
 
 ```text
 (a and b) or (not a and b)
-≡ b ∧ (a ∨ ¬a)                | by distributivity
+≡ b ∧ (a ∨ ¬a)                | by distributivity (factoring)
 ≡ b ∧ 1                       | by complement
 ≡ b                           | by identity
 ```
@@ -333,15 +333,18 @@ spelling of `⇔`. Steps apply to expression lines; a heading takes
 
 Each step ends in its *justification*: `| by` and the law that takes the line
 above to this one. The laws are named as in the table above, plus
-`distributivity` (distributing moves an operand into a group and factoring
-moves a shared one out: the one law, used from either side), `commutativity`,
+`distributivity (factoring)` and `distributivity (distributing)` (factoring
+moves a shared operand out of its terms and distributing moves one into a
+group: the one law, used from either side, with the side named so that a step
+says which command wrote it), `commutativity`,
 `De Morgan`, and `definition of ⊕` or `⇔`. The bar sits four columns clear of
 the wider of the two lines, or under the bar of the line above when that is
 further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
 on is a remark: a rewrite reads the expression before it, and a cursor in the
 remark means the line's last side. Applying in place to a justified line adds
-the new law to it (`| by distributivity, complement`), so the line still says
+the new law to it (`| by distributivity (factoring), complement`), so the line
+still says
 how it follows from the one above.
 
 N.B. Simplify takes one step per run and leaves the choice of steps to you; for
@@ -496,6 +499,11 @@ on it, and the `solution` that the test suite replays.
 | `<leader>ttr` | drop row |
 | `<leader>ttc` | drop column |
 | `<leader>ttk` | Karnaugh map and formula for the column |
+
+Factor and Distribute are the one law used from either side, and easy to
+reach for the wrong way round. When one refuses and the other applies at the
+cursor, the refusal says so: `No neighbouring group to distribute Q into; to
+pull it out of the terms that share it, use :TruthTableFactor`.
 
 ## Abbreviations
 
