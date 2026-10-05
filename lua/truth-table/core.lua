@@ -7,6 +7,7 @@
 -- has a pure default, and the vim layer swaps in vim.fn.strdisplaywidth.
 
 local M = {}
+local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local model = require("truth-table.table_model")
 local predicate = require("truth-table.predicate")
@@ -169,22 +170,22 @@ local function table_from_expressions(input)
     if not asts then
         return nil, parse_err
     end
-    local vars, seen, compound = {}, {}, {}
+    local vars, seen = {}, {}
     local discovered, discover_err = result.traverse(asts, predicate.variables)
     if not discovered then
         return nil, discover_err
     end
-    for i, names in ipairs(discovered) do
+    for _, names in ipairs(discovered) do
         for _, name in ipairs(names) do
             if not seen[name] then
                 seen[name] = true
                 vars[#vars + 1] = name
             end
         end
-        if asts[i].type ~= "var" then
-            compound[#compound + 1] = asts[i]
-        end
     end
+    local compound = fp.filter(asts, function(ast)
+        return ast.type ~= "var"
+    end)
 
     if #vars == 0 then
         return nil, "No variables in: " .. trim(input)
@@ -199,13 +200,9 @@ end
 -- The :TruthTable argument spelled out over several lines (a visual selection):
 -- a line break is one more column delimiter. Blank lines are skipped.
 function M.args_from_lines(lines)
-    local parts = {}
-    for _, line in ipairs(lines) do
-        line = trim(line)
-        if line ~= "" then
-            parts[#parts + 1] = line
-        end
-    end
+    local parts = fp.filter(fp.map(lines, trim), function(line)
+        return line ~= ""
+    end)
     return table.concat(parts, " | ")
 end
 
@@ -255,8 +252,8 @@ function M.toggle_cells(rows)
     end
 
     local replacements = uses_tf and { T = "1", F = "0" } or { ["1"] = "T", ["0"] = "F" }
-    return result.traverse(rows, function(row)
-        return result.traverse(row, function(cell)
+    return fp.map(rows, function(row)
+        return fp.map(row, function(cell)
             return replacements[cell] or cell
         end)
     end)

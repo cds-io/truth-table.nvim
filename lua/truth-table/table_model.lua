@@ -1,5 +1,6 @@
 -- Semantic cells are 0/1; encoding belongs to the Markdown boundary.
 -- All transformations return fresh arrays and use value, error results.
+local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local M = {}
 local bits = { ["0"] = 0, ["1"] = 1, F = 0, T = 1, [0] = 0, [1] = 1 }
@@ -106,13 +107,9 @@ function M.render_rows(tbl)
 end
 
 local function without(values, index)
-    local out = {}
-    for i, value in ipairs(values) do
-        if i ~= index then
-            out[#out + 1] = value
-        end
-    end
-    return out
+    return fp.filter(values, function(_, i)
+        return i ~= index
+    end)
 end
 
 local function valid_index(index, count)
