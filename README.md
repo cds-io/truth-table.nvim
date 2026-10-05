@@ -839,8 +839,8 @@ without the next file inheriting any of it:
 | `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | independent; each starts from the defaults the plugin entry point installs |
 | `integration_nvim_spec.lua` | commands and default keymaps, malformed tables left alone | independent; each writes its buffer |
 | `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals | independent; each in a fresh buffer |
-| `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | one reader's session, in order; then one case per lesson |
-| `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and a stand-in | in order (a vellum, once loaded, answers every later render) |
+| `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | fresh sessions for navigation; one independent case per lesson |
+| `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and a stand-in | scoped renderer modules; one continuous stand-in lifecycle case |
 | `startup_nvim_spec.lua` | Neovim loading `plugin/` by itself | independent |
 
 The startup spec is the odd one: a spec runs inside a Neovim that has already

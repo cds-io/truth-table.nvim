@@ -191,13 +191,23 @@ describe("the course", function()
     end)
 end)
 
--- One reader's session. The cases run in order and share the reader's place:
--- each starts from where the one before it left the two panes, the scratch
--- buffers and the warnings, so none of them stands alone.
+-- Each navigation case starts a fresh session, then visits the place it needs.
 describe(":TruthTableTutor", function()
     local tabs
 
+    before_each(function()
+        -- Keep a reader tab, closing any tutor tab left by an earlier case.
+        vim.cmd("tabnew")
+        vim.cmd("silent tabonly!")
+        vim.cmd("enew!")
+        vim.wo.wrap = false
+        tabs = tab_count()
+        vim.cmd("TruthTableTutor!")
+        warnings = {}
+    end)
+
     it("opens a new tab holding the two panes, on the first step, with its starting text in the scratch pane", function()
+        vim.cmd("tabclose")
         vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.getcwd() .. "/README.md"))
         tabs = tab_count()
         vim.cmd("TruthTableTutor")
@@ -229,6 +239,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("moves one step with ]] and, from the lesson pane, back with [[", function()
+        vim.cmd("TruthTableTutor 2")
         vim.cmd("normal ]]")
         at(2, 2)
         vim.api.nvim_set_current_win((pane("lesson")))
@@ -237,6 +248,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("keeps work in its step's scratch", function()
+        vim.cmd("TruthTableTutor 2")
         vim.api.nvim_buf_set_lines(0, 0, -1, false, { "scribble" })
         vim.cmd("TruthTableTutorNext")
         at(2, 2)
@@ -247,6 +259,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("returns to the reader's place from another tab", function()
+        vim.cmd("TruthTableTutor 2")
         vim.cmd("tabfirst")
         assert.are_not.equal((pane("scratch")), vim.api.nvim_get_current_win())
         vim.cmd("TruthTableTutor")
@@ -255,6 +268,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("opens a closed lesson pane again beside the scratch pane", function()
+        vim.cmd("TruthTableTutor 2")
         vim.api.nvim_win_close(pane("lesson"), false)
         vim.cmd("TruthTableTutor")
         at(2, 1)
@@ -262,6 +276,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("opens a closed scratch pane again beside the lesson pane, on Next", function()
+        vim.cmd("TruthTableTutor 2")
         vim.api.nvim_win_close(pane("scratch"), false)
         vim.cmd("TruthTableTutorNext")
         at(2, 2)
@@ -269,6 +284,9 @@ describe(":TruthTableTutor", function()
     end)
 
     it("opens both panes in a tab of their own once their tab is closed, on Prev", function()
+        vim.cmd("TruthTableTutor 2")
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, { "scribble" })
+        vim.cmd("TruthTableTutorNext")
         vim.cmd("tabclose")
         assert.are.equal(tabs, tab_count())
         assert.is_nil((pane("lesson")))
@@ -282,6 +300,7 @@ describe(":TruthTableTutor", function()
     -- :bdelete leaves a valid but unloaded buffer, which is what makes it a
     -- different case from a closed window.
     it("recreates a scratch pane deleted with :bdelete, with its starting text and tutor options", function()
+        vim.cmd("TruthTableTutor 2")
         local deleted_scratch = vim.api.nvim_get_current_buf()
         vim.cmd("bdelete!")
         assert.is_true(vim.api.nvim_buf_is_valid(deleted_scratch))
@@ -293,6 +312,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("recreates a lesson pane deleted with :bdelete, and preserves the scratch pane's work", function()
+        vim.cmd("TruthTableTutor 2")
         vim.api.nvim_buf_set_lines(0, 0, -1, false, { "kept scratch" })
         local lesson_win, deleted_lesson = pane("lesson")
         vim.api.nvim_set_current_win(lesson_win)
@@ -315,6 +335,7 @@ describe(":TruthTableTutor", function()
     end)
 
     it("refuses a number past the last lesson, and anything that is not a number", function()
+        vim.cmd("TruthTableTutor 6")
         warnings = {}
         vim.cmd("TruthTableTutor " .. #course + 1)
         vim.cmd("TruthTableTutor six")
@@ -324,6 +345,8 @@ describe(":TruthTableTutor", function()
     end)
 
     it("starts the course over with !, and the work is gone", function()
+        vim.cmd("TruthTableTutor 2")
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, { "scribble" })
         vim.cmd("TruthTableTutor!")
         at(1, 1)
         assert.are.equal(tabs + 1, tab_count())
@@ -333,9 +356,7 @@ describe(":TruthTableTutor", function()
     end)
 end)
 
--- The course worked through in order, as a reader would, one case per lesson.
--- These run in order too: a lesson's case ends with the Next that leaves its
--- last step, which is what puts the reader on the following lesson.
+-- One case per lesson, with a fresh session so any lesson can run on its own.
 describe("working through the course", function()
     local function trimmed(lines)
         while lines[#lines] == "" do
@@ -352,9 +373,9 @@ describe("working through the course", function()
         end
     end
 
-    -- Whatever the session above left in the scratch buffers is discarded.
-    setup(function()
+    before_each(function()
         vim.cmd("TruthTableTutor!")
+        warnings = {}
     end)
 
     for number, lesson in ipairs(course) do
@@ -362,15 +383,7 @@ describe("working through the course", function()
         -- (the first line when absent), the text on it the cursor sits on (the
         -- start of the line when absent), and the commands to run.
         it(("lesson %d: %s"):format(number, lesson.title), function()
-            -- A lesson that fails stops short of its last Next. Putting the
-            -- reader on the following lesson anyway keeps one broken lesson
-            -- from failing every case after it.
-            local finished = false
-            finally(function()
-                if not finished and course[number + 1] then
-                    pcall(vim.cmd, "TruthTableTutor " .. number + 1)
-                end
-            end)
+            vim.cmd("TruthTableTutor " .. number)
             for index, step in ipairs(lesson.steps) do
                 local label = ("lesson %d step %d"):format(number, index)
                 at(number, index)
@@ -401,11 +414,14 @@ describe("working through the course", function()
                 warnings = {}
                 vim.cmd("TruthTableTutorNext")
             end
-            finished = true
         end)
     end
 
     it("ends on the last step, where Next warns that there is no further", function()
+        vim.cmd("TruthTableTutor " .. #course)
+        for _ = 1, #course[#course].steps do
+            vim.cmd("TruthTableTutorNext")
+        end
         at(#course, #course[#course].steps)
         assert.are.equal(1, #warnings, vim.inspect(warnings))
         assert.is_truthy(warnings[1]:find("last step", 1, true), warnings[1])
