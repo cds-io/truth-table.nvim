@@ -18,6 +18,7 @@ test-integration:
 	$(NVIM) --headless -u NONE -i NONE -l spec/preview.lua
 	$(NVIM) --headless -u NONE -i NONE -l spec/abbreviations.lua
 	$(NVIM) --headless -u NONE -i NONE -l spec/tutor.lua
+	$(NVIM) --headless -u NONE -i NONE -l spec/tutor_vellum.lua
 
 # Lints the source tree. spec/ is excluded: it uses busted's describe/it/assert
 # DSL, which selene's lua/neovim std library does not model.

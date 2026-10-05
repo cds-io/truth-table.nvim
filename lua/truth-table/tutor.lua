@@ -2,20 +2,46 @@
 -- one step at a time, and on the right a scratch buffer holding that step's
 -- starting text for the reader to run commands on. The course is data, one
 -- file per lesson under tutor/truth-table/, read in file-name order;
--- tutor_page.lua turns a step into the lesson pane's text.
+-- tutor_page.lua turns a step into the lesson pane's Markdown, and
+-- tutor_vellum.lua styles that when vellum.nvim is installed.
 local page = require("truth-table.tutor_page")
+local styled = require("truth-table.tutor_vellum")
 
 local M = {}
 
 local LESSONS = "tutor/truth-table"
 local ROLE = "truth_table_tutor"
 local KEYS = { ["]]"] = "TruthTableTutorNext", ["[["] = "TruthTableTutorPrev" }
--- The lesson pane wraps its prose to whatever width the window has.
-local LESSON_PANE = { wrap = true, linebreak = true, breakindent = true, breakindentopt = "list:-1" }
+local MARKS = vim.api.nvim_create_namespace(ROLE)
+-- The lesson pane by what it shows. Markdown is one line per paragraph, for
+-- the window to wrap at whatever width it has. Styled text arrives wrapped to
+-- the window's full width, so the window gives up its gutter and leaves the
+-- lines alone.
+local LESSON_PANE = {
+    markdown = {
+        filetype = "markdown",
+        options = { wrap = true, linebreak = true, breakindent = true, breakindentopt = "list:-1" },
+    },
+    styled = {
+        filetype = "truth-table-tutor",
+        options = {
+            wrap = false,
+            list = false,
+            spell = false,
+            colorcolumn = "",
+            number = false,
+            relativenumber = false,
+            signcolumn = "no",
+            foldcolumn = "0",
+            statuscolumn = "",
+        },
+    },
+}
 
 -- The course, the reader's place in it (an index into `steps`, every step of
--- every lesson in order), the lesson pane's buffer, and a scratch buffer per
--- step visited, so the work in one survives moving to another.
+-- every lesson in order), the lesson pane's buffer, the width its text was
+-- wrapped to (nil while it shows Markdown), and a scratch buffer per step
+-- visited, so the work in one survives moving to another.
 local session
 
 local function load()
@@ -52,13 +78,20 @@ local function buffer(name, lines, previous)
     vim.bo[buf].undolevels = -1
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     vim.bo[buf].undolevels = undolevels
-    vim.bo[buf].filetype = "markdown"
     vim.api.nvim_buf_set_name(buf, name)
-    -- Set after the filetype, whose plugin maps the same keys to headings.
+    return buf
+end
+
+-- A buffer's filetype and the tutor's keys. The keys go on after the
+-- filetype, whose plugin maps the same ones to headings, and again each time:
+-- a filetype plugin that is replaced takes those mappings with it.
+local function dress(buf, filetype)
+    if vim.bo[buf].filetype ~= filetype then
+        vim.bo[buf].filetype = filetype
+    end
     for keys, command in pairs(KEYS) do
         vim.keymap.set("n", keys, "<cmd>" .. command .. "<CR>", { buffer = buf, desc = command })
     end
-    return buf
 end
 
 local function window(role)
@@ -92,30 +125,77 @@ local function panes()
     return lesson, scratch
 end
 
+-- The reader's step in the lesson pane `win`, which shows the lesson buffer:
+-- styled for the width the pane has now, or as Markdown when that fails.
+local function draw(win)
+    local at = session.steps[session.at]
+    local markdown = page.render(session.course, at.lesson, at.step)
+    local width = vim.api.nvim_win_get_width(win)
+    local lines, marks = styled.render(markdown, width)
+    local pane = lines and LESSON_PANE.styled or LESSON_PANE.markdown
+    session.width = lines and width
+
+    local buf = session.lesson
+    local view = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_clear_namespace(buf, MARKS, 0, -1)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or markdown)
+    vim.bo[buf].modifiable = false
+    for _, mark in ipairs(marks or {}) do
+        vim.api.nvim_buf_set_extmark(buf, MARKS, mark.row, mark.col, {
+            end_col = mark.end_col,
+            hl_group = mark.group,
+            priority = mark.priority,
+        })
+    end
+    dress(buf, pane.filetype)
+    -- Set after the buffer is in the window, and local to it. A window takes
+    -- fresh options when it first shows a buffer: set any earlier, these are
+    -- lost, and the scratch pane, split off this one, keeps the reader's own.
+    for name, value in pairs(pane.options) do
+        vim.api.nvim_set_option_value(name, value, { win = win, scope = "local" })
+    end
+    vim.api.nvim_win_call(win, function()
+        vim.fn.winrestview(view)
+    end)
+end
+
+-- Styled text is wrapped to one width and coloured for one colorscheme, so
+-- it is drawn again when either changes.
+local function watch()
+    local group = vim.api.nvim_create_augroup(ROLE, { clear = true })
+    local function redraw(event)
+        if event.event == "ColorScheme" then
+            styled.restyle()
+        end
+        local win = window("lesson")
+        if not (win and session.width and vim.api.nvim_win_get_buf(win) == session.lesson) then
+            return
+        end
+        if event.event == "ColorScheme" or vim.api.nvim_win_get_width(win) ~= session.width then
+            draw(win)
+        end
+    end
+    vim.api.nvim_create_autocmd({ "WinResized", "ColorScheme" }, { group = group, callback = redraw })
+end
+
 local function show()
     local at = session.steps[session.at]
     if not live(session.lesson) then
         session.lesson = buffer("truth-table-tutor://lesson", {}, session.lesson)
     end
-    vim.bo[session.lesson].modifiable = true
-    vim.api.nvim_buf_set_lines(session.lesson, 0, -1, false, page.render(session.course, at.lesson, at.step))
-    vim.bo[session.lesson].modifiable = false
 
     local scratch = session.scratch[session.at]
     if not live(scratch) then
         local name = ("truth-table-tutor://scratch/%d.%d"):format(at.lesson, at.step)
         scratch = buffer(name, page.lines(session.course[at.lesson].steps[at.step].template), scratch)
+        dress(scratch, "markdown")
         session.scratch[session.at] = scratch
     end
 
     local lesson_win, scratch_win = panes()
     vim.api.nvim_win_set_buf(lesson_win, session.lesson)
-    -- Set after the buffer is in the window, and local to it. A window takes
-    -- fresh options when it first shows a buffer: set any earlier, these are
-    -- lost, and the scratch pane, split off this one, keeps the reader's own.
-    for name, value in pairs(LESSON_PANE) do
-        vim.api.nvim_set_option_value(name, value, { win = lesson_win, scope = "local" })
-    end
+    draw(lesson_win)
     vim.api.nvim_win_set_cursor(lesson_win, { 1, 0 })
     vim.api.nvim_win_set_buf(scratch_win, scratch)
     vim.api.nvim_set_current_win(scratch_win)
@@ -129,6 +209,7 @@ local function discard()
             vim.api.nvim_buf_delete(buf, { force = true })
         end
     end
+    vim.api.nvim_del_augroup_by_name(ROLE)
     session = nil
 end
 
@@ -140,9 +221,12 @@ function M.open(opts)
     if opts.fresh and session then
         discard()
     end
-    session = session or load()
     if not session then
-        return
+        session = load()
+        if not session then
+            return
+        end
+        watch()
     end
     if opts.lesson then
         local target
