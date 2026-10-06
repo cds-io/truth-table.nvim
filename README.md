@@ -804,7 +804,9 @@ explicitly; `core.display_width` retains the existing injection API.
 - `karnaugh.lua` finds a column's input variables, minimizes it (Quine-McCluskey
 prime implicants, essential primes, then a smallest exact cover under a search
 budget, greedy beyond it) and renders the map and the formula.
-- `result.lua` composes Lua's `value, error` convention with `bind` and `traverse`.
+- `result.lua` composes Lua's `value, error` convention: `bind` and `traverse`
+for a step that can refuse, `map` for one that cannot, and `context` to say
+where an error was met.
 Only `nil` means failure; zero and false remain successful values.
 - `fp.lua` is `map`, `filter` and `reduce` over lists, for the pure modules:
 plain Lua 5.1 has none of the three, and `vim.iter` needs the editor. Map and

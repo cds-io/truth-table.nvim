@@ -96,10 +96,10 @@ local function expand_asts(tbl, asts)
         end
         local columns, column_err = result.traverse(asts, function(ast)
             local bound, bind_err = predicate.bind_columns(ast, indices, valid.headers)
-            return result.bind(bound, bind_err, function(expression)
+            return result.map(bound, bind_err, function(expression)
                 return {
                     heading = trees.heading(expression),
-                    values = result.traverse(valid.rows, function(row)
+                    values = fp.map(valid.rows, function(row)
                         return predicate.eval_ast(expression, row)
                     end),
                 }

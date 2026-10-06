@@ -250,10 +250,7 @@ local function parse_source(input, node_spans)
         locations.node_spans = node_spans
         return M.parse_predicate(values, locations)
     end)
-    if not ast then
-        return nil, 'Parse error in "' .. input .. '": ' .. parse_err
-    end
-    return ast
+    return result.context(ast, parse_err, 'Parse error in "' .. input .. '": ')
 end
 
 function M.parse_expression(input)
@@ -324,7 +321,7 @@ function M.variables(node)
         end
         return copy
     end)
-    return result.bind(mapped, err, function()
+    return result.map(mapped, err, function()
         return vars
     end)
 end

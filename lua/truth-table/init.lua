@@ -5,6 +5,7 @@
 
 local core = require("truth-table.core")
 local result = require("truth-table.result")
+local fp = require("truth-table.fp")
 
 local M = {}
 
@@ -16,7 +17,7 @@ local function replace_table(first, last, tbl, err, indent)
         return
     end
     if indent and indent ~= "" then
-        lines = result.traverse(lines, function(line)
+        lines = fp.map(lines, function(line)
             return indent .. line
         end)
     end

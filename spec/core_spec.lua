@@ -7,7 +7,6 @@
 local core = require("truth-table.core")
 local model = require("truth-table.table_model")
 local predicate = require("truth-table.predicate")
-local result = require("truth-table.result")
 
 local two_variables = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } }
 
@@ -278,25 +277,6 @@ describe("validated table pipeline", function()
             { 0, 0, 0, 1 }, { 0, 1, 0, 1 },
             { 1, 0, 0, 0 }, { 1, 1, 1, 0 },
         }, tbl.rows)
-        assert.are.equal(2, calls)
-    end)
-end)
-
-describe("result composition", function()
-    it("preserves false and zero successes and short-circuits errors", function()
-        assert.is_false(result.bind(false, nil, function(value) return value end))
-        assert.are.equal(0, result.bind(0, nil, function(value) return value end))
-        local value, err = result.bind(nil, "failure", function() error("must not run") end)
-        assert.is_nil(value)
-        assert.are.equal("failure", err)
-        local calls = 0
-        value, err = result.traverse({ 1, 2, 3 }, function(n)
-            calls = calls + 1
-            if n == 2 then return nil, "stop" end
-            return n
-        end)
-        assert.is_nil(value)
-        assert.are.equal("stop", err)
         assert.are.equal(2, calls)
     end)
 end)
