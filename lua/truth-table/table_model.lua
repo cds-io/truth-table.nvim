@@ -91,7 +91,7 @@ function M.normalize(tbl)
                 return bit
             end)
         end)
-        return result.bind(rows, row_err, function(valid_rows)
+        return result.map(rows, row_err, function(valid_rows)
             return { headers = valid_headers, rows = valid_rows, encoding = encoding or tbl.encoding or "bits" }
         end)
     end)
@@ -99,8 +99,8 @@ end
 
 function M.render_rows(tbl)
     local symbols = tbl.encoding == "tf" and { [0] = "F", [1] = "T" } or { [0] = "0", [1] = "1" }
-    return result.traverse(tbl.rows, function(row)
-        return result.traverse(row, function(bit)
+    return fp.map(tbl.rows, function(row)
+        return fp.map(row, function(bit)
             return symbols[bit]
         end)
     end)
@@ -146,7 +146,7 @@ function M.append_columns(tbl, columns)
                 appended[#appended + 1] = column
             end
         end
-        local rows = result.traverse(valid.rows, function(row, index)
+        local rows = fp.map(valid.rows, function(row, index)
             local extended = {}
             for i, bit in ipairs(row) do
                 extended[i] = bit
@@ -181,7 +181,7 @@ function M.drop_column(tbl, index)
         end
         return {
             headers = without(valid.headers, index),
-            rows = result.traverse(valid.rows, function(row) return without(row, index) end),
+            rows = fp.map(valid.rows, function(row) return without(row, index) end),
             encoding = valid.encoding,
         }
     end)
@@ -189,7 +189,7 @@ end
 
 function M.toggle(tbl)
     local normalized, err = M.normalize(tbl)
-    return result.bind(normalized, err, function(valid)
+    return result.map(normalized, err, function(valid)
         return {
             headers = valid.headers, rows = valid.rows,
             encoding = valid.encoding == "tf" and "bits" or "tf",

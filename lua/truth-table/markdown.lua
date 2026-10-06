@@ -252,7 +252,7 @@ function M.replace_heading(line, index, heading)
     end
     headers[index] = heading
     local valid, validation_err = model.normalize({ headers = headers, rows = {} })
-    return result.bind(valid, validation_err, function()
+    return result.map(valid, validation_err, function()
         local pipes = {}
         scan(line, function(pos)
             pipes[#pipes + 1] = pos
@@ -263,7 +263,7 @@ end
 
 function M.format(tbl, display_width)
     local normalized, err = model.normalize(tbl)
-    return result.bind(normalized, err, function(valid)
+    return result.map(normalized, err, function(valid)
         local headers = fp.map(valid.headers, M.escape_heading)
         return format_valid(headers, model.render_rows(valid), display_width or M.display_width)
     end)

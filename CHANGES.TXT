@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- Add result.map(value, err, fn), for a step that always answers, and
+  result.context(value, err, prefix), which puts where an error was met in
+  front of it. bind is now only called where its function can refuse, and a
+  list map with no error to carry is fp.map (the indent of replaced lines,
+  render_rows, the row rebuilds of drop_column and append_columns, a
+  computed column's values). Behaviour is unchanged. The result cases of the
+  core spec are spec/result_spec.lua.
 - Core exports one API, over the table model: build, expand, parse, format,
   toggle, drop_row and drop_column, with find_table, column_index,
   split_expressions, derive_karnaugh and format_karnaugh beside them; every
