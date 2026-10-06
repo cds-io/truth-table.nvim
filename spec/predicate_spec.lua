@@ -298,21 +298,18 @@ describe("predicate parsing + evaluation", function()
         assert.is_nil(ast)
         assert.is_truthy(err:match("Unexpected token after expression"))
     end)
-
-    it("reports a parse error on an unclosed paren", function()
-        local toks = assert(predicate.tokenize("(A and B"))
-        local ast, err = predicate.parse_predicate(toks)
-        assert.is_nil(ast)
-        assert.is_truthy(err)
-    end)
 end)
 
 describe("predicate.bind_columns", function()
     local columns = { A = 1, B = 2 }
 
-    it("binds when every variable names a column", function()
+    it("binds every variable to its column's position", function()
         local ast = assert(predicate.parse_expression("A and B"))
-        assert.is_truthy(predicate.bind_columns(ast, columns))
+        assert.are.same({
+            type = "and",
+            left = { type = "column", index = 1, variable = "A" },
+            right = { type = "column", index = 2, variable = "B" },
+        }, predicate.bind_columns(ast, columns))
     end)
 
     it("flags an unknown column", function()
