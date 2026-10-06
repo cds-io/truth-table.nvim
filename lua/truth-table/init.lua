@@ -1,5 +1,5 @@
 -- truth-table.nvim: generate and manipulate markdown truth tables. The pure
--- parsing/eval/format logic lives in truth-table.core; this module holds the
+-- table pipeline lives in truth-table.core; this module holds the
 -- Neovim-facing pieces (buffer scanning, the user commands, keymaps) and the
 -- setup() entry point.
 
@@ -10,7 +10,7 @@ local M = {}
 
 -- Apply only complete successful pipelines; failures leave the buffer untouched.
 local function replace_table(first, last, tbl, err, indent)
-    local lines, format_err = result.bind(tbl, err, core.format_model)
+    local lines, format_err = result.bind(tbl, err, core.format)
     if not lines then
         vim.notify(format_err, vim.log.levels.WARN)
         return
@@ -40,7 +40,7 @@ local function read_table()
     for row = bounds.start_line, bounds.end_line do
         selected[#selected + 1] = lines[row]
     end
-    local tbl, err = core.parse_model(selected)
+    local tbl, err = core.parse(selected)
     if not tbl then
         return nil, err
     end
@@ -71,7 +71,7 @@ local function cmd_truth_table(opts)
         args = core.args_from_lines(vim.api.nvim_buf_get_lines(0, first, last, false))
     end
 
-    replace_table(first, last, core.build_model(args))
+    replace_table(first, last, core.build(args))
 end
 
 local function cmd_expand(opts)
@@ -82,7 +82,7 @@ local function cmd_expand(opts)
     end
 
     with_table(function(tbl)
-        return core.expand_model(tbl, predicates)
+        return core.expand(tbl, predicates)
     end)
 end
 
@@ -94,20 +94,20 @@ local function cmd_drop_row()
         end
 
         local row_idx = cur_row - start_line - 1
-        return core.drop_model_row(tbl, row_idx)
+        return core.drop_row(tbl, row_idx)
     end)
 end
 
 local function cmd_drop_column()
     with_table(function(tbl)
         local col_idx = math.min(get_cursor_column_index(), #tbl.headers)
-        return core.drop_model_column(tbl, col_idx)
+        return core.drop_column(tbl, col_idx)
     end)
 end
 
 local function cmd_toggle()
     with_table(function(tbl)
-        return core.toggle_model(tbl)
+        return core.toggle(tbl)
     end)
 end
 

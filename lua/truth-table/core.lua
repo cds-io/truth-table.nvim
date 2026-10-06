@@ -1,16 +1,21 @@
--- truth-table core: pure logic with no Neovim dependency.
+-- truth-table core: the table pipeline, with no Neovim dependency.
 --
 -- Everything here is a plain function over strings and tables: no `vim.*`, no
--- buffers, no side effects. That boundary keeps the parser, evaluator, and
--- formatter unit-testable under a bare Lua interpreter (busted). The one place
--- that wants Neovim (display-width measurement) is injectable: M.display_width
--- has a pure default, and the vim layer swaps in vim.fn.strdisplaywidth.
+-- buffers, no side effects. The predicate language lives in
+-- truth-table.predicate, the table model in truth-table.table_model and the
+-- Markdown codec in truth-table.markdown; this module composes them into the
+-- table pipeline used by init.lua. Cells are the integers 0 and 1 throughout
+-- and a table carries its encoding ("bits" or "tf") as a field; the codec is
+-- the one place that spells them. The one thing that wants Neovim
+-- (display-width measurement) is injectable: M.display_width has a pure
+-- default, and setup() swaps in vim.fn.strdisplaywidth.
 
 local M = {}
 local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local model = require("truth-table.table_model")
 local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
 local markdown = require("truth-table.markdown")
 local karnaugh = require("truth-table.karnaugh")
 
@@ -18,27 +23,19 @@ local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
--- Compatibility facade; standalone codecs receive width measurement explicitly.
+-- Every fallible operation returns one table, or nil and an error.
+M.parse = markdown.parse_table_lines
+M.find_table = markdown.find_table
+M.column_index = markdown.column_index
+M.split_expressions = predicate.split_expressions
+M.drop_row = model.drop_row
+M.drop_column = model.drop_column
+M.toggle = model.toggle
+
+-- The codecs take the width measurer as an argument; these close over the
+-- injected one.
 M.display_width = markdown.display_width
-function M.center_pad(str, width)
-    return markdown.center_pad(str, width, M.display_width)
-end
-
-function M.format_table(headers, rows)
-    return markdown.format({ headers = headers, rows = rows }, M.display_width)
-end
-
--- Legacy string-cell generation is an adapter over semantic row generation.
-function M.generate_rows(n)
-    return model.render_rows({ rows = model.generate_rows(n), encoding = "bits" })
-end
-
--- Semantic API: every fallible operation returns one table, or nil and an error.
-M.parse_model = markdown.parse_table_lines
-M.drop_model_row = model.drop_row
-M.drop_model_column = model.drop_column
-M.toggle_model = model.toggle
-function M.format_model(tbl)
+function M.format(tbl)
     return markdown.format(tbl, M.display_width)
 end
 
@@ -48,13 +45,6 @@ end
 M.derive_karnaugh = karnaugh.derive
 function M.format_karnaugh(analysis)
     return karnaugh.render(analysis, M.display_width)
-end
-
-local function legacy_parts(tbl, err)
-    if not tbl then
-        return nil, err
-    end
-    return tbl.headers, model.render_rows(tbl)
 end
 
 -- Parse the :TruthTable argument: either an integer N (-> headers A, B, C, ...)
@@ -97,30 +87,6 @@ function M.parse_truth_table_args(args)
     return headers
 end
 
-M.is_table_line = markdown.is_table_line
-M.is_separator = markdown.is_separator
-M.split_row = markdown.split_row
-M.column_index = markdown.column_index
-M.find_table = markdown.find_table
-function M.parse_table_lines(lines)
-    local parsed, err = markdown.parse_table_lines(lines)
-    return result.bind(parsed, err, function(tbl)
-        return { headers = tbl.headers, rows = model.render_rows(tbl), encoding = tbl.encoding }
-    end)
-end
-
--- Compatibility facade for the standalone predicate language.
-M.tokenize = predicate.tokenize
-M.parse_predicate = predicate.parse_predicate
-M.validate_vars = predicate.validate_vars
-M.eval_ast = predicate.eval_ast
-M.ast_to_heading = predicate.ast_to_heading
-M.parse_expression = predicate.parse_expression
-M.bind_columns = predicate.bind_columns
-M.split_expressions = predicate.split_expressions
-M.is_expression_input = predicate.is_expression_input
-M.SYMBOLS = predicate.SYMBOLS
-
 local function expand_asts(tbl, asts)
     local normalized, err = model.normalize(tbl)
     return result.bind(normalized, err, function(valid)
@@ -129,12 +95,12 @@ local function expand_asts(tbl, asts)
             indices[heading] = i
         end
         local columns, column_err = result.traverse(asts, function(ast)
-            local bound, bind_err = M.bind_columns(ast, indices, valid.headers)
+            local bound, bind_err = predicate.bind_columns(ast, indices, valid.headers)
             return result.bind(bound, bind_err, function(expression)
                 return {
-                    heading = M.ast_to_heading(expression),
+                    heading = trees.heading(expression),
                     values = result.traverse(valid.rows, function(row)
-                        return M.eval_ast(expression, row)
+                        return predicate.eval_ast(expression, row)
                     end),
                 }
             end)
@@ -145,27 +111,23 @@ local function expand_asts(tbl, asts)
     end)
 end
 
-function M.expand_model(tbl, predicate_strings)
-    local asts, err = result.traverse(predicate_strings, M.parse_expression)
+function M.expand(tbl, predicate_strings)
+    local asts, err = result.traverse(predicate_strings, predicate.parse_expression)
     if not asts then
         return nil, err
     end
     return expand_asts(tbl, asts)
 end
 
-function M.expand(tbl, predicate_strings)
-    return legacy_parts(M.expand_model(tbl, predicate_strings))
-end
-
 -- Build a whole table from expressions separated by `|` or `,`. The variables
 -- are whatever names the expressions mention, in order of first appearance;
 -- each compound expression becomes a computed column. A bare variable adds no
 -- column of its own, which makes it a way to pin the variable order
--- (`b | a | a -> b`). Returns headers, rows, or nil + an error message.
+-- (`b | a | a -> b`). Returns the table, or nil + an error message.
 local function table_from_expressions(input)
-    local parts, split_err = M.split_expressions(input, "|,")
+    local parts, split_err = predicate.split_expressions(input, "|,")
     local asts, parse_err = result.bind(parts, split_err, function(expressions)
-        return result.traverse(expressions, M.parse_expression)
+        return result.traverse(expressions, predicate.parse_expression)
     end)
     if not asts then
         return nil, parse_err
@@ -206,11 +168,11 @@ function M.args_from_lines(lines)
     return table.concat(parts, " | ")
 end
 
--- Headers + rows for any :TruthTable argument: an integer N, a list of names,
--- or expressions (see M.is_expression_input). Returns nil + an error message
--- on failure.
-function M.build_model(args)
-    if M.is_expression_input(args) then
+-- The table for any :TruthTable argument: an integer N, a list of names, or
+-- expressions (see predicate.is_expression_input). Returns nil + an error
+-- message on failure.
+function M.build(args)
+    if predicate.is_expression_input(args) then
         return table_from_expressions(args)
     end
 
@@ -219,44 +181,6 @@ function M.build_model(args)
         return nil, err
     end
     return { headers = headers, rows = model.generate_rows(#headers), encoding = "bits" }
-end
-
-function M.build_truth_table(args)
-    return legacy_parts(M.build_model(args))
-end
-
--- The compatibility adapters are the only edit paths that encode string cells.
-local function edit_table(transform, tbl, index)
-    return legacy_parts(transform(tbl, index))
-end
-
-function M.drop_row(tbl, index)
-    return edit_table(model.drop_row, tbl, index)
-end
-
-function M.drop_column(tbl, index)
-    return edit_table(model.drop_column, tbl, index)
-end
-
-function M.toggle_table(tbl)
-    return edit_table(model.toggle, tbl)
-end
-
--- Toggle every cell between 0/1 and F/T, returning fresh rows. The direction is decided by
--- the first data cell: T/F -> 0/1, otherwise 0/1 -> T/F. Returns the rows.
-function M.toggle_cells(rows)
-    local uses_tf = false
-    if #rows > 0 and #rows[1] > 0 then
-        local first = rows[1][1]
-        uses_tf = (first == "T" or first == "F")
-    end
-
-    local replacements = uses_tf and { T = "1", F = "0" } or { ["1"] = "T", ["0"] = "F" }
-    return fp.map(rows, function(row)
-        return fp.map(row, function(cell)
-            return replacements[cell] or cell
-        end)
-    end)
 end
 
 return M

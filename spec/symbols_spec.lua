@@ -1,6 +1,7 @@
 local symbols = require("truth-table.symbols")
 local predicate = require("truth-table.predicate")
-local core = require("truth-table.core")
+local trees = require("truth-table.trees")
+local operators = require("truth-table.operators")
 
 describe("symbols", function()
     it("pairs an ascii word with a unicode symbol for every constant", function()
@@ -17,22 +18,22 @@ describe("symbols", function()
 
     it("is the source of the predicate language's rendered symbols", function()
         for _, key in ipairs({ "NOT", "AND", "OR", "XOR", "IMPLIES", "IFF" }) do
-            assert.are.equal(symbols[key].unicode, predicate.SYMBOLS[symbols[key].ascii], key)
+            assert.are.equal(symbols[key].unicode, operators.SYMBOLS[symbols[key].ascii], key)
         end
     end)
 
     it("keeps ≡ out of the predicate language", function()
-        assert.is_nil(predicate.SYMBOLS.equiv)
+        assert.is_nil(operators.SYMBOLS.equiv)
         local ast, err = predicate.parse_expression("A ≡ B")
         assert.is_nil(ast)
         assert.is_truthy(err:find("Unexpected character: ≡", 1, true))
-        assert.are.equal("A ∧ equiv", core.ast_to_heading(assert(predicate.parse_expression("A and equiv"))))
+        assert.are.equal("A ∧ equiv", trees.heading(assert(predicate.parse_expression("A and equiv"))))
     end)
 
     it("renders iff as ⇔ and still parses = as iff", function()
         local ast = assert(predicate.parse_expression("A iff B"))
-        assert.are.equal("A ⇔ B", core.ast_to_heading(ast))
+        assert.are.equal("A ⇔ B", trees.heading(ast))
         local from_equals = assert(predicate.parse_expression("A = B"))
-        assert.are.equal("A ⇔ B", core.ast_to_heading(from_equals))
+        assert.are.equal("A ⇔ B", trees.heading(from_equals))
     end)
 end)

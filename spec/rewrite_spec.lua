@@ -1,4 +1,5 @@
 local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
 local rewrite = require("truth-table.rewrite")
 
 -- Byte of the `occurrence`-th appearance of `needle` in `source`: the cursor.
@@ -19,7 +20,7 @@ local function run(name, source, needle, occurrence, backward)
     if not tree then
         return nil, err
     end
-    return predicate.ast_to_heading(tree)
+    return trees.heading(tree)
 end
 
 describe("rewrite.target", function()
@@ -30,7 +31,7 @@ describe("rewrite.target", function()
         if not node then
             return nil, err
         end
-        return predicate.ast_to_heading(node)
+        return trees.heading(node)
     end
 
     it("widens to the nearest chain operand", function()
@@ -60,8 +61,8 @@ describe("rewrite.target", function()
     it("lands on the first byte of a multibyte symbol and on its last", function()
         local ast = assert(predicate.parse_located("A ∧ ¬C"))
         local first = byte_of("A ∧ ¬C", "¬")
-        assert.are.equal("¬C", predicate.ast_to_heading(assert(rewrite.target(ast, first))))
-        assert.are.equal("¬C", predicate.ast_to_heading(assert(rewrite.target(ast, first + 1))))
+        assert.are.equal("¬C", trees.heading(assert(rewrite.target(ast, first))))
+        assert.are.equal("¬C", trees.heading(assert(rewrite.target(ast, first + 1))))
     end)
 
     it("treats a single variable or a negation as having no chain", function()
@@ -286,9 +287,9 @@ describe("rewrite.de_morgan", function()
     it("rewrites the whole expression when there is no cursor or it is outside", function()
         local source = "not (A and B)"
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, nil))))
-        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, 0))))
-        assert.are.equal("¬A ∨ ¬B", predicate.ast_to_heading(assert(rewrite.de_morgan(ast, #source + 5))))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, nil))))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, 0))))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, #source + 5))))
     end)
 
     it("refuses when nothing from the cursor up to the root matches", function()
@@ -306,7 +307,7 @@ describe("rewrite.simplify", function()
         if not tree then
             return nil, law
         end
-        return predicate.ast_to_heading(tree), law
+        return trees.heading(tree), law
     end
 
     local function check(cases)
@@ -433,7 +434,7 @@ describe("rewrite.moves", function()
     it("lists the collapsing laws Simplify passes over for a nearer one", function()
         local source = "A ∨ ¬A ∨ A"
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal("1 ∨ A", predicate.ast_to_heading(assert(rewrite.simplify(ast))))
+        assert.are.equal("1 ∨ A", trees.heading(assert(rewrite.simplify(ast))))
         assert.are.same({
             { "complement", "1 ∨ A" },
             { "idempotence", "A ∨ ¬A" },
@@ -461,7 +462,7 @@ describe("rewrite.moves", function()
         }
         assert.are.same(expected, results(source, "distributivity (distributing)"))
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal(expected[1], predicate.ast_to_heading(assert(rewrite.distribute(ast, (source:find("C"))))))
+        assert.are.equal(expected[1], trees.heading(assert(rewrite.distribute(ast, (source:find("C"))))))
     end)
 
     it("lists every complementary pair, including later repeated operands", function()
@@ -519,7 +520,7 @@ describe("rewrite.moves", function()
 
     it("returns each move's tree, canonical and without spans", function()
         local move = rewrite.moves(assert(predicate.parse_located("A ∧ B")))[1]
-        assert.are.equal("B ∧ A", predicate.ast_to_heading(move.tree))
+        assert.are.equal("B ∧ A", trees.heading(move.tree))
         assert.is_nil(move.tree.span)
     end)
 end)
@@ -601,7 +602,7 @@ describe("rewrite soundness", function()
         local rewritten = 0
         for _, source in ipairs(corpus) do
             local ast = assert(predicate.parse_located(source))
-            local before = predicate.ast_to_heading(ast)
+            local before = trees.heading(ast)
             local variables = inputs(ast)
             for byte = 0, #source + 1 do
                 for name, fn in pairs(rewrites) do
@@ -609,16 +610,16 @@ describe("rewrite soundness", function()
                     local tree, err = fn(ast, byte)
                     if tree then
                         rewritten = rewritten + 1
-                        local text = predicate.ast_to_heading(tree)
+                        local text = trees.heading(tree)
                         assert.is_true(same_function(ast, tree, variables), where .. " gave " .. text)
                         local reparsed = assert(predicate.parse_expression(text), where)
-                        assert.are.equal(text, predicate.ast_to_heading(reparsed), where)
+                        assert.are.equal(text, trees.heading(reparsed), where)
                         assert.is_true(same_function(ast, reparsed, variables), where .. " rendered as " .. text)
                         assert.is_nil(tree.span, where)
                     else
                         assert.is_string(err, where)
                     end
-                    assert.are.equal(before, predicate.ast_to_heading(ast), where)
+                    assert.are.equal(before, trees.heading(ast), where)
                 end
             end
         end
@@ -630,7 +631,7 @@ describe("rewrite soundness", function()
         local listed = 0
         for _, source in ipairs(corpus) do
             local ast = assert(predicate.parse_located(source))
-            local before = predicate.ast_to_heading(ast)
+            local before = trees.heading(ast)
             local variables = inputs(ast)
             local seen = { [before] = true }
             for _, move in ipairs(rewrite.moves(ast)) do
@@ -638,13 +639,13 @@ describe("rewrite soundness", function()
                 local where = move.law .. " of " .. source .. " gave " .. move.text
                 assert.is_nil(seen[move.text], where)
                 seen[move.text] = true
-                assert.are.equal(move.text, predicate.ast_to_heading(move.tree), where)
+                assert.are.equal(move.text, trees.heading(move.tree), where)
                 assert.is_true(same_function(ast, move.tree, variables), where)
                 local reparsed = assert(predicate.parse_expression(move.text), where)
-                assert.are.equal(move.text, predicate.ast_to_heading(reparsed), where)
+                assert.are.equal(move.text, trees.heading(reparsed), where)
                 assert.is_nil(move.tree.span, where)
             end
-            assert.are.equal(before, predicate.ast_to_heading(ast), source)
+            assert.are.equal(before, trees.heading(ast), source)
         end
         assert.is_true(listed > 200, "only " .. listed .. " moves listed")
     end)
@@ -654,7 +655,7 @@ describe("rewrite soundness", function()
     it("lists whatever a cursor rewrite reaches from any byte", function()
         for _, source in ipairs(corpus) do
             local ast = assert(predicate.parse_located(source))
-            local listed = { [predicate.ast_to_heading(ast)] = true }
+            local listed = { [trees.heading(ast)] = true }
             for _, move in ipairs(rewrite.moves(ast)) do
                 listed[move.text] = true
             end
@@ -662,7 +663,7 @@ describe("rewrite soundness", function()
                 for name, fn in pairs(rewrites) do
                     local tree = fn(ast, byte)
                     if tree then
-                        local text = predicate.ast_to_heading(tree)
+                        local text = trees.heading(tree)
                         assert.is_true(listed[text], name .. " at byte " .. byte .. " of " .. source .. " gave " .. text)
                     end
                 end

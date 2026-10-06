@@ -1,6 +1,27 @@
 truth-table.nvim changes
 ========================
 
+- Core exports one API, over the table model: build, expand, parse, format,
+  toggle, drop_row and drop_column, with find_table, column_index,
+  split_expressions, derive_karnaugh and format_karnaugh beside them; every
+  one is a call init.lua makes. The string-cell layer (build_truth_table,
+  expand, generate_rows, parse_table_lines, format_table, center_pad,
+  toggle_cells, drop_row, drop_column, toggle_table) and the tokenizer and
+  Markdown pass-throughs are gone, as is the _model suffix that told the two
+  apart. predicate.validate_vars goes with them.
+- Split truth-table.predicate in three. predicate.lua keeps the language:
+  tokenize, parse, evaluate, bind names to row positions, and the reading of
+  a :TruthTable argument. operators.lua is the one table of operators
+  (keyword, rendered symbol, further spellings, binding power, Boolean
+  meaning) that the parser, the evaluator and the renderer read. trees.lua
+  holds what works on a tree once made: unparen, operands and fold, the
+  copying transform (was predicate.transform_ast), canonical, heading (was
+  predicate.ast_to_heading) and de_morgan. predicate.SYMBOLS is
+  operators.SYMBOLS; de_morgan_expression, the parse-rewrite-render pipeline
+  nothing called, is gone.
+- Specs: core_spec tests core and the model through the model API; the
+  predicate and codec cases moved to predicate_spec and markdown_spec, and
+  spec/trees_spec.lua holds the tree cases.
 - Remove release-please (its workflow, configuration and manifest). Nothing
   installs this plugin by version, and the workflow failed on every push to
   main. A version, when one is wanted, is a tag made by hand. This file's

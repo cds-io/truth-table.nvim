@@ -6,6 +6,7 @@ local fp = require("truth-table.fp")
 local model = require("truth-table.table_model")
 local markdown = require("truth-table.markdown")
 local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
 local SYMBOLS = require("truth-table.symbols")
 
 local M = {}
@@ -335,14 +336,14 @@ local function term_ast(term, inputs)
     if #literals == 0 then
         return { type = "literal", value = 1 }
     end
-    return predicate.fold("and", literals)
+    return trees.fold("and", literals)
 end
 
 local function cover_ast(cover, inputs)
     if #cover == 0 then
         return { type = "literal", value = 0 }
     end
-    return predicate.fold("or", fp.map(cover, function(term)
+    return trees.fold("or", fp.map(cover, function(term)
         return term_ast(term, inputs)
     end))
 end
@@ -407,7 +408,7 @@ function M.derive(tbl, column)
         primes = primes,
         cover = cover,
         ast = ast,
-        formula = predicate.ast_to_heading(ast),
+        formula = trees.heading(ast),
         encoding = valid.encoding,
     }
 end
