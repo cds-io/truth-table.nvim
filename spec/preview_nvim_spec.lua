@@ -9,6 +9,7 @@ vim.opt.rtp:append(vim.fn.getcwd())
 require("truth-table").setup()
 
 local core = require("truth-table.core")
+local markdown = require("truth-table.markdown")
 local ns = vim.api.nvim_get_namespaces()["truth-table.preview"]
 
 local function marks()
@@ -303,7 +304,7 @@ end)
 
 describe("a table heading", function()
     local function format(headers, rows)
-        return assert(core.format_table(headers, rows))
+        return assert(core.format({ headers = headers, rows = rows }))
     end
 
     local indented = format({ "A", "¬(A ∧ B)" }, { { "0", "1" }, { "1", "0" } })
@@ -321,7 +322,7 @@ describe("a table heading", function()
         assert.are.equal(" [column 2] ⇒ ¬A ∨ ¬B  | by De Morgan", text())
         vim.cmd("TruthTableDeMorganApply")
         local updated = lines()
-        assert.are.equal("¬A ∨ ¬B", core.split_row(updated[1])[2])
+        assert.are.equal("¬A ∨ ¬B", markdown.split_row(updated[1])[2])
         assert.are.equal("  ", updated[1]:sub(1, 2))
         -- Compared whole: a row that went missing fails here too.
         assert.are.same(vim.list_slice(indented, 2), vim.list_slice(updated, 2))
@@ -349,7 +350,7 @@ describe("a table heading", function()
         assert.are.same(heading_table, lines())
         vim.cmd("TruthTableApply")
         local renamed = lines()
-        assert.are.equal("B ∧ A", core.split_row(renamed[1])[3])
+        assert.are.equal("B ∧ A", markdown.split_row(renamed[1])[3])
         assert.are.same(vim.list_slice(heading_table, 2), vim.list_slice(renamed, 2))
     end)
 
@@ -490,7 +491,7 @@ describe("the rewrite menu", function()
     end
 
     local function format(headers, rows)
-        return assert(core.format_table(headers, rows))
+        return assert(core.format({ headers = headers, rows = rows }))
     end
 
     local source = "(a and b) or (not a and b)"
@@ -565,7 +566,7 @@ describe("the rewrite menu", function()
         rewrites("1")
         assert.are.same({ "1       | by complement", "¬A ∨ A  | by commutativity" }, entries())
         local collapsed = lines()
-        assert.are.equal("1", core.split_row(collapsed[1])[2])
+        assert.are.equal("1", markdown.split_row(collapsed[1])[2])
         assert.are.same(vim.list_slice(constant, 2), vim.list_slice(collapsed, 2))
         assert.are.equal("Renamed the heading; update explicit references to its old label if needed", notified)
     end)

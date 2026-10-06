@@ -3,10 +3,11 @@
 -- and `moves`, every one of them the expression allows, wherever it applies.
 -- Pure: trees in, trees out. Inputs come from predicate.parse_located, whose
 -- node spans say where the cursor is; outputs are fresh trees without spans,
--- in canonical form (predicate.canonical), which is where their grouping and
+-- in canonical form (trees.canonical), which is where their grouping and
 -- parentheses are decided. A rewrite returns the new tree and the name of the
 -- law it applied, or nil and the reason it does not apply.
-local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
+local operators = require("truth-table.operators")
 local SYMBOLS = require("truth-table.symbols")
 local fp = require("truth-table.fp")
 local M = {}
@@ -25,9 +26,9 @@ local DISTRIBUTING = "distributivity (distributing)"
 local FACTORING = "distributivity (factoring)"
 local DE_MORGAN = "De Morgan"
 
-local unparen, operands, fold = predicate.unparen, predicate.operands, predicate.fold
+local unparen, operands, fold = trees.unparen, trees.operands, trees.fold
 -- A fresh tree without spans, in the form every grouping of it shares.
-local canonical = predicate.canonical
+local canonical = trees.canonical
 
 -- Tree identity with every parenthesis ignored; operand order counts.
 local function shape(node)
@@ -197,7 +198,7 @@ M.commute = at_cursor(commute_at)
 -- A ∧ T ∨ G ∧ T becomes T ∧ (A ∨ G), and dually for ∨ over ∧.
 local function factor_at(path, index)
     local target = path[index]
-    local label = predicate.ast_to_heading(target)
+    local label = trees.heading(target)
     local inner = chain_at(path, index)
     local outer = DUAL[inner.op] and chain_at(path, inner.slot)
     if not outer or outer.op ~= DUAL[inner.op] then
@@ -262,7 +263,7 @@ local function distribute_at(path, index, emit)
             emit(tree, DISTRIBUTING)
         end
     end
-    return nil, "No neighbouring group to distribute " .. predicate.ast_to_heading(target) .. " into"
+    return nil, "No neighbouring group to distribute " .. trees.heading(target) .. " into"
 end
 M.distribute = at_cursor(distribute_at)
 
@@ -331,7 +332,7 @@ local function xor_at(path, index, emit)
                         local items = operands(path[chain.top], chain.op)
                         items[low] = recognised
                         table.remove(items, high)
-                        local law = "definition of " .. predicate.SYMBOLS[recognised.type]
+                        local law = "definition of " .. operators.SYMBOLS[recognised.type]
                         local tree = canonical(substitute(path[1], path[chain.top], fold(chain.op, items)))
                         if not emit then
                             return tree, law
@@ -352,12 +353,12 @@ M.xor = at_cursor(xor_at)
 function M.de_morgan(ast, byte)
     local path = byte and path_to(ast, byte) or {}
     for index = #path, 1, -1 do
-        local rewritten = predicate.de_morgan(path[index])
+        local rewritten = trees.de_morgan(path[index])
         if rewritten then
             return canonical(substitute(ast, path[index], rewritten)), DE_MORGAN
         end
     end
-    local rewritten = predicate.de_morgan(ast)
+    local rewritten = trees.de_morgan(ast)
     if not rewritten then
         return nil, "No De Morgan rewrite applies under the cursor or to the whole expression"
     end
@@ -714,9 +715,9 @@ local OPERAND_REWRITES = {
 -- first; all of them left to right. A result reached twice keeps its first
 -- law, and one that reads the same as the expression is left out.
 function M.moves(ast)
-    local found, seen = {}, { [predicate.ast_to_heading(ast)] = true }
+    local found, seen = {}, { [trees.heading(ast)] = true }
     local function add(tree, law)
-        local text = tree and predicate.ast_to_heading(tree)
+        local text = tree and trees.heading(tree)
         if text and not seen[text] then
             seen[text] = true
             found[#found + 1] = { law = law, tree = tree, text = text }
@@ -732,7 +733,7 @@ function M.moves(ast)
     local everywhere, operand_paths = paths(ast), {}
     for _, path in ipairs(everywhere) do
         local node = path[#path]
-        local rewritten = predicate.de_morgan(node)
+        local rewritten = trees.de_morgan(node)
         if rewritten then
             add(canonical(substitute(ast, node, rewritten)), DE_MORGAN)
         end

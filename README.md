@@ -198,7 +198,7 @@ is written.
 | `a implies b implies c` | `(a → b) → c` | `→` is not associative, so a nested one is always marked |
 
 So two spellings of one expression get one heading, and `:TruthTableExpand`
-treats them as the same column. `predicate.canonical(ast)` is the tree
+treats them as the same column. `trees.canonical(ast)` is the tree
 transform behind it: it returns one tree for every grouping, with a run of `∧`
 or `∨` nested to the left.
 Each operator can be typed as its symbol, so formula headings can be used as
@@ -771,11 +771,13 @@ The plugin separates predicate logic, the table model, Markdown formatting, and
 Neovim integration. Compared with the original `truth-table.lua` and
 `truth-table-core.lua` configuration modules:
 
-- `toggle_cells` returns fresh rows instead of mutating its argument.
+- A table is a model: `headers`, `rows` of 0 and 1, and an `encoding` of
+`bits` or `tf` that the Markdown codec spells. `build`, `expand`,
+`toggle` and `format` are the API over it.
 - Repeated expansion skips an existing heading instead of appending a duplicate.
 - Equivalence renders as `⇔` in generated headings; `=` is still accepted as
 an input spelling.
-- Parsing, editing, and `format_table` reject malformed/non-Boolean tables with
+- Parsing, editing, and formatting reject malformed/non-Boolean tables with
 `nil, error`. Headings must be single-line strings without surrounding whitespace.
 - Empty expressions between delimiters now return errors instead of being ignored.
 
@@ -783,12 +785,18 @@ an input spelling.
 
 The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
 
-- `core.lua` composes construction and expansion and preserves the public APIs.
-- `predicate.lua` owns parsing, binding, evaluation, the canonical form of a
-tree, heading rendering, and the helpers that take a chain apart and put one
-together (`unparen`, `operands`, `fold`).
-Operator definitions share aliases, precedence, symbols, and Boolean semantics.
-Binding and variable discovery share a pure post-order AST traversal.
+- `core.lua` composes construction, expansion and the edits over the model;
+it provides the table pipeline used by `init.lua`.
+- `predicate.lua` is the language: the tokenizer, the parser, the evaluator,
+and the binding of names to row positions. Binding and variable discovery are
+written over the copying traversal in `trees.lua`.
+- `operators.lua` is the one table of operators: each one's keyword, rendered
+symbol, further spellings, binding power and Boolean meaning, read by the
+parser, the evaluator and the renderer alike.
+- `trees.lua` works on the trees the parser makes: the helpers that take a
+chain apart and put one together (`unparen`, `operands`, `fold`), the copying
+`transform`, the canonical form of a tree and its text as a heading, and the
+whole-expression De Morgan rewrite.
 - `table_model.lua` owns numeric Boolean cells, display encoding, validation, and
 immutable row/column transformations. Column appending centralizes deduplication.
 - `markdown.lua` parses and renders tables. It accepts display-width measurement
@@ -829,17 +837,16 @@ step's own `expect` block, so the course stays true as the plugin changes. It
 also evaluates every law a lesson states (`left ≡ right` in a fenced block)
 over all values of its variables.
 - `symbols.lua` is the one table of logic symbols, each an ASCII word plus its
-Unicode character; `predicate.lua` renders from it.
+Unicode character; `operators.lua` builds on it.
 - `abbreviations.lua` derives the default insert-mode abbreviations from
 `symbols.lua`, merges the `setup()` option over them, and swaps the
 registered set on each call.
 - `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
 complete result. Editor line ranges stay outside the table model.
 
-The semantic API is `build_model`, `parse_model`, `expand_model`,
-`drop_model_row`, `drop_model_column`, `toggle_model`, and `format_model`.
-Semantic tables carry numeric `0/1` cells and `encoding = "bits"` or `"tf"`.
-Existing string-cell APIs remain compatibility adapters.
+The API over the model is `build`, `parse`, `expand`, `drop_row`,
+`drop_column`, `toggle`, and `format`. A table carries numeric `0/1` cells and
+`encoding = "bits"` or `"tf"`.
 
 ## Testing
 

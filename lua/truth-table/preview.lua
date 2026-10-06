@@ -1,6 +1,7 @@
 -- Editor-only preview state. The source buffer remains unchanged until apply,
 -- or until a rewrite is picked from the menu of them.
 local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
 local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
 local rewrite = require("truth-table.rewrite")
@@ -191,7 +192,7 @@ local function resolve(buf, kind)
         end
         return nil, law
     end
-    local preview, err = prepare(buf, source, { text = predicate.ast_to_heading(tree), law = law })
+    local preview, err = prepare(buf, source, { text = trees.heading(tree), law = law })
     if not preview then
         return nil, err
     end

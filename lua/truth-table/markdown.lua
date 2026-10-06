@@ -132,7 +132,7 @@ local function read_row(line)
     return cells
 end
 
--- Legacy splitting returns an empty array for invalid row syntax.
+-- The cells of a row, or an empty array where read_row would report an error.
 function M.split_row(line)
     return read_row(line) or {}
 end

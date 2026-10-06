@@ -3,6 +3,7 @@
 
 local karnaugh = require("truth-table.karnaugh")
 local predicate = require("truth-table.predicate")
+local trees = require("truth-table.trees")
 local model = require("truth-table.table_model")
 
 -- A table over `names` whose last column is `fn(row bits...)`, as the plugin
@@ -91,7 +92,7 @@ describe("karnaugh.derive", function()
         assert.are.equal("(¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)", analysis.formula)
         -- The formula is a predicate the plugin can parse and evaluate back.
         local parsed = assert(predicate.parse_expression(analysis.formula))
-        assert.are.equal(analysis.formula, predicate.ast_to_heading(parsed))
+        assert.are.equal(analysis.formula, trees.heading(parsed))
     end)
 
     it("breaks a tie between equal covers deterministically", function()

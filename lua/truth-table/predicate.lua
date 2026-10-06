@@ -1,70 +1,22 @@
--- Predicate language: source -> AST -> bound AST -> Boolean value.
--- No table rendering or editor dependencies. Fallible operations use value, error.
-local fp = require("truth-table.fp")
+-- Predicate language: source -> AST -> bound AST -> Boolean value. The
+-- tokenizer, the parser, the evaluator and the binding of names to row
+-- positions, with the helpers that read a :TruthTable argument. The operators
+-- themselves are truth-table.operators; a tree once made is the business of
+-- truth-table.trees. No table rendering or editor dependencies. Fallible
+-- operations use value, error.
 local result = require("truth-table.result")
+local operators = require("truth-table.operators")
+local trees = require("truth-table.trees")
+local OPERATORS, KEYWORDS, BY_NAME = operators.OPERATORS, operators.KEYWORDS, operators.BY_NAME
+local SYMBOL_OPS, CONSTANTS, CONSTANT_WORDS = operators.SYMBOL_OPS, operators.CONSTANTS, operators.CONSTANT_WORDS
 local M = {}
 
 local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
--- ---------------------------------------------------------------------------
--- Predicate language: tokenizer -> recursive-descent parser -> AST.
+-- Tokenizer -> recursive-descent parser -> AST.
 -- Precedence (loosest to tightest): iff, implies, xor, or, and, unary not, atom.
--- ---------------------------------------------------------------------------
-
--- Ordered from tightest to loosest. Every binary operator associates left.
-local SYMBOLS = require("truth-table.symbols")
-
--- Token aliases, rendering, binding power, and Boolean semantics live together.
--- The keyword and rendered symbol come from truth-table.symbols so the
--- abbreviations stay in step; the aliases are extra spellings the tokenizer
--- accepts, and each one includes the rendered symbol so headings round-trip.
-local OPERATORS = {
-    { name = SYMBOLS.NOT.ascii, symbol = SYMBOLS.NOT.unicode, aliases = { SYMBOLS.NOT.unicode, "!" }, unary = true,
-        apply = function(a) return a == 0 end },
-    { name = SYMBOLS.AND.ascii, symbol = SYMBOLS.AND.unicode, aliases = { SYMBOLS.AND.unicode },
-        apply = function(a, b) return a == 1 and b == 1 end },
-    { name = SYMBOLS.OR.ascii, symbol = SYMBOLS.OR.unicode, aliases = { SYMBOLS.OR.unicode },
-        apply = function(a, b) return a == 1 or b == 1 end },
-    { name = SYMBOLS.XOR.ascii, symbol = SYMBOLS.XOR.unicode, aliases = { SYMBOLS.XOR.unicode },
-        apply = function(a, b) return a ~= b end },
-    { name = SYMBOLS.IMPLIES.ascii, symbol = SYMBOLS.IMPLIES.unicode,
-        aliases = { SYMBOLS.IMPLIES.unicode, "⇒", "->", "=>" },
-        apply = function(a, b) return a == 0 or b == 1 end },
-    { name = SYMBOLS.IFF.ascii, symbol = SYMBOLS.IFF.unicode,
-        aliases = { SYMBOLS.IFF.unicode, "=", "↔", "<->", "<=>" },
-        apply = function(a, b) return a == b end },
-}
-local KEYWORDS, BINARY, SYMBOL_OPS, BY_NAME = {}, {}, {}, {}
-M.SYMBOLS = {}
-for index, operator in ipairs(OPERATORS) do
-    KEYWORDS[operator.name] = true
-    BY_NAME[operator.name] = operator
-    operator.precedence = #OPERATORS - index + 1
-    M.SYMBOLS[operator.name] = operator.symbol
-    if not operator.unary then
-        BINARY[operator.name] = true
-    end
-    for _, alias in ipairs(operator.aliases) do
-        -- Preserve the existing tokenizer's public spelling for !.
-        SYMBOL_OPS[#SYMBOL_OPS + 1] = { alias, alias == "!" and "!" or operator.name }
-    end
-end
-M.SYMBOLS["!"] = M.SYMBOLS["not"]
--- Longest match handles overlapping spellings without order-sensitive aliases.
-table.sort(SYMBOL_OPS, function(a, b)
-    return #a[1] > #b[1]
-end)
-
--- The constants: the digits, with ⊤ and ⊥ as further spellings of 1 and 0.
--- The words `true` and `false` are read as ⊤ and ⊥, the way `and` is read as
--- ∧, which reserves them: neither can name a column.
-local CONSTANTS = { ["0"] = 0, ["1"] = 1, [SYMBOLS.TOP.unicode] = 1, [SYMBOLS.BOTTOM.unicode] = 0 }
-local CONSTANT_WORDS = {
-    [SYMBOLS.TOP.ascii] = SYMBOLS.TOP.unicode,
-    [SYMBOLS.BOTTOM.ascii] = SYMBOLS.BOTTOM.unicode,
-}
 
 local function symbol_op_at(input, pos)
     for _, entry in ipairs(SYMBOL_OPS) do
@@ -269,12 +221,6 @@ function M.parse_predicate(tokens, locations)
     return ast
 end
 
--- Compatibility adapter: binding owns name validation.
-function M.validate_vars(node, header_set)
-    local _, err = M.bind_columns(node, header_set)
-    return err
-end
-
 function M.eval_ast(node, ctx)
     if node.type == "paren" then
         return M.eval_ast(node.expr, ctx)
@@ -295,87 +241,6 @@ function M.eval_ast(node, ctx)
         end
         return operator.apply(left, right) and 1 or 0
     end
-end
-
--- ---------------------------------------------------------------------------
--- Taking trees apart and putting them together, for every module that does.
--- ---------------------------------------------------------------------------
-
-function M.unparen(node)
-    while node.type == "paren" do
-        node = node.expr
-    end
-    return node
-end
-
-local function collect(node, op, out)
-    local inner = M.unparen(node)
-    if inner.type == op then
-        collect(inner.left, op, out)
-        collect(inner.right, op, out)
-    else
-        out[#out + 1] = node
-    end
-    return out
-end
-
--- Operands of the `op` chain rooted at `node`, left to right. Parentheses
--- around a run of the same operator are transparent; any other operand is
--- kept whole, parentheses included.
-function M.operands(node, op)
-    return collect(node, op, {})
-end
-
--- Left-nested chain of `op` over `operands`, splicing in any operand that is
--- itself an `op` chain so the result reads flat.
-function M.fold(op, operands)
-    local flat = {}
-    for _, operand in ipairs(operands) do
-        collect(operand, op, flat)
-    end
-    local chain = flat[1]
-    for i = 2, #flat do
-        chain = { type = op, left = chain, right = flat[i] }
-    end
-    return chain
-end
-
--- Print a tree as it stands: parentheses come from its paren nodes alone.
-local function render_ast(node, reference_text)
-    if node.type == "paren" then
-        return "(" .. render_ast(node.expr, reference_text) .. ")"
-    elseif node.type == "reference" then
-        return ":h" .. node.index
-    elseif node.type == "column" then
-        return node.variable or reference_text(node.name)
-    elseif node.type == "var" then
-        return node.name
-    elseif node.type == "literal" then
-        return node.symbol or tostring(node.value)
-    elseif node.type == "not" then
-        return M.SYMBOLS["not"] .. render_ast(node.operand, reference_text)
-    elseif BINARY[node.type] then
-        local left, right = render_ast(node.left, reference_text), render_ast(node.right, reference_text)
-        return left .. " " .. M.SYMBOLS[node.type] .. " " .. right
-    end
-end
-
--- Headings and expressions are rendered from the canonical tree, so one
--- expression has one text however its source grouped it.
-local function render(node, reference_text)
-    return render_ast(assert(M.canonical(node)), reference_text)
-end
-
-function M.ast_to_heading(node)
-    return render(node, function(name)
-        return "“" .. name .. "”"
-    end)
-end
-
-local function ast_to_expression(node)
-    return render(node, function(name)
-        return "[" .. name .. "]"
-    end)
 end
 
 -- Parse source through the tokenizer/parser Result pipeline.
@@ -402,76 +267,9 @@ function M.parse_located(input)
     return parse_source(input, true)
 end
 
--- Post-order traversal copies every node before applying a result-producing
--- transformation. Shared by binding and variable discovery; inputs stay intact.
-function M.transform_ast(node, fn)
-    local copy = { type = node.type }
-    if node.type == "paren" or node.type == "not" then
-        local key = node.type == "paren" and "expr" or "operand"
-        local child, err = M.transform_ast(node[key], fn)
-        return result.bind(child, err, function(mapped)
-            copy[key] = mapped
-            return fn(copy)
-        end)
-    elseif BINARY[node.type] then
-        local left, err = M.transform_ast(node.left, fn)
-        return result.bind(left, err, function(mapped_left)
-            local right, right_err = M.transform_ast(node.right, fn)
-            return result.bind(right, right_err, function(mapped_right)
-                copy.left, copy.right = mapped_left, mapped_right
-                return fn(copy)
-            end)
-        end)
-    elseif node.type == "var" then
-        copy.name = node.name
-    elseif node.type == "reference" then
-        copy.index = node.index
-    elseif node.type == "literal" then
-        copy.value, copy.symbol = node.value, node.symbol
-    elseif node.type == "column" then
-        copy.index, copy.name, copy.variable = node.index, node.name, node.variable
-    else
-        return nil, "Unknown AST node: " .. tostring(node.type)
-    end
-    return fn(copy)
-end
-
--- A run of ∧ or of ∨ means the same however it is grouped, and reads
--- correctly flat. ⊕ and ⇔ are associative too, but a flat run of either
--- misreads (A ⇔ B ⇔ C is true when A is true and B and C are false), so
--- their grouping stays visible, like that of →.
-local FLAT = { ["and"] = true, ["or"] = true }
-
-local function grouped(operand)
-    return BINARY[operand.type] and { type = "paren", expr = operand } or operand
-end
-
--- The canonical form of a tree: one tree, and so one text, for every way of
--- grouping and parenthesising the same expression. The source's parentheses
--- are dropped; a run of ∧ or of ∨ becomes one left-nested chain; and an
--- operand that is itself a binary expression is parenthesised, so a mix of
--- operators reads without recalling the binding order: (A ∧ B) ∨ C.
-function M.canonical(node)
-    -- The traversal is post-order, so a node's operands are canonical before
-    -- the node is: any parentheses they had are gone, and a run among them
-    -- is already one chain.
-    return M.transform_ast(node, function(copy)
-        if copy.type == "paren" then
-            return copy.expr
-        elseif copy.type == "not" then
-            return { type = "not", operand = grouped(copy.operand) }
-        elseif FLAT[copy.type] then
-            return M.fold(copy.type, fp.map(M.operands(copy, copy.type), grouped))
-        elseif BINARY[copy.type] then
-            return { type = copy.type, left = grouped(copy.left), right = grouped(copy.right) }
-        end
-        return copy
-    end)
-end
-
 -- Resolve surface names once; evaluation uses row positions, never labels.
 function M.bind_columns(node, columns, headers)
-    return M.transform_ast(node, function(copy)
+    return trees.transform(node, function(copy)
         if copy.type == "reference" then
             if not headers or not headers[copy.index] then
                 return nil, "Column reference out of range: :h" .. copy.index
@@ -517,7 +315,7 @@ end
 -- the observable operation is pure and reference errors short-circuit traversal.
 function M.variables(node)
     local vars, seen = {}, {}
-    local mapped, err = M.transform_ast(node, function(copy)
+    local mapped, err = trees.transform(node, function(copy)
         if copy.type == "reference" then
             return nil, "Column references require an existing table"
         elseif copy.type == "var" and not seen[copy.name] then
@@ -546,41 +344,6 @@ function M.is_expression_input(args)
         end
     end
     return false
-end
-
--- Root-only De Morgan rewrite, returning an independent tree. No automatic
--- double-negation simplification: that is a separate refactoring operation.
-function M.de_morgan(node)
-    local root = M.unparen(node)
-    local rewritten
-    if root.type == "not" then
-        local operand = M.unparen(root.operand)
-        if operand.type == "and" or operand.type == "or" then
-            rewritten = {
-                type = operand.type == "and" and "or" or "and",
-                left = { type = "not", operand = operand.left },
-                right = { type = "not", operand = operand.right },
-            }
-        end
-    elseif root.type == "and" or root.type == "or" then
-        local left, right = M.unparen(root.left), M.unparen(root.right)
-        if left.type == "not" and right.type == "not" then
-            rewritten = { type = "not", operand = {
-                type = root.type == "and" and "or" or "and",
-                left = left.operand, right = right.operand,
-            } }
-        end
-    end
-    if not rewritten then
-        return nil, "No De Morgan rewrite applies to the whole expression"
-    end
-    return M.canonical(rewritten)
-end
-
-function M.de_morgan_expression(input)
-    local ast, err = M.parse_expression(input)
-    local rewritten, rewrite_err = result.bind(ast, err, M.de_morgan)
-    return result.bind(rewritten, rewrite_err, ast_to_expression)
 end
 
 return M

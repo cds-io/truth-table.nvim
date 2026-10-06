@@ -19,7 +19,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
             vim.cmd("TruthTable A")
             vim.api.nvim_win_set_cursor(0, { 3, 1 })
             vim.cmd("TruthTableToggle")
-            local tbl = assert(require("truth-table.core").parse_model(vim.api.nvim_buf_get_lines(0, 0, 4, false)))
+            local tbl = assert(require("truth-table.core").parse(vim.api.nvim_buf_get_lines(0, 0, 4, false)))
             found.rows, found.encoding = tbl.rows, tbl.encoding
             vim.cmd("help truth-table-predicates")
             found.help_filetype = vim.bo.filetype

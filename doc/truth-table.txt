@@ -634,10 +634,16 @@ an explicit later setup() can install it again.
 
 All pure modules support Lua 5.1 and have no vim dependency:
 
-- core.lua composes construction/expansion and exposes compatibility adapters.
-- predicate.lua owns parsing, binding, evaluation, the canonical form of a
-  tree, heading rendering, and the helpers that take a chain apart and put
-  one together (unparen, operands, fold).
+- core.lua composes construction, expansion and the edits over the model; it
+  provides the table pipeline used by init.lua.
+- predicate.lua is the language: the tokenizer, the parser, the evaluator,
+  and the binding of names to row positions.
+- operators.lua is the one table of operators: keyword, rendered symbol,
+  further spellings, binding power and Boolean meaning, read by the parser,
+  the evaluator and the renderer alike.
+- trees.lua works on the trees the parser makes: unparen, operands and fold,
+  the copying transform, the canonical form of a tree and its text as a
+  heading, and the whole-expression De Morgan rewrite.
 - table_model.lua owns numeric Boolean cells, display encoding, and pure edits.
 - markdown.lua parses/renders tables and escapes pipes, backslashes, and
   backticks so displayed headings retain their literal reference names.
@@ -668,7 +674,7 @@ All pure modules support Lua 5.1 and have no vim dependency:
   and evaluates every law a lesson states (`left ≡ right` in a fenced block)
   over all values of its variables.
 - symbols.lua is the one table of logic symbols (ASCII word plus Unicode
-  character); predicate.lua renders from it.
+  character); operators.lua builds on it.
 - abbreviations.lua derives the default insert-mode abbreviations from
   symbols.lua, merges the setup() option over them, and swaps the registered
   set on each call.
@@ -677,8 +683,9 @@ All pure modules support Lua 5.1 and have no vim dependency:
 Display width is injectable through core.display_width; setup() uses
 vim.fn.strdisplaywidth. The default counts UTF-8 codepoints.
 
-Compatibility changes: toggle_cells returns fresh rows; expansion skips existing
-headings; malformed/non-Boolean tables and empty expressions are rejected.
+Compatibility changes: a table is a model with 0/1 cells and an encoding;
+expansion skips existing headings; malformed/non-Boolean tables and empty
+expressions are rejected.
 Computed columns retain stored values when source variable columns are dropped.
 An empty table loses its display encoding when serialized to Markdown.
 
