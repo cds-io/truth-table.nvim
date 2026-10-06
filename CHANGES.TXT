@@ -1,6 +1,11 @@
 truth-table.nvim changes
 ========================
 
+- Specs: the three command cases that checked only that a warning was shown
+  now check which (the ragged row, the escaped closing pipe, the Karnaugh
+  column its inputs do not determine); the bind_columns case checks the
+  bound tree's positions; the unclosed-paren case, which asked only for some
+  error, goes, since the diagnostics case pins its message and byte.
 - Add result.map(value, err, fn), for a step that always answers, and
   result.context(value, err, prefix), which puts where an error was met in
   front of it. bind is now only called where its function can refuse, and a
