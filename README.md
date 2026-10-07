@@ -362,6 +362,30 @@ it as the next line of a derivation, then moves the cursor there:
 ≡ b                           | by identity
 ```
 
+A rewrite lights both ends of its step. While a preview is pending, the terms
+the law takes are lit on the line in `TruthTableConsumed` (a default link to
+`DiagnosticWarn`): the operands a commute moves, each occurrence a factoring
+pulls out, the operand distributing expands and the group it enters, the two
+terms ⊕ recognition reads, the group De Morgan rewrites, the operands a
+collapsing law makes disappear. What the rewrite puts in shows in the preview's
+dimmed text in `TruthTableChanged` (a default link to `DiagnosticOk`). A step
+written below keeps both, the consumed terms above and the result on the new
+line, so a derivation reads from the part a law acted on to the part it
+produced; a line rewritten in place keeps only the result, since what it
+consumed is gone with the text. Define either group yourself and it stands.
+The marks stay with their lines and follow your edits; a line rewritten in
+place again loses its old one. Undo and redo restore the text and its marks
+together, including when you return to an earlier undo branch. A collapsing
+law that introduces a replacement lights that replacement, leaving untouched
+operands dimmed; a law that only removes terms lights the surviving site.
+
+The bars of a derivation's justifications stay in one column: a written step
+realigns the steps above it, in the same undo entry, and `:TruthTableAlign`
+does the same for a derivation typed by hand, from any of its lines. The
+plugin fires the `User` autocommand `TruthTableRewrite` after every rewrite it
+writes, with `data = { buf, row, kind }` (`kind` is `step` or `in_place`); the
+aligner is its own listener, and yours can follow.
+
 `≡` separates the sides of a derivation: a rewrite reads the side under the
 cursor and leaves the others as they are, and a new step lines up under the
 line's last `≡` (or at its indentation when it has none). Type it as `equiv@`.
@@ -816,10 +840,21 @@ which would leave a hole that `ipairs` stops at.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law
-(simplify): located trees in, fresh trees out, each with the name of the law
-applied. `moves` lists what all of them give from every place in a tree: each
-rewrite is written against an operand's path from the root, which a cursor
-byte or a walk of the tree supplies.
+(simplify): trees in, transactions out. A transaction is the new `value` with
+the log of `changes` that made it, one per law: the `before` and `after`
+trees, the terms the law consumed and produced, and where those terms sit as
+byte ranges in each tree's text. A canonical result can be the input of the
+next rewrite without reparsing. `moves` lists what all of them give from
+every place in a tree: each rewrite is written against an operand's path from
+the root, which a cursor byte or a walk of the tree supplies.
+- `transaction.lua` is that shape: `record` makes a transaction of one
+change, `pure` one of none, and `bind` runs the next rewrite on a
+transaction's value and appends its changes, keeping both inputs as they
+were; a refusal is `nil, reason`, as everywhere else.
+- `edit.lua` writes a rewrite's text and marks as one patch, and keeps the
+marks in step with Neovim's undo tree: each undo sequence number has the
+marks that went with it, so undo and redo restore them with the text,
+branches included.
 - `derivation.lua` splits a line into sides at `≡`, sets its `| by`
 justification apart, replaces one side, and builds an aligned, justified step
 line.

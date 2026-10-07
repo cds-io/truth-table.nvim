@@ -138,7 +138,7 @@ Try to reach the target yourself, applying each move as a step
 ]],
             expect = [[
 (¬C ∨ (Q ∧ ¬L)) ∧ Q
-≡ Q ∧ (¬C ∨ (Q ∧ ¬L))    | by commutativity
+≡ Q ∧ (¬C ∨ (Q ∧ ¬L))        | by commutativity
 ≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity (distributing)
 ≡ (Q ∧ ¬C) ∨ (Q ∧ ¬L)        | by idempotence
 ≡ Q ∧ (¬C ∨ ¬L)              | by distributivity (factoring)

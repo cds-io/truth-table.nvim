@@ -137,3 +137,78 @@ describe("derivation.step", function()
         assert.are.equal("        ≡ B ∧ A", step)
     end)
 end)
+
+-- One display column per codepoint, as the pure default.
+local function width(s)
+    local _, count = s:gsub("[^\128-\191]", "")
+    return count
+end
+
+describe("derivation.block", function()
+    local lines = {
+        "prose",
+        "",
+        "(¬C ∨ (Q ∧ ¬L)) ∧ Q",
+        "≡ Q ∧ (¬C ∨ (Q ∧ ¬L))    | by commutativity",
+        "≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity (distributing)",
+        "",
+        "≡ an orphan step",
+        "F ≡ A ∧ B",
+    }
+
+    it("runs from the head a derivation follows from to its last step, from any of its rows", function()
+        for row = 3, 5 do
+            assert.are.same({ 3, 5 }, { derivation.block(lines, row) }, "from row " .. row)
+        end
+    end)
+
+    it("is one line for a line that is no step with no step below it", function()
+        assert.are.same({ 1, 1 }, { derivation.block(lines, 1) })
+        assert.are.same({ 8, 8 }, { derivation.block(lines, 8) })
+    end)
+
+    it("takes no blank line as a head, and a step on the first line as its own head", function()
+        assert.are.same({ 7, 7 }, { derivation.block(lines, 7) })
+        assert.are.same({ 1, 2 }, { derivation.block({ "≡ A", "≡ B", "" }, 2) })
+    end)
+end)
+
+describe("derivation.aligned", function()
+    it("puts every bar four columns past the widest sides in the block", function()
+        local block = {
+            "(¬C ∨ (Q ∧ ¬L)) ∧ Q",
+            "≡ Q ∧ (¬C ∨ (Q ∧ ¬L))    | by commutativity",
+            "≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)    | by distributivity (distributing)",
+            "≡ (Q ∧ ¬C) ∨ (Q ∧ ¬L)        | by idempotence",
+            "≡ Q ∧ (¬C ∨ ¬L)              | by distributivity (factoring)",
+        }
+        local aligned = derivation.aligned(block, width)
+        assert.are.equal(block[1], aligned[1])
+        local column = width("≡ (Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)") + 4
+        for i = 2, #aligned do
+            local bar = assert(aligned[i]:find("|", 1, true))
+            assert.are.equal(column, width(aligned[i]:sub(1, bar - 1)), aligned[i])
+            assert.are.equal(block[i]:match("| by .*$"), aligned[i]:match("| by .*$"))
+        end
+        assert.are.equal("≡ Q ∧ (¬C ∨ (Q ∧ ¬L))        | by commutativity", aligned[2])
+    end)
+
+    it("measures a head wider than every step, and leaves lines with no bar as they are", function()
+        local block = { "a long head expression here", "≡ b    | by a law", "  not a step, no bar" }
+        local aligned = derivation.aligned(block, width)
+        assert.are.equal("≡ b" .. string.rep(" ", #"a long head expression here" + 4 - 3) .. "| by a law", aligned[2])
+        assert.are.equal(block[1], aligned[1])
+        assert.are.equal(block[3], aligned[3])
+    end)
+
+    it("pulls a bar back as well as pushing one out", function()
+        local block = { "≡ a            | by x", "≡ b ∧ c    | by y" }
+        assert.are.same({ "≡ a        | by x", "≡ b ∧ c    | by y" }, derivation.aligned(block, width))
+    end)
+
+    it("changes the padding before the bar and nothing else", function()
+        local block = { "  F ≡ A ∨ B", "    ≡ B ∨ A  | by commutativity, idempotence" }
+        local aligned = derivation.aligned(block, width)
+        assert.are.equal("    ≡ B ∨ A    | by commutativity, idempotence", aligned[2])
+    end)
+end)

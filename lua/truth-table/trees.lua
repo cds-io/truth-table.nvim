@@ -6,7 +6,8 @@
 -- A tree is a table with a `type`: "var" (name), "reference" (index, from
 -- :hN), "column" (index, with name or variable; what binding makes of the
 -- two before it), "literal" (value, and the symbol it was typed as), "paren"
--- (expr), "not" (operand), or a binary operator's name (left, right).
+-- (expr), "not" (operand), or a binary operator's name (left, right). A node
+-- has no editor annotations. Provenance is supplied separately to rendered().
 local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local operators = require("truth-table.operators")
@@ -62,7 +63,7 @@ function M.transform(node, fn)
         local child, err = M.transform(node[key], fn)
         return result.bind(child, err, function(mapped)
             copy[key] = mapped
-            return fn(copy)
+            return fn(copy, node)
         end)
     elseif BINARY[node.type] then
         local left, err = M.transform(node.left, fn)
@@ -70,7 +71,7 @@ function M.transform(node, fn)
             local right, right_err = M.transform(node.right, fn)
             return result.bind(right, right_err, function(mapped_right)
                 copy.left, copy.right = mapped_left, mapped_right
-                return fn(copy)
+                return fn(copy, node)
             end)
         end)
     elseif node.type == "var" then
@@ -84,7 +85,7 @@ function M.transform(node, fn)
     else
         return nil, "Unknown AST node: " .. tostring(node.type)
     end
-    return fn(copy)
+    return fn(copy, node)
 end
 
 -- A run of ∧ or of ∨ means the same however it is grouped, and reads
@@ -102,48 +103,137 @@ end
 -- are dropped; a run of ∧ or of ∨ becomes one left-nested chain; and an
 -- operand that is itself a binary expression is parenthesised, so a mix of
 -- operators reads without recalling the binding order: (A ∧ B) ∨ C.
-function M.canonical(node)
-    -- The traversal is post-order, so a node's operands are canonical before
-    -- the node is: any parentheses they had are gone, and a run among them
-    -- is already one chain.
-    return M.transform(node, function(copy)
-        if copy.type == "paren" then
-            return copy.expr
-        elseif copy.type == "not" then
-            return { type = "not", operand = grouped(copy.operand) }
-        elseif FLAT[copy.type] then
-            return M.fold(copy.type, fp.map(M.operands(copy, copy.type), grouped))
-        elseif BINARY[copy.type] then
-            return { type = copy.type, left = grouped(copy.left), right = grouped(copy.right) }
+function M.canonical(node, selected)
+    -- Membership belongs to this traversal, never to the syntax tree.
+    local origins, mapped = {}, {}
+    local function select_nodes(tree)
+        origins[tree] = true
+        for _, key in ipairs({ "expr", "operand", "left", "right" }) do
+            if tree[key] then
+                select_nodes(tree[key])
+            end
         end
-        return copy
-    end)
-end
-
--- Print a tree as it stands: parentheses come from its paren nodes alone. A
--- column bound from a reference prints as its label in quotes.
-local function render(node)
-    if node.type == "paren" then
-        return "(" .. render(node.expr) .. ")"
-    elseif node.type == "reference" then
-        return ":h" .. node.index
-    elseif node.type == "column" then
-        return node.variable or ("“" .. node.name .. "”")
-    elseif node.type == "var" then
-        return node.name
-    elseif node.type == "literal" then
-        return node.symbol or tostring(node.value)
-    elseif node.type == "not" then
-        return SYMBOLS["not"] .. render(node.operand)
-    elseif BINARY[node.type] then
-        return render(node.left) .. " " .. SYMBOLS[node.type] .. " " .. render(node.right)
     end
+    for _, tree in ipairs(selected or {}) do
+        select_nodes(tree)
+    end
+    local function grouped_copy(operand)
+        local group = grouped(operand)
+        if mapped[operand] then
+            mapped[group] = true
+        end
+        return group
+    end
+    local tree, err = M.transform(node, function(copy, original)
+        local output
+        if copy.type == "paren" then
+            output = copy.expr
+        elseif copy.type == "not" then
+            output = { type = "not", operand = grouped_copy(copy.operand) }
+        elseif FLAT[copy.type] then
+            output = M.fold(copy.type, fp.map(M.operands(copy, copy.type), grouped_copy))
+        elseif BINARY[copy.type] then
+            output = { type = copy.type, left = grouped_copy(copy.left), right = grouped_copy(copy.right) }
+        else
+            output = copy
+        end
+        if origins[original] then
+            mapped[output] = true
+        end
+        return output
+    end)
+    if not tree then
+        return nil, err
+    end
+    local produced = {}
+    local function visit(current)
+        if mapped[current] then
+            produced[#produced + 1] = current
+            return
+        end
+        for _, key in ipairs({ "expr", "operand", "left", "right" }) do
+            if current[key] then
+                visit(current[key])
+            end
+        end
+    end
+    visit(tree)
+    return tree, produced
 end
 
--- The text of a tree, as a column heading: rendered from its canonical form,
--- so one expression has one text however its source grouped it.
+-- Render as it stands, collecting selected regions and optional positions
+-- into separate tables. Parentheses come from paren nodes alone.
+local function render(node, offset, selected, regions, positions)
+    local text
+    if node.type == "paren" then
+        text = "(" .. render(node.expr, offset + 1, selected, regions, positions) .. ")"
+    elseif node.type == "not" then
+        text = SYMBOLS["not"] .. render(node.operand, offset + #SYMBOLS["not"], selected, regions, positions)
+    elseif BINARY[node.type] then
+        local left = render(node.left, offset, selected, regions, positions)
+        local glue = " " .. SYMBOLS[node.type] .. " "
+        local right = render(node.right, offset + #left + #glue, selected, regions, positions)
+        text = left .. glue .. right
+    elseif node.type == "reference" then
+        text = ":h" .. node.index
+    elseif node.type == "column" then
+        text = node.variable or ("“" .. node.name .. "”")
+    elseif node.type == "var" then
+        text = node.name
+    else
+        text = node.symbol or tostring(node.value)
+    end
+    if positions then
+        positions[node] = { start_byte = offset + 1, end_byte = offset + #text }
+    end
+    if selected[node] then
+        regions[#regions + 1] = { offset, offset + #text }
+    end
+    return text
+end
+
+-- Locate a tree's nodes in its own text without mutating it or parsing it
+-- again. This lets a subsequent transaction target a canonical output tree.
+function M.positions(node)
+    local positions = {}
+    render(node, 0, {}, {}, positions)
+    return positions
+end
+
+-- The text of a tree, with the bytes its separately supplied nodes cover as
+-- zero-based half-open ranges, then the canonical tree the text was rendered
+-- from and those nodes' counterparts in it. Canonical form gives one
+-- expression one text however its source grouped it.
+function M.rendered(node, produced)
+    local tree, mapped = M.canonical(node, produced)
+    assert(tree, mapped)
+    local selected = {}
+    for _, item in ipairs(mapped) do
+        selected[item] = true
+    end
+    local regions = {}
+    local text = render(tree, 0, selected, regions)
+    table.sort(regions, function(a, b)
+        return a[1] < b[1] or a[1] == b[1] and a[2] > b[2]
+    end)
+    local merged = {}
+    for _, region in ipairs(regions) do
+        local previous = merged[#merged]
+        local glue = previous and text:sub(previous[2] + 1, region[1])
+        -- Adjacent produced operands include their joining operator. A gap
+        -- containing an untouched operand stays unlit.
+        local joins = glue == " ∧ " or glue == " ∨ " or glue == " ⊕ " or glue == " ⇔ " or glue == " → "
+        if previous and (region[1] <= previous[2] or joins) then
+            previous[2] = math.max(previous[2], region[2])
+        else
+            merged[#merged + 1] = { region[1], region[2] }
+        end
+    end
+    return text, merged, tree, mapped
+end
+
 function M.heading(node)
-    return render(assert(M.canonical(node)))
+    return (M.rendered(node))
 end
 
 -- Root-only De Morgan rewrite, returning an independent tree. No automatic

@@ -16,9 +16,18 @@ local function marks()
     return vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })
 end
 
--- The pending preview's virtual text, or nil when none is shown.
+-- The pending preview's virtual text, its chunks joined, or nil when none is
+-- shown.
 local function text()
-    return marks()[1] and marks()[1][4].virt_text[1][1]
+    local mark = marks()[1]
+    if not mark then
+        return nil
+    end
+    local parts = {}
+    for _, chunk in ipairs(mark[4].virt_text) do
+        parts[#parts + 1] = chunk[1]
+    end
+    return table.concat(parts)
 end
 
 local function lines()
@@ -51,6 +60,41 @@ before_each(function()
     notified = nil
     vim.cmd("enew!")
 end)
+
+-- The marks of a namespace as the text under each with its group, in order
+-- of row, column and text.
+local function regions(name)
+    local found = {}
+    local space = vim.api.nvim_get_namespaces()[name]
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, space, 0, -1, { details = true })) do
+        -- A mark an edit has orphaned, before its scheduled removal, may point
+        -- past the buffer.
+        local line = vim.api.nvim_buf_get_lines(0, mark[2], mark[2] + 1, false)[1] or ""
+        found[#found + 1] = { row = mark[2] + 1, col = mark[3], text = line:sub(mark[3] + 1, mark[4].end_col or mark[3]), group = mark[4].hl_group }
+    end
+    table.sort(found, function(a, b)
+        if a.row ~= b.row then
+            return a.row < b.row
+        elseif a.col ~= b.col then
+            return a.col < b.col
+        end
+        return a.text < b.text
+    end)
+    for _, region in ipairs(found) do
+        region.col = nil
+    end
+    return found
+end
+
+-- What written rewrites lit, to stay with their lines.
+local function lit()
+    return regions("truth-table.changed")
+end
+
+-- The consumed terms of the pending preview.
+local function targets()
+    return regions("truth-table.target")
+end
 
 describe("a De Morgan preview", function()
     it("shows the rewrite beside the line and leaves the source as it was", function()
@@ -585,5 +629,321 @@ describe("the rewrite menu", function()
         rewrites(nil)
         assert.is_nil(offered)
         assert.are.equal("No expression under the cursor", notified)
+    end)
+end)
+
+describe("what a rewrite consumed and put in", function()
+    local group, consumed = "TruthTableChanged", "TruthTableConsumed"
+
+    it("is lit in the preview's text, between the dimmed rest", function()
+        set({ "r and not (s or t)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        assert.are.same({
+            { " ⇒ r ∧ ", "Comment" },
+            { "¬s ∧ ¬t", group },
+            { "  | by De Morgan", "Comment" },
+        }, marks()[1][4].virt_text)
+    end)
+
+    it("lights the consumed terms on the line while the preview is pending, and no longer once it is dismissed", function()
+        set({ "a ∧ b ∨ c" })
+        on("a")
+        vim.cmd("TruthTableCommute")
+        assert.are.same({
+            { row = 1, text = "a", group = consumed },
+            { row = 1, text = "b", group = consumed },
+        }, targets())
+        vim.cmd("TruthTableCommute")
+        assert.are.same({}, targets())
+        assert.are.same({}, lit())
+    end)
+
+    it("drops the consumed marks with a preview the buffer invalidated", function()
+        set({ "not (A or B)" })
+        vim.cmd("TruthTableDeMorgan")
+        assert.are.equal(1, #targets())
+        set({ "A and B" })
+        vim.wait(100, function()
+            return #targets() == 0
+        end)
+        assert.are.same({}, targets())
+    end)
+
+    it("is lit on the step it is written as, with what it consumed above, and stays as the next step is written", function()
+        set({ "r and not (s or t)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApplyStep")
+        assert.are.same({}, targets())
+        assert.are.same({
+            { row = 1, text = "not (s or t)", group = consumed },
+            { row = 2, text = "¬s ∧ ¬t", group = group },
+        }, lit())
+        on("r", 2)
+        vim.cmd("TruthTableCommute")
+        vim.cmd("TruthTableApplyStep")
+        assert.are.same({
+            { row = 1, text = "not (s or t)", group = consumed },
+            { row = 2, text = "r", group = consumed },
+            { row = 2, text = "¬s", group = consumed },
+            { row = 2, text = "¬s ∧ ¬t", group = group },
+            { row = 3, text = "¬s ∧ r", group = group },
+        }, lit())
+    end)
+
+    it("lights the consumed terms of a pick from the menu with its step", function()
+        local picked
+        local select = vim.ui.select
+        vim.ui.select = function(items, _, choose)
+            for _, item in ipairs(items) do
+                if item.text == picked then
+                    choose(item)
+                    return
+                end
+            end
+        end
+        finally(function()
+            vim.ui.select = select
+        end)
+        set({ "A ∧ B" })
+        picked = "B ∧ A"
+        vim.cmd("TruthTableRewrites")
+        assert.are.same({
+            { row = 1, text = "A", group = consumed },
+            { row = 1, text = "B", group = consumed },
+            { row = 2, text = "B ∧ A", group = group },
+        }, lit())
+    end)
+
+    it("is lit on a line rewritten in place, and a second rewrite there replaces it", function()
+        set({ "A or not (B and C)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        assert.are.equal("A ∨ ¬B ∨ ¬C", vim.api.nvim_get_current_line())
+        assert.are.same({ { row = 1, text = "¬B ∨ ¬C", group = group } }, lit())
+        on("¬B")
+        vim.cmd("TruthTableCommute")
+        vim.cmd("TruthTableApply")
+        assert.are.same({ { row = 1, text = "¬C ∨ ¬B", group = group } }, lit())
+    end)
+
+    it("is lit in a heading rewritten in place, whose consumed term was lit while pending", function()
+        set(assert(core.format({ headers = { "A", "B", "A ∧ ¬(A ∧ B)" }, rows = { { 0, 0, 0 }, { 1, 0, 1 } } })), 1, 20)
+        on("¬(")
+        vim.cmd("TruthTableDeMorgan")
+        assert.are.same({ { row = 1, text = "¬(A ∧ B)", group = consumed } }, targets())
+        vim.cmd("TruthTableApply")
+        assert.are.same({}, targets())
+        assert.are.equal("A ∧ (¬A ∨ ¬B)", markdown.split_row(lines()[1])[3])
+        assert.are.same({ { row = 1, text = "(¬A ∨ ¬B)", group = group } }, lit())
+    end)
+
+    it("follows the reader's edits on the line", function()
+        set({ "A or not (B and C)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { "  " })
+        assert.are.same({ { row = 1, text = "¬B ∨ ¬C", group = group } }, lit())
+    end)
+
+    it("has its groups defined as default links, again after a colorscheme", function()
+        for name, link in pairs({ [group] = "DiagnosticOk", [consumed] = "DiagnosticWarn" }) do
+            local hl = vim.api.nvim_get_hl(0, { name = name })
+            assert.are.equal(link, hl.link, name)
+            assert.is_true(hl.default, name)
+            vim.cmd("highlight clear " .. name)
+            vim.api.nvim_exec_autocmds("ColorScheme", {})
+            assert.are.equal(link, vim.api.nvim_get_hl(0, { name = name }).link, name)
+        end
+    end)
+end)
+
+describe("editor patches and undo", function()
+    local function settle()
+        vim.wait(20, function() return false end, 1)
+    end
+
+    it("undoes and redoes a step's text and annotations together", function()
+        set({ "not (A or B)" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApplyStep")
+        local written, highlights = lines(), lit()
+        assert.are.equal(2, #highlights)
+        vim.cmd("undo")
+        settle()
+        assert.are.same({ "not (A or B)" }, lines())
+        assert.are.same({}, lit())
+        vim.cmd("redo")
+        settle()
+        assert.are.same(written, lines())
+        assert.are.same(highlights, lit())
+    end)
+
+    it("clears marks when undo passes the first annotated history entry", function()
+        set({ "not (A or B)" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApplyStep")
+        vim.cmd("undo")
+        vim.cmd("undo")
+        settle()
+        assert.are.same({ "" }, lines())
+        assert.are.same({}, lit())
+        vim.cmd("redo")
+        vim.cmd("redo")
+        settle()
+        assert.are.equal(2, #lit())
+    end)
+
+    it("restores the previous annotations when an in-place rewrite is undone", function()
+        set({ "A or not (B and C)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        local first_text, first_marks = lines(), lit()
+        on("¬B")
+        vim.cmd("TruthTableCommute")
+        vim.cmd("TruthTableApply")
+        local second_text, second_marks = lines(), lit()
+        vim.cmd("undo")
+        settle()
+        assert.are.same(first_text, lines())
+        assert.are.same(first_marks, lit())
+        vim.cmd("redo")
+        settle()
+        assert.are.same(second_text, lines())
+        assert.are.same(second_marks, lit())
+        vim.cmd("undo")
+        vim.cmd("undo")
+        settle()
+        assert.are.same({ "A or not (B and C)" }, lines())
+        assert.are.same({}, lit())
+    end)
+
+    it("keeps annotations associated with native undo branches", function()
+        set({ "not (A or B)" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApplyStep")
+        local branch_one, marks_one = lines(), lit()
+        vim.cmd("undo")
+        settle()
+        on("A")
+        vim.cmd("TruthTableCommute")
+        vim.cmd("TruthTableApply")
+        local branch_two, marks_two = lines(), lit()
+        vim.cmd("undo")
+        settle()
+        assert.are.same({}, lit())
+        vim.cmd("redo")
+        settle()
+        assert.are.same(branch_two, lines())
+        assert.are.same(marks_two, lit())
+        vim.cmd("undo 2")
+        settle()
+        assert.are.same(branch_one, lines())
+        assert.are.same(marks_one, lit())
+    end)
+
+    it("restores annotations around an ordinary edit between rewrites", function()
+        set({ "A or not (B and C)" })
+        on("not")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        local original = lit()
+        vim.cmd("let &undolevels = &undolevels")
+        vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { "  " })
+        settle()
+        assert.are.equal("¬B ∨ ¬C", lit()[1].text)
+        vim.cmd("undo")
+        settle()
+        assert.are.same(original, lit())
+        vim.cmd("undo")
+        settle()
+        assert.are.same({}, lit())
+        vim.cmd("redo")
+        vim.cmd("redo")
+        settle()
+        assert.are.equal("¬B ∨ ¬C", lit()[1].text)
+    end)
+end)
+
+describe("aligning a derivation", function()
+    -- The display column of each justification bar in the buffer, in order.
+    local function bars()
+        local columns = {}
+        for _, line in ipairs(lines()) do
+            local bar = line:find("| by", 1, true)
+            if bar then
+                columns[#columns + 1] = vim.fn.strdisplaywidth(line:sub(1, bar - 1))
+            end
+        end
+        return columns
+    end
+
+    local function step(row, needle, command)
+        on(needle, row)
+        vim.cmd(command)
+        vim.cmd("TruthTableApplyStep")
+    end
+
+    it("keeps every bar in one column as steps grow wider, and the marks on their expressions", function()
+        set({ "(¬C ∨ (Q ∧ ¬L)) ∧ Q" })
+        step(1, ") ∧ Q", "TruthTableCommute")
+        step(2, "Q", "TruthTableDistribute")
+        assert.are.same({ 29, 29 }, bars())
+        step(3, "(Q", "TruthTableSimplify")
+        step(4, "Q", "TruthTableFactor")
+        assert.are.same({ 29, 29, 29, 29 }, bars())
+        assert.are.equal("≡ Q ∧ (¬C ∨ (Q ∧ ¬L))        | by commutativity", lines()[2])
+        local produced = vim.tbl_filter(function(region)
+            return region.row == 2 and region.group == "TruthTableChanged"
+        end, lit())
+        assert.are.same({ { row = 2, text = "Q ∧ (¬C ∨ (Q ∧ ¬L))", group = "TruthTableChanged" } }, produced)
+    end)
+
+    it("undoes a step and the realignment it caused together", function()
+        set({ "(¬C ∨ (Q ∧ ¬L)) ∧ Q" })
+        step(1, ") ∧ Q", "TruthTableCommute")
+        local before = lines()
+        step(2, "Q", "TruthTableDistribute")
+        assert.are_not.same(before[2], lines()[2])
+        vim.cmd("silent undo")
+        assert.are.same(before, lines())
+    end)
+
+    it("realigns after a rewrite in place that changed a step's width", function()
+        set({ "¬(A ∧ B) ∨ C", "≡ ¬A ∨ ¬B ∨ C    | by De Morgan" })
+        on("¬A", 2)
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        assert.are.same({ "¬(A ∧ B) ∨ C", "≡ ¬(A ∧ B) ∨ C    | by De Morgan, De Morgan" }, lines())
+    end)
+
+    it("aligns a derivation typed by hand with :TruthTableAlign, from any of its lines", function()
+        set({ "head", "≡ a  | by x", "≡ a ∧ b ∧ c      | by y", "" }, 2, 0)
+        vim.cmd("TruthTableAlign")
+        assert.are.same({ "head", "≡ a            | by x", "≡ a ∧ b ∧ c    | by y", "" }, lines())
+    end)
+
+    it("fires TruthTableRewrite with the buffer, the row and the kind of each written rewrite", function()
+        local heard = {}
+        local id = vim.api.nvim_create_autocmd("User", {
+            pattern = "TruthTableRewrite",
+            callback = function(event)
+                heard[#heard + 1] = event.data
+            end,
+        })
+        finally(function()
+            vim.api.nvim_del_autocmd(id)
+        end)
+        set({ "not (A or B)" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApplyStep")
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableApply")
+        local buf = vim.api.nvim_get_current_buf()
+        assert.are.same({ { buf = buf, row = 2, kind = "step" }, { buf = buf, row = 2, kind = "in_place" } }, heard)
     end)
 end)

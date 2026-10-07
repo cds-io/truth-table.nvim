@@ -183,8 +183,8 @@ R ∧ ¬(B ∨ A) ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)
 ]],
             expect = [[
 R ∧ ¬(B ∨ A) ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)
-≡ R ∧ ¬B ∧ ¬A ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)    | by De Morgan
-≡ R ∧ ¬B ∧ ¬A ∧ (¬S ∨ ¬L) ∧ ¬(E ∧ G)    | by De Morgan
+≡ R ∧ ¬B ∧ ¬A ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)      | by De Morgan
+≡ R ∧ ¬B ∧ ¬A ∧ (¬S ∨ ¬L) ∧ ¬(E ∧ G)     | by De Morgan
 ≡ R ∧ ¬B ∧ ¬A ∧ (¬S ∨ ¬L) ∧ (¬E ∨ ¬G)    | by De Morgan
 ]],
             note = [[

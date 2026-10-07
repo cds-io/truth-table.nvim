@@ -1,6 +1,41 @@
 truth-table.nvim changes
 ========================
 
+- Previews light both ends of a rewrite. While one is pending, the terms the
+  law takes are lit on the line in TruthTableConsumed (a default link to
+  DiagnosticWarn): the operands a commute moves, each occurrence a factoring
+  pulls out, the operand distributing expands and the group it enters, the
+  two terms ⊕ recognition reads, the group De Morgan rewrites, the operands
+  a collapsing law makes disappear. What the rewrite puts in shows in the
+  virtual text in TruthTableChanged (a default link to DiagnosticOk)
+  between the dimmed rest: the terms it made, so a collapsing law that puts
+  a constant in place of a pair lights the constant and leaves the other
+  operands dimmed, and one that only removes terms lights what remains at
+  the site. A step written by :TruthTableApplyStep or the rewrites menu
+  keeps both, the consumed terms above and the result on the new line, so a
+  derivation reads from the part a law acted on to the part it produced;
+  :TruthTableApply keeps the result only. The marks stay with their lines
+  and follow edits, a line rewritten in place again loses its old one, and
+  undo and redo restore them with the text, across undo branches too.
+- A derivation's justification bars stay in one column: a written step
+  realigns the steps above it, in the same undo entry as the step, and
+  :TruthTableAlign does the same for a derivation typed by hand, from any of
+  its lines. The padding before each bar is all that changes, so the marks
+  on the expressions stay. The plugin fires the User autocommand
+  TruthTableRewrite after every rewrite it writes, with data { buf, row,
+  kind }, kind being "step" or "in_place"; the aligner (truth-table.align)
+  is its listener. The two lessons whose expected derivations had ragged
+  bars show them aligned.
+  - A rewrite returns a transaction (truth-table.transaction): its canonical
+    result with a log of changes, each the law, the trees before and after,
+    the terms consumed and produced, and their byte ranges in each tree's
+    text; bind composes rewrites and keeps the log in order. The produced
+    terms ride through the canonical form outside the tree. A canonical
+    result can be rewritten again without reparsing. truth-table.edit writes
+    text and marks as one patch and keeps the marks per undo sequence
+    number. rewrite.moves entries carry each move's transaction.
+    derivation.block(lines, row) finds the derivation around a row and
+    derivation.aligned(block, display_width) measures it.
 - Specs: the three command cases that checked only that a warning was shown
   now check which (the ragged row, the escaped closing pipe, the Karnaugh
   column its inputs do not determine); the bind_columns case checks the
