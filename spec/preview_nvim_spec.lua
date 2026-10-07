@@ -947,3 +947,90 @@ describe("aligning a derivation", function()
         assert.are.same({ { buf = buf, row = 2, kind = "step" }, { buf = buf, row = 2, kind = "in_place" } }, heard)
     end)
 end)
+
+describe("the transient apply keys", function()
+    local function press(keys)
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "x", false)
+    end
+
+    -- How many of the buffer's normal-mode maps are the preview's own.
+    local function apply_keys()
+        local count = 0
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(0, "n")) do
+            if (map.desc or ""):find("apply preview", 1, true) then
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    it("appear with a preview, and <Space> writes it in place and removes them", function()
+        set({ "  not (A and B)" })
+        vim.cmd("TruthTableDeMorgan")
+        assert.are.equal(2, apply_keys())
+        press("<Space>")
+        assert.are.equal("  ¬A ∨ ¬B", vim.api.nvim_get_current_line())
+        assert.are.equal(0, #marks())
+        assert.are.equal(0, apply_keys())
+    end)
+
+    it("write the step below on <CR>, and the cursor follows it", function()
+        set({ "A ∧ B" })
+        vim.cmd("TruthTableCommute")
+        press("<CR>")
+        assert.are.same({ "A ∧ B", "≡ B ∧ A    | by commutativity" }, lines())
+        assert.are.equal(2, vim.api.nvim_win_get_cursor(0)[1])
+        assert.are.equal(0, apply_keys())
+    end)
+
+    it("go when the preview is toggled away, and <CR> is plain movement again", function()
+        set({ "not (A and B)", "below" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.cmd("TruthTableDeMorgan")
+        assert.are.equal(0, apply_keys())
+        press("<CR>")
+        assert.are.same({ "not (A and B)", "below" }, lines())
+        assert.are.equal(2, vim.api.nvim_win_get_cursor(0)[1])
+    end)
+
+    it("go when an edit invalidates the preview", function()
+        set({ "not (A and B)" })
+        vim.cmd("TruthTableDeMorgan")
+        set({ "A and B" })
+        -- The edit schedules the keys' removal with the stale mark's.
+        vim.wait(100, function()
+            return apply_keys() == 0
+        end)
+        assert.are.equal(0, apply_keys())
+    end)
+
+    it("shadow a buffer-local map while pending, and put it back after", function()
+        set({ "A ∧ B" })
+        vim.keymap.set("n", "<CR>", "G", { buffer = 0 })
+        vim.cmd("TruthTableCommute")
+        press("<CR>")
+        assert.are.same({ "A ∧ B", "≡ B ∧ A    | by commutativity" }, lines())
+        local restored = vim.fn.maparg("<CR>", "n", false, true)
+        assert.are.equal("G", restored.rhs)
+        assert.are.equal(1, restored.buffer)
+    end)
+
+    it("warn on <CR> over a heading and stay; <Space> still renames it", function()
+        local heading_table = assert(core.format({
+            headers = { "A", "B", "A ∧ B" },
+            rows = { { "0", "0", "0" }, { "1", "1", "1" } },
+        }))
+        set(heading_table)
+        on("A ∧")
+        vim.cmd("TruthTableCommute")
+        -- The preview itself notified (applying renames the heading).
+        notified = nil
+        press("<CR>")
+        assert.are.equal("Steps apply to expression lines; use :TruthTableApply for a heading", notified)
+        assert.are.equal(1, #marks())
+        assert.are.equal(2, apply_keys())
+        press("<Space>")
+        assert.are.equal("B ∧ A", markdown.row(lines()[1])[3])
+        assert.are.equal(0, apply_keys())
+    end)
+end)

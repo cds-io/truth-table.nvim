@@ -290,6 +290,15 @@ lists or blockquotes are not supported.
     right. Steps apply to expression lines; a heading takes
     |:TruthTableApply| only.
 
+                                                  *truth-table-transient-keys*
+While a preview is pending, two buffer-local keys apply it without the full
+commands: <Space> applies it in place, as |:TruthTableApply| does, and <CR>
+writes the step, as |:TruthTableApplyStep| does. They act from anywhere in
+the buffer and live exactly as long as the preview: applying it, dismissing
+it, or editing the buffer removes them, and a buffer-local map they shadowed
+is restored when they go. On a heading, which has no steps, <CR> warns and
+the preview stays.
+
                                                          *:TruthTableRewrites*
 :TruthTableRewrites
     List every rewrite of the expression the cursor selects, and write the one
@@ -557,6 +566,11 @@ Examples: >
   Apply ~
     <leader>tta   |:TruthTableApply|
     <leader>ttA   |:TruthTableApplyStep|
+    <Space>       apply in place, while a preview is pending
+    <CR>          apply as a ≡ step, while a preview is pending
+
+The last two are transient, buffer-local keys: they appear when a rewrite
+locks a preview and go with it (|truth-table-transient-keys|).
 
                                                         *truth-table-which-key*
 Each keymap's description opens with its family (`Table: new`,

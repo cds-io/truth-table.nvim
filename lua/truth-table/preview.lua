@@ -51,8 +51,69 @@ local REWRITES = {
     },
 }
 
+-- While a preview is pending, <Space> and <CR> apply it: <Space> in place,
+-- <CR> as a ≡ step. Buffer-local, so they shadow the user's own maps only
+-- while the preview shows; a buffer-local map they shadow is put back on
+-- release. `saved[buf]` holds the shadowed maps and doubles as the
+-- engaged flag.
+local TRANSIENT = {
+    {
+        lhs = "<Space>",
+        run = function()
+            M.apply()
+        end,
+        desc = "Truth table: apply preview in place",
+    },
+    {
+        lhs = "<CR>",
+        run = function()
+            M.apply_step()
+        end,
+        desc = "Truth table: apply preview as a ≡ step",
+    },
+}
+local saved = {}
+
+local function engage(buf)
+    if saved[buf] then
+        return
+    end
+    local shadowed = {}
+    for _, key in ipairs(TRANSIENT) do
+        -- maparg reads the current buffer's maps, so ask in `buf`'s context.
+        local existing = vim.api.nvim_buf_call(buf, function()
+            return vim.fn.maparg(key.lhs, "n", false, true)
+        end)
+        if existing.buffer == 1 then
+            shadowed[key.lhs] = existing
+        end
+        vim.keymap.set("n", key.lhs, key.run, { buffer = buf, desc = key.desc })
+    end
+    saved[buf] = shadowed
+end
+
+local function release(buf)
+    local shadowed = saved[buf]
+    if not shadowed then
+        return
+    end
+    saved[buf] = nil
+    if not vim.api.nvim_buf_is_valid(buf) then
+        return
+    end
+    for _, key in ipairs(TRANSIENT) do
+        pcall(vim.keymap.del, "n", key.lhs, { buffer = buf })
+    end
+    vim.api.nvim_buf_call(buf, function()
+        for _, dict in pairs(shadowed) do
+            vim.fn.mapset("n", false, dict)
+        end
+    end)
+end
+
 local function dismiss(buf)
     pending[buf] = nil
+    release(buf)
     vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
     vim.api.nvim_buf_clear_namespace(buf, TARGET, 0, -1)
 end
@@ -66,6 +127,9 @@ local function watch(buf)
             local preview = pending[buf]
             pending[buf] = nil
             if preview then
+                -- A fast context: the extmark and the transient keymaps go
+                -- once Neovim is ready. A preview engaged again by then owns
+                -- the keymaps, so they stay.
                 vim.schedule(function()
                     if vim.api.nvim_buf_is_valid(buf) then
                         pcall(vim.api.nvim_buf_del_extmark, buf, namespace, preview.mark)
@@ -73,11 +137,14 @@ local function watch(buf)
                             pcall(vim.api.nvim_buf_del_extmark, buf, TARGET, mark)
                         end
                     end
+                    if not pending[buf] then
+                        release(buf)
+                    end
                 end)
             end
         end,
         on_detach = function()
-            attached[buf], pending[buf] = nil, nil
+            attached[buf], pending[buf], saved[buf] = nil, nil, nil
         end,
     })
 end
@@ -278,6 +345,7 @@ function M.toggle(name)
         })
     end
     pending[buf] = preview
+    engage(buf)
     if preview.column then
         vim.notify("Applying renames the heading; update explicit references to its old label if needed", vim.log.levels.INFO)
     end
