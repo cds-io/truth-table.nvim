@@ -116,7 +116,8 @@ result and the law that justifies it:
 
 Use `:TruthTableApply` to replace the expression, or `:TruthTableApplyStep` to
 keep it and insert the equivalent expression, with its law, as the next
-derivation step.
+derivation step. While the preview shows, `<Space>` and `<CR>` do the same
+without the full commands: `<Space>` applies in place, `<CR>` writes the step.
 
 Run `:TruthTableTutor` for guided exercises, or `:help truth-table.txt` for the
 help file.
@@ -393,6 +394,14 @@ line's last `≡` (or at its indentation when it has none). Type it as `equiv@`.
 spelling of `⇔`. Steps apply to expression lines; a heading takes
 `:TruthTableApply` only. Both apply commands serve De Morgan previews too.
 
+The full commands have keymaps (`<leader>tta`, `<leader>ttA`), but a pending
+preview also puts two transient keys on its buffer: `<Space>` applies in place
+and `<CR>` writes the step, so a derivation runs as rewrite, `<CR>`, rewrite,
+`<CR>`. The keys live exactly as long as the preview; applying it, dismissing
+it, or editing the buffer takes them away, and a buffer-local map they
+shadowed (a Markdown link-follower on `<CR>`, say) is put back when they go.
+On a heading, which has no steps, `<CR>` warns and the preview stays.
+
 Each step ends in its *justification*: `| by` and the law that takes the line
 above to this one. The laws are named as in the table above, plus
 `distributivity (factoring)` and `distributivity (distributing)` (factoring
@@ -662,6 +671,12 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 | `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
 | `<leader>tta` | Apply | apply the preview in place |
 | `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
+| `<Space>` | Apply | while a preview is pending, apply it in place |
+| `<CR>` | Apply | while a preview is pending, apply it as a `≡` step |
+
+The last two are transient, so they claim nothing from your own maps: they
+appear on the preview's buffer when a rewrite locks one and go with it (see
+[Applying a preview](#applying-a-preview)).
 
 Each keymap's description opens with its family (`Table: new`,
 `Rewrite: factor operand out`, `Apply: in place`), so the grouping shows in a

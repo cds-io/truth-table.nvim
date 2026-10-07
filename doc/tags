@@ -1,4 +1,5 @@
 :TruthTable	truth-table.txt	/*:TruthTable*
+:TruthTableAlign	truth-table.txt	/*:TruthTableAlign*
 :TruthTableApply	truth-table.txt	/*:TruthTableApply*
 :TruthTableApplyStep	truth-table.txt	/*:TruthTableApplyStep*
 :TruthTableCommute	truth-table.txt	/*:TruthTableCommute*
@@ -17,6 +18,7 @@
 :TruthTableTutorNext	truth-table.txt	/*:TruthTableTutorNext*
 :TruthTableTutorPrev	truth-table.txt	/*:TruthTableTutorPrev*
 :TruthTableXor	truth-table.txt	/*:TruthTableXor*
+TruthTableRewrite	truth-table.txt	/*TruthTableRewrite*
 truth-table-abbreviations	truth-table.txt	/*truth-table-abbreviations*
 truth-table-architecture	truth-table.txt	/*truth-table-architecture*
 truth-table-canonical	truth-table.txt	/*truth-table-canonical*
@@ -31,6 +33,7 @@ truth-table-predicates	truth-table.txt	/*truth-table-predicates*
 truth-table-requirements	truth-table.txt	/*truth-table-requirements*
 truth-table-rewrites	truth-table.txt	/*truth-table-rewrites*
 truth-table-symbols	truth-table.txt	/*truth-table-symbols*
+truth-table-transient-keys	truth-table.txt	/*truth-table-transient-keys*
 truth-table-which-key	truth-table.txt	/*truth-table-which-key*
 truth-table.setup()	truth-table.txt	/*truth-table.setup()*
 truth-table.txt	truth-table.txt	/*truth-table.txt*

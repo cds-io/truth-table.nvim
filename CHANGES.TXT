@@ -1,6 +1,11 @@
 truth-table.nvim changes
 ========================
 
+- While a rewrite preview is pending, <Space> applies it in place and <CR>
+  writes it as a ≡ step. The keys are buffer-local and transient: they appear
+  when a preview locks, act from anywhere in the buffer, and go when the
+  preview does (applied, dismissed, or invalidated by an edit), restoring any
+  buffer-local map they shadowed. The <leader>tta and <leader>ttA maps stay.
 - A rewrite returns { value, change }, the new tree with the record of the
   change that made it; truth-table.transaction, whose bind and pure nothing
   in the plugin called, is gone, and rewrite.moves entries carry each move's
