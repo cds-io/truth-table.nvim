@@ -131,11 +131,11 @@ Running it again switches back.
         {
             text = [[
 The second: `:TruthTableDropColumn` (`<leader>ttc`) removes the column under
-the cursor. Put the cursor in the `a ∧ ¬a` column and run it; the table returns
-to the five columns it had before.
+the cursor. Put the cursor in the `a ∧ ¬a` column, in yellow, and run it; the
+table returns to the five columns it had before.
 ]],
             template = [[
-|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | a ∧ ¬a |
+|  a  |  b  | a → b | ¬a ∨ b | “a → b” ⇔ “¬a ∨ b” | [:yellow a ∧ ¬a] |
 |:---:|:---:|:-----:|:------:|:------------------:|:------:|
 |  0  |  0  |   1   |   1    |         1          |   0    |
 |  0  |  1  |   1   |   1    |         1          |   0    |
@@ -204,6 +204,13 @@ P or (G and not S) | (P or G) and not S
             note = [[
 The columns differ in two rows, `1 0 1` and `1 1 1`: a privileged user who is
 suspended. The original lets them edit, and the merged version locks them out.
+The suspension check governs the grant alone in the first, in blue, and both
+branches in the second, in red:
+
+```logic
+P ∨ (G ∧ [:blue ¬S])
+(P ∨ G) ∧ [:red ¬S]
+```
 (`:TruthTableExpand :h4 iff :h5` would mark those rows with a `0`: the claim
 is no tautology.)
 
