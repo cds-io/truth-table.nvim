@@ -69,7 +69,12 @@ out.
 
 The columns differ in the rows where `p` is true and `r` is false:
 `p ∨ (q ∧ r)` is true there because `p` alone is enough, while `(p ∨ q) ∧ r`
-needs `r`.
+needs `r`. The operand that decides each, in blue:
+
+```logic
+[:blue p] ∨ (q ∧ r)
+(p ∨ q) ∧ [:blue r]
+```
 ]],
             solution = {
                 { on = "p or q and r | (p or q) and r", run = { ".TruthTable" } },

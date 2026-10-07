@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: lessons 3 (connectives) and 5 (equivalence) colour the parts their
+  notes point at: the operand that decides each reading of `p or q and r`,
+  where the suspension check applies in the original and in the merged
+  condition, and the column to drop in the scratch pane.
 - Tutor: a lesson may colour a span of an expression it shows. Inside a
   ```logic fenced block of a step's text or note, and anywhere in its
   template, `[:blue A] ∨ ¬(B ∧ ¬C)` shows the expression with `A` in blue;
