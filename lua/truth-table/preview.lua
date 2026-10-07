@@ -1,12 +1,20 @@
 -- Editor-only preview state. The source buffer remains unchanged until apply,
--- or until a rewrite is picked from the menu of them.
+-- or until a rewrite is picked from the menu of them. The terms a rewrite
+-- consumed are lit on its line while the preview is pending, and what it put
+-- in is lit in the preview's text; a step written below keeps both, so a
+-- derivation reads from the part a law acted on to the part it produced.
 local predicate = require("truth-table.predicate")
 local trees = require("truth-table.trees")
 local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
 local rewrite = require("truth-table.rewrite")
+local edit = require("truth-table.edit")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.preview")
+-- The consumed terms of a pending preview, cleared with it.
+local TARGET = vim.api.nvim_create_namespace("truth-table.target")
+-- The lit regions of written rewrites stay with their lines.
+local CHANGED_GROUP, CONSUMED_GROUP = "TruthTableChanged", "TruthTableConsumed"
 local pending, attached = {}, {}
 
 -- Each rewrite maps a located tree and a cursor byte to a new tree and the
@@ -46,6 +54,7 @@ local REWRITES = {
 local function dismiss(buf)
     pending[buf] = nil
     vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
+    vim.api.nvim_buf_clear_namespace(buf, TARGET, 0, -1)
 end
 
 local function watch(buf)
@@ -60,6 +69,9 @@ local function watch(buf)
                 vim.schedule(function()
                     if vim.api.nvim_buf_is_valid(buf) then
                         pcall(vim.api.nvim_buf_del_extmark, buf, namespace, preview.mark)
+                        for _, mark in ipairs(preview.targets or {}) do
+                            pcall(vim.api.nvim_buf_del_extmark, buf, TARGET, mark)
+                        end
                     end
                 end)
             end
@@ -70,11 +82,14 @@ local function watch(buf)
     })
 end
 
--- A source is the expression the cursor selects plus the ways to write a
--- rewritten one, { text, law }, back: `replace(rewritten)` gives the edited
--- line, and `step(rewritten)`, for expression lines only, gives the line to
--- insert below. `offset` is the cursor's byte within the expression, when it
--- has one.
+-- A source is the expression the cursor selects, the byte from zero where it
+-- `start`s in its line (nil when it is escaped there), plus the ways to
+-- write a rendered transaction, { text, law, produced, consumed }, back:
+-- `replace(rewritten)` gives the edited line and the byte, from zero, where
+-- the text starts in it (nil when the text is escaped there), and
+-- `step(rewritten)`, for expression lines only, gives the line to insert
+-- below and that byte. `offset` is the cursor's byte within the expression,
+-- when it has one.
 
 -- A heading is one expression, read from anywhere in its column. Only the
 -- heading row itself puts the cursor on a byte of the expression.
@@ -90,21 +105,27 @@ local function heading_source(lines, bounds, at)
     local heading_line = lines[bounds.start_line]
     local column = math.min(markdown.column_index(lines[at.row], at.byte - 1), #tbl.headers)
     local expression = tbl.headers[column]
+    local first, last = markdown.heading_cell(heading_line, column)
+    -- An escaped heading does not map byte for byte (nor does it parse).
+    local start = first and heading_line:sub(first, last) == expression and first - 1 or nil
     local offset
-    if at.row == bounds.start_line then
-        local first, last = markdown.heading_cell(heading_line, column)
-        -- An escaped heading does not map byte for byte (nor does it parse).
-        if first and heading_line:sub(first, last) == expression then
-            offset = at.byte - first + 1
-        end
+    if start and at.row == bounds.start_line then
+        offset = at.byte - start
     end
     return {
         row = bounds.start_line,
         column = column,
         expression = expression,
+        start = start,
         offset = offset,
         replace = function(rewritten)
-            return markdown.replace_heading(heading_line, column, rewritten.text)
+            local replaced, reason = markdown.replace_heading(heading_line, column, rewritten.text)
+            if not replaced then
+                return nil, reason
+            end
+            local cell_first, cell_last = markdown.heading_cell(replaced, column)
+            local written = cell_first and replaced:sub(cell_first, cell_last) == rewritten.text and cell_first - 1 or nil
+            return replaced, written
         end,
     }
 end
@@ -120,9 +141,10 @@ local function line_source(line, at)
     return {
         row = at.row,
         expression = side.text,
+        start = side.first - 1,
         offset = at.byte - side.first + 1,
         replace = function(rewritten)
-            return derivation.replace(line, side, rewritten)
+            return derivation.replace(line, side, rewritten), side.first - 1
         end,
         step = function(rewritten)
             return derivation.step(line, rewritten, vim.fn.strdisplaywidth)
@@ -152,18 +174,36 @@ local function source_at(buf)
     return source, ast
 end
 
--- What writing `rewritten`, { text, law }, back to its source would put in
--- the buffer, as it stands now.
+-- A transaction as the source will write it: the consumed ranges lie in the
+-- first change's input, the source expression, and the produced ones in the
+-- last change's result, the text written; the laws of a composed one are
+-- listed in order.
+local function rendered(tx)
+    local first, last = tx.changes[1], tx.changes[#tx.changes]
+    local laws = {}
+    for i, change in ipairs(tx.changes) do
+        laws[i] = change.law
+    end
+    return {
+        text = trees.heading(tx.value), law = table.concat(laws, ", "),
+        produced = last.produced_ranges, consumed = first.consumed_ranges,
+    }
+end
+
 local function prepare(buf, source, rewritten)
-    local replacement, err = source.replace(rewritten)
+    local replacement, written = source.replace(rewritten)
     if not replacement then
-        return nil, err
+        return nil, written
     end
     local preview = {
         row = source.row - 1,
         replacement = replacement,
+        written = written,
+        source = source.start,
         heading = rewritten.text,
         law = rewritten.law,
+        changed = rewritten.produced or {},
+        consumed = rewritten.consumed or {},
         column = source.column,
         tick = vim.api.nvim_buf_get_changedtick(buf),
     }
@@ -181,18 +221,18 @@ local function resolve(buf, kind)
     if not kind.whole and not source.offset then
         return nil, "Put the cursor on the heading row to choose an operand"
     end
-    -- On success the second value is the law; on refusal, the reason.
-    local tree, law = kind.run(ast, source.offset)
-    if not tree then
+    -- A successful transaction carries its law and both sides of the change.
+    local tx, reason = kind.run(ast, source.offset)
+    if not tx then
         -- Factor and Distribute are one law used from either side, and easy
         -- to reach for the wrong way round: say so when the other applies.
         local opposite = kind.opposite
         if opposite and REWRITES[opposite.name].run(ast, source.offset) then
-            return nil, law .. "; " .. opposite.hint
+            return nil, reason .. "; " .. opposite.hint
         end
-        return nil, law
+        return nil, reason
     end
-    local preview, err = prepare(buf, source, { text = trees.heading(tree), law = law })
+    local preview, err = prepare(buf, source, rendered(tx))
     if not preview then
         return nil, err
     end
@@ -220,10 +260,29 @@ function M.toggle(name)
     end
     watch(buf)
     local label = preview.column and (" [column " .. preview.column .. "] ⇒ ") or " ⇒ "
-    local shown_text = label .. preview.heading .. "  " .. derivation.justification(preview.law)
+    local tail = "  " .. derivation.justification(preview.law)
+    local chunks = { { label .. preview.heading .. tail, "Comment" } }
+    if #preview.changed > 0 then
+        chunks = {}
+        local cursor, prefix = 0, label
+        for _, region in ipairs(preview.changed) do
+            chunks[#chunks + 1] = { prefix .. preview.heading:sub(cursor + 1, region[1]), "Comment" }
+            chunks[#chunks + 1] = { preview.heading:sub(region[1] + 1, region[2]), CHANGED_GROUP }
+            cursor, prefix = region[2], ""
+        end
+        chunks[#chunks + 1] = { preview.heading:sub(cursor + 1) .. tail, "Comment" }
+    end
     preview.mark = vim.api.nvim_buf_set_extmark(buf, namespace, preview.row, 0, {
-        virt_text = { { shown_text, "Comment" } }, virt_text_pos = "eol",
+        virt_text = chunks, virt_text_pos = "eol",
     })
+    preview.targets = {}
+    for _, range in ipairs(preview.source and preview.consumed or {}) do
+        preview.targets[#preview.targets + 1] = vim.api.nvim_buf_set_extmark(buf, TARGET, preview.row, preview.source + range[1], {
+            end_col = preview.source + range[2],
+            hl_group = CONSUMED_GROUP,
+            priority = 4098,
+        })
+    end
     pending[buf] = preview
     if preview.column then
         vim.notify("Applying renames the heading; update explicit references to its old label if needed", vim.log.levels.INFO)
@@ -242,15 +301,59 @@ local function current(buf)
     return preview
 end
 
-local function write_in_place(buf, preview)
-    vim.api.nvim_buf_set_lines(buf, preview.row, preview.row + 1, false, { preview.replacement })
+-- A region of the expression that starts at byte `start` of `row`, as one
+-- mark of an editor patch. The consumed terms sit above whatever an earlier
+-- step lit on their line.
+local function annotation(row, start, range, group)
+    if start == nil or range == nil then
+        return nil
+    end
+    return {
+        row = row, column = start + range[1], end_row = row,
+        end_column = start + range[2], group = group,
+        priority = group == CONSUMED_GROUP and 4097 or 4096,
+    }
 end
 
--- Insert the step below the line it follows from, and put the window's
--- cursor on its expression.
+-- Anything that wants to follow a written rewrite: the buffer, the row it
+-- was written to (from one) and whether it is a step below its source or
+-- in its place. The plugin's own listener aligns the derivation's bars.
+local function written(buf, row, kind)
+    vim.api.nvim_exec_autocmds("User", {
+        pattern = "TruthTableRewrite",
+        data = { buf = buf, row = row, kind = kind },
+    })
+end
+
+local function write_in_place(buf, preview)
+    local additions = {}
+    for _, range in ipairs(preview.changed) do
+        local mark = annotation(preview.row, preview.written, range, CHANGED_GROUP)
+        if mark then
+            additions[#additions + 1] = mark
+        end
+    end
+    edit.apply(buf, edit.prepare(buf, preview.row, preview.replacement, false, additions))
+    written(buf, preview.row + 1, "in_place")
+end
+
 local function write_step(win, preview)
     local buf = vim.api.nvim_win_get_buf(win)
-    vim.api.nvim_buf_set_lines(buf, preview.row + 1, preview.row + 1, false, { preview.step })
+    local additions = {}
+    for _, range in ipairs(preview.consumed) do
+        local mark = annotation(preview.row, preview.source, range, CONSUMED_GROUP)
+        if mark then
+            additions[#additions + 1] = mark
+        end
+    end
+    for _, range in ipairs(preview.changed) do
+        local mark = annotation(preview.row + 1, preview.step_column, range, CHANGED_GROUP)
+        if mark then
+            additions[#additions + 1] = mark
+        end
+    end
+    edit.apply(buf, edit.prepare(buf, preview.row, preview.step, true, additions))
+    written(buf, preview.row + 2, "step")
     vim.api.nvim_win_set_cursor(win, { preview.row + 2, preview.step_column })
 end
 
@@ -320,7 +423,7 @@ function M.choose()
             vim.notify("The buffer changed while the menu was open; nothing was written", vim.log.levels.WARN)
             return
         end
-        local preview, err = prepare(buf, source, move)
+        local preview, err = prepare(buf, source, rendered(move.transaction))
         if not preview then
             vim.notify(err, vim.log.levels.WARN)
         elseif preview.step then

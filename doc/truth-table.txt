@@ -161,6 +161,32 @@ lists or blockquotes are not supported.
     identifying the selected table column. One preview is kept per buffer. Run
     again to dismiss, even after moving the cursor. Apply acts on the saved
     target in the current buffer. Buffer edits invalidate the preview.
+    Both ends of the rewrite are lit. While the preview is pending, the
+    terms the law takes are lit on the line in TruthTableConsumed (a
+    default link to DiagnosticWarn): the operands a commute moves, each
+    occurrence a factoring pulls out, the operand distributing expands and
+    the group it enters, the two terms ⊕ recognition reads, the group De
+    Morgan rewrites, the operands a collapsing law makes disappear. What
+    the rewrite puts in shows in the virtual text in TruthTableChanged (a
+    default link to DiagnosticOk) between the dimmed rest. A step written
+    by :TruthTableApplyStep or the rewrites menu keeps both, the consumed
+    terms above and the result on the new line, so a derivation reads from
+    the part a law acted on to the part it produced; a line rewritten in
+    place keeps only the result. A group you define stands. The marks stay
+    with their lines and follow edits; a line rewritten in place again
+    loses its old one. Undo and redo restore both text and marks, including
+    across undo branches. A collapsing law that introduces replacement terms
+    lights those terms; a deletion-only law lights the surviving site.
+
+                                                            *:TruthTableAlign*
+:TruthTableAlign
+    Put the justification bars of the derivation under the cursor in one
+    column, four columns past its widest line, as a written step places its
+    own. A written step does this to the steps above it in the same undo
+    entry; this command is for a derivation typed by hand. The plugin fires
+    the User autocommand *TruthTableRewrite* after every rewrite it writes,
+    with `data = { buf, row, kind }` (`kind` is "step" or "in_place"); the
+    aligner is its own listener.
 
                                                            *:TruthTableFactor*
 :TruthTableFactor

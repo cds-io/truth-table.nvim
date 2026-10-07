@@ -253,3 +253,54 @@ describe("whole-expression De Morgan rewrites", function()
         assert.is_nil(de_morgan_expression('A and'))
     end)
 end)
+
+describe("trees.rendered", function()
+    local function parse(source) return assert(predicate.parse_expression(source)) end
+    local function lit(tree, selected)
+        local text, regions = trees.rendered(tree, selected)
+        local region = regions[1]
+        return region and text:sub(region[1] + 1, region[2]), text
+    end
+
+    it("renders an unannotated tree without a range", function()
+        local text, regions = trees.rendered(parse("a ∨ (b ∧ c)"))
+        assert.are.equal("a ∨ (b ∧ c)", text)
+        assert.are.same({}, regions)
+    end)
+
+    it("transports external provenance through flattening", function()
+        local tree = parse("a ∨ (b ∨ c)")
+        assert.are.equal("b ∨ c", (lit(tree, { tree.right })))
+        assert.is_nil(tree.right.changed)
+        assert.is_nil(tree.right.expr.changed)
+    end)
+
+    it("takes a produced subtree whole, including necessary grouping", function()
+        local tree = parse("a ∨ (b ∧ c)")
+        assert.are.equal("(b ∧ c)", (lit(tree, { tree.right })))
+        tree = parse("a ∨ ¬(b ∧ c)")
+        assert.are.equal("¬(b ∧ c)", (lit(tree, { tree.right })))
+    end)
+
+    it("counts multibyte symbols and preserves selected leaf identities", function()
+        local tree = parse("¬a ∧ ¬(b ∨ c)")
+        local inner = tree.right.operand.expr
+        assert.are.equal("b ∨ c", (lit(tree, { inner.left, inner.right })))
+        assert.are.equal("a", (lit(tree, { tree.left.operand })))
+    end)
+
+    it("maps provenance to independent canonical output nodes", function()
+        local tree = parse("a ∨ (b ∨ c)")
+        local canonical, selected = trees.canonical(tree, { tree.right })
+        assert.are.equal("b ∨ c", (lit(canonical, selected)))
+        assert.are.equal("a ∨ b ∨ c", trees.heading(tree))
+        assert.are_not.equal(tree.right.expr.left, selected[1])
+        assert.are.same(canonical, assert(trees.canonical(canonical)))
+    end)
+
+    it("keeps disjoint produced regions separate", function()
+        local tree = parse("a ∨ b ∨ c")
+        local text, regions = trees.rendered(tree, { tree.left.left, tree.right })
+        assert.are.same({ { 0, 1 }, { #"a ∨ b ∨ ", #text } }, regions)
+    end)
+end)

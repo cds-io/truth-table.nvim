@@ -104,4 +104,51 @@ function M.step(line, rewritten, display_width)
     return step, #prefix
 end
 
+-- A step: a line whose sides open with the separator.
+local function is_step(line)
+    return body(line):match("^%s*" .. SEPARATOR) ~= nil
+end
+
+-- The first and last rows of the derivation that holds `row` (from one) in
+-- `lines`: the steps above and below it, and the line the first step
+-- follows from, unless that line is blank. A line that is no step, with no
+-- step below it, is a derivation of one line.
+function M.block(lines, row)
+    local first, last = row, row
+    while first > 1 and is_step(lines[first]) do
+        first = first - 1
+    end
+    if not is_step(lines[first]) and lines[first]:match("^%s*$") then
+        first = first + 1
+    end
+    while last < #lines and is_step(lines[last + 1]) do
+        last = last + 1
+    end
+    return first, last
+end
+
+-- The lines of a derivation with every justification bar in one column, GAP
+-- columns past the widest sides in the block, where a step whose sides were
+-- the widest would have put it. A line with no bar is as it was. The
+-- padding before a bar is all that changes, so marks on the expressions
+-- keep their places.
+function M.aligned(block, display_width)
+    local widest = 0
+    for _, line in ipairs(block) do
+        widest = math.max(widest, display_width((body(line):gsub("%s+$", ""))))
+    end
+    local column = widest + GAP
+    local out = {}
+    for i, line in ipairs(block) do
+        local sides, bar = body(line)
+        if bar then
+            local trimmed = sides:gsub("%s+$", "")
+            out[i] = trimmed .. string.rep(" ", column - display_width(trimmed)) .. line:sub(bar)
+        else
+            out[i] = line
+        end
+    end
+    return out
+end
+
 return M

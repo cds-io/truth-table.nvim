@@ -172,6 +172,14 @@ local KEYMAPS = {
 -- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
 -- terminal-accurate. Idempotent: the last call wins, including for the
 -- abbreviations. Automatic loading preserves an earlier explicit setup call.
+-- The groups a rewrite is lit with, the terms it consumed and the result it
+-- produced, as defaults the reader may define over. A colorscheme clears
+-- them, so they are defined again after one.
+local function highlights()
+    vim.api.nvim_set_hl(0, "TruthTableChanged", { default = true, link = "DiagnosticOk" })
+    vim.api.nvim_set_hl(0, "TruthTableConsumed", { default = true, link = "DiagnosticWarn" })
+end
+
 function M.setup(opts)
     if opts ~= nil and type(opts) ~= "table" then
         error("truth-table setup options must be a table", 0)
@@ -179,6 +187,18 @@ function M.setup(opts)
     opts = opts or {}
     core.display_width = vim.fn.strdisplaywidth
     require("truth-table.abbreviations").register(opts.abbreviations)
+    highlights()
+    local group = vim.api.nvim_create_augroup("truth_table", { clear = true })
+    vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = highlights })
+    -- A written rewrite realigns its derivation's bars, in the same undo
+    -- entry.
+    vim.api.nvim_create_autocmd("User", {
+        group = group,
+        pattern = "TruthTableRewrite",
+        callback = function(event)
+            require("truth-table.align").derivation(event.data.buf, event.data.row, true)
+        end,
+    })
 
     vim.api.nvim_create_user_command("TruthTable", cmd_truth_table, {
         nargs = "*",
@@ -197,6 +217,11 @@ function M.setup(opts)
     })
     vim.api.nvim_create_user_command("TruthTableToggle", cmd_toggle, {
         desc = "Toggle truth table between 0/1 and F/T",
+    })
+    vim.api.nvim_create_user_command("TruthTableAlign", function()
+        require("truth-table.align").derivation(0, vim.api.nvim_win_get_cursor(0)[1], false)
+    end, {
+        desc = "Align the derivation's justification bars in one column",
     })
     vim.api.nvim_create_user_command("TruthTableKarnaugh", cmd_karnaugh, {
         desc = "Insert a Karnaugh map and minimal formula for the current column",

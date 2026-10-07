@@ -16,7 +16,8 @@ end
 -- and the refusal message.
 local function run(name, source, needle, occurrence, backward)
     local ast = assert(predicate.parse_located(source))
-    local tree, err = rewrite[name](ast, byte_of(source, needle, occurrence), backward)
+    local tx, err = rewrite[name](ast, byte_of(source, needle, occurrence), backward)
+    local tree = tx and tx.value
     if not tree then
         return nil, err
     end
@@ -287,9 +288,9 @@ describe("rewrite.de_morgan", function()
     it("rewrites the whole expression when there is no cursor or it is outside", function()
         local source = "not (A and B)"
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, nil))))
-        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, 0))))
-        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, #source + 5))))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, nil).value)))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, 0).value)))
+        assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, #source + 5).value)))
     end)
 
     it("refuses when nothing from the cursor up to the root matches", function()
@@ -303,7 +304,9 @@ describe("rewrite.simplify", function()
     -- The rewritten text and the law that was applied.
     local function simplify(source, needle, occurrence)
         local ast = assert(predicate.parse_located(source))
-        local tree, law = rewrite.simplify(ast, needle and byte_of(source, needle, occurrence))
+        local tx, law = rewrite.simplify(ast, needle and byte_of(source, needle, occurrence))
+        local tree = tx and tx.value
+        law = tx and tx.changes[1].law or law
         if not tree then
             return nil, law
         end
@@ -434,7 +437,7 @@ describe("rewrite.moves", function()
     it("lists the collapsing laws Simplify passes over for a nearer one", function()
         local source = "A ∨ ¬A ∨ A"
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal("1 ∨ A", trees.heading(assert(rewrite.simplify(ast))))
+        assert.are.equal("1 ∨ A", trees.heading(assert(rewrite.simplify(ast).value)))
         assert.are.same({
             { "complement", "1 ∨ A" },
             { "idempotence", "A ∨ ¬A" },
@@ -462,7 +465,7 @@ describe("rewrite.moves", function()
         }
         assert.are.same(expected, results(source, "distributivity (distributing)"))
         local ast = assert(predicate.parse_located(source))
-        assert.are.equal(expected[1], trees.heading(assert(rewrite.distribute(ast, (source:find("C"))))))
+        assert.are.equal(expected[1], trees.heading(assert(rewrite.distribute(ast, (source:find("C")))).value))
     end)
 
     it("lists every complementary pair, including later repeated operands", function()
@@ -520,8 +523,8 @@ describe("rewrite.moves", function()
 
     it("returns each move's tree, canonical and without spans", function()
         local move = rewrite.moves(assert(predicate.parse_located("A ∧ B")))[1]
-        assert.are.equal("B ∧ A", trees.heading(move.tree))
-        assert.is_nil(move.tree.span)
+        assert.are.equal("B ∧ A", trees.heading(move.transaction.value))
+        assert.is_nil(move.transaction.value.span)
     end)
 end)
 
@@ -607,7 +610,8 @@ describe("rewrite soundness", function()
             for byte = 0, #source + 1 do
                 for name, fn in pairs(rewrites) do
                     local where = name .. " at byte " .. byte .. " of " .. source
-                    local tree, err = fn(ast, byte)
+                    local tx, err = fn(ast, byte)
+                    local tree = tx and tx.value
                     if tree then
                         rewritten = rewritten + 1
                         local text = trees.heading(tree)
@@ -639,11 +643,11 @@ describe("rewrite soundness", function()
                 local where = move.law .. " of " .. source .. " gave " .. move.text
                 assert.is_nil(seen[move.text], where)
                 seen[move.text] = true
-                assert.are.equal(move.text, trees.heading(move.tree), where)
-                assert.is_true(same_function(ast, move.tree, variables), where)
+                assert.are.equal(move.text, trees.heading(move.transaction.value), where)
+                assert.is_true(same_function(ast, move.transaction.value, variables), where)
                 local reparsed = assert(predicate.parse_expression(move.text), where)
                 assert.are.equal(move.text, trees.heading(reparsed), where)
-                assert.is_nil(move.tree.span, where)
+                assert.is_nil(move.transaction.value.span, where)
             end
             assert.are.equal(before, trees.heading(ast), source)
         end
@@ -661,12 +665,151 @@ describe("rewrite soundness", function()
             end
             for byte = 0, #source + 1 do
                 for name, fn in pairs(rewrites) do
-                    local tree = fn(ast, byte)
+                    local tx = fn(ast, byte)
+                    local tree = tx and tx.value
                     if tree then
                         local text = trees.heading(tree)
                         assert.is_true(listed[text], name .. " at byte " .. byte .. " of " .. source .. " gave " .. text)
                     end
                 end
+            end
+        end
+    end)
+end)
+
+-- What a rewrite put in is the region the preview lights: the result's
+-- produced terms are kept beside its syntax, and rendered() reports the
+-- bytes from the first to the last.
+describe("the region a rewrite changed", function()
+    local function lit(source, run, needle)
+        local ast = assert(predicate.parse_located(source))
+        local tx, law = run(ast, needle and byte_of(source, needle))
+        local tree = tx and tx.value
+        assert.is_truthy(tree, law)
+        local text, regions = trees.rendered(tree, tx.changes[1].produced)
+        assert.are.equal(1, #regions, "expected one region in " .. text)
+        return text:sub(regions[1][1] + 1, regions[1][2]), text
+    end
+
+    it("is the swapped pair after a commute", function()
+        local region, text = lit("a ∧ b ∨ c", function(ast, byte)
+            return rewrite.commute(ast, byte, false)
+        end, "a")
+        assert.are.equal("(b ∧ a) ∨ c", text)
+        -- The two leaves are what moved; the pair around them is canonical's.
+        assert.are.equal("b ∧ a", region)
+    end)
+
+    it("is the whole of a factored or distributed expression", function()
+        assert.are.equal("c ∧ (d ∨ e)", (lit("(c ∧ d) ∨ (c ∧ e)", rewrite.factor, "c")))
+        assert.are.equal("(u ∧ v) ∨ (u ∧ w)", (lit("u ∧ (v ∨ w)", rewrite.distribute, "u")))
+    end)
+
+    it("is the group De Morgan rewrote, inside the chain it was spliced into", function()
+        local region, text = lit("r ∧ ¬(s ∨ t)", rewrite.de_morgan, "¬")
+        assert.are.equal("r ∧ ¬s ∧ ¬t", text)
+        assert.are.equal("¬s ∧ ¬t", region)
+    end)
+
+    it("is the whole expression when De Morgan rewrites the whole expression", function()
+        assert.are.equal("¬p ∨ ¬q", (lit("¬(p ∧ q)", rewrite.de_morgan)))
+    end)
+
+    it("is what a collapsing law left in place of its site", function()
+        local region, text = lit("b ∧ (a ∨ ¬a)", rewrite.simplify, "a")
+        assert.are.equal("b ∧ 1", text)
+        assert.are.equal("1", region)
+    end)
+
+    it("does not include untouched chain operands beside a replacement", function()
+        local region, text = lit("a ∨ ¬a ∨ b", rewrite.simplify, "a")
+        assert.are.equal("1 ∨ b", text)
+        assert.are.equal("1", region)
+    end)
+
+    it("is reported for every move of the menu", function()
+        local ast = assert(predicate.parse_located("a ∨ ¬a ∨ b"))
+        local moves = rewrite.moves(ast)
+        assert.is_true(#moves > 0)
+        for _, move in ipairs(moves) do
+            local _, regions = trees.rendered(move.transaction.value, move.transaction.changes[1].produced)
+            assert.is_true(#regions > 0, move.law .. ": " .. move.text)
+        end
+    end)
+
+    it("leaves the input tree unmarked", function()
+        local ast = assert(predicate.parse_located("a ∧ b"))
+        assert(rewrite.commute(ast, byte_of("a ∧ b", "a"), false))
+        local _, regions = trees.rendered(ast)
+        assert.are.same({}, regions)
+    end)
+end)
+
+-- The terms a rewrite consumed: nodes of the input, so each has the span it
+-- was read from, and the text under each span is the term.
+describe("the terms a rewrite consumed", function()
+    local function consumed(source, run, needle, ...)
+        local ast = assert(predicate.parse_located(source))
+        local tx, law = run(ast, needle and byte_of(source, needle), ...)
+        local tree = tx and tx.value
+        local terms = tx and tx.changes[1].consumed
+        law = tx and tx.changes[1].law or law
+        assert.is_truthy(tree, law)
+        assert.is_truthy(terms, law .. ": no consumed terms")
+        local texts, starts = {}, {}
+        for i, node in ipairs(terms) do
+            assert.is_truthy(node.span, law .. ": a consumed term with no span")
+            texts[i] = source:sub(node.span.start_byte, node.span.end_byte)
+            starts[node.span.start_byte] = true
+        end
+        return texts, starts
+    end
+
+    it("are the two operands a commute moves, in reading order either way", function()
+        assert.are.same({ "a", "b" }, (consumed("a ∧ b ∨ c", rewrite.commute, "a", false)))
+        assert.are.same({ "a", "b" }, (consumed("a ∧ b ∨ c", rewrite.commute, "b", true)))
+    end)
+
+    it("are each occurrence a factoring pulls out, in different places", function()
+        local texts, starts = consumed("(c ∧ d) ∨ f ∨ (c ∧ e)", rewrite.factor, "c")
+        assert.are.same({ "c", "c" }, texts)
+        local places = 0
+        for _ in pairs(starts) do
+            places = places + 1
+        end
+        assert.are.equal(2, places)
+    end)
+
+    it("are the operand distributing moves and the group it enters", function()
+        assert.are.same({ "u", "(v ∨ w)" }, (consumed("u ∧ (v ∨ w)", rewrite.distribute, "u")))
+        assert.are.same({ "(v ∨ w)", "u" }, (consumed("(v ∨ w) ∧ u", rewrite.distribute, "u")))
+    end)
+
+    it("are the two terms ⊕ recognition reads", function()
+        assert.are.same({ "(¬T ∧ E)", "(T ∧ ¬E)" }, (consumed("(¬T ∧ E) ∨ (T ∧ ¬E)", rewrite.xor, "¬T")))
+    end)
+
+    it("is the group De Morgan rewrites, or the whole expression", function()
+        assert.are.same({ "¬(s ∨ t)" }, (consumed("r ∧ ¬(s ∨ t)", rewrite.de_morgan, "¬")))
+        assert.are.same({ "¬(p ∧ q)" }, (consumed("¬(p ∧ q)", rewrite.de_morgan)))
+    end)
+
+    it("are the operands a collapsing law makes disappear", function()
+        assert.are.same({ "a", "¬a" }, (consumed("b ∧ (a ∨ ¬a)", rewrite.simplify, "a")))
+        assert.are.same({ "1" }, (consumed("b ∧ 1", rewrite.simplify, "1")))
+        assert.are.same({ "Q" }, (consumed("(Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)", rewrite.simplify, "(Q ∧ Q")))
+        assert.are.same({ "(a ∧ b)" }, (consumed("a ∨ (a ∧ b)", rewrite.simplify, "a")))
+        assert.are.same({ "¬¬a" }, (consumed("¬¬a ∧ b", rewrite.simplify, "¬¬a")))
+    end)
+
+    it("come with every move of the menu, each with its span", function()
+        local ast = assert(predicate.parse_located("a ∨ ¬a ∨ (a ∧ b)"))
+        local moves = rewrite.moves(ast)
+        assert.is_true(#moves > 0)
+        for _, move in ipairs(moves) do
+            assert.is_truthy(move.transaction.changes[1].consumed and #move.transaction.changes[1].consumed > 0, move.law .. ": " .. move.text)
+            for _, node in ipairs(move.transaction.changes[1].consumed) do
+                assert.is_truthy(node.span, move.law .. ": " .. move.text)
             end
         end
     end)
