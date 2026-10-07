@@ -12,6 +12,7 @@ require("truth-table").setup()
 
 local page = require("truth-table.tutor_page")
 local predicate = require("truth-table.predicate")
+local spans = require("truth-table.tutor_spans")
 
 local warnings = {}
 vim.notify = function(message, level)
@@ -68,6 +69,29 @@ local function text(role)
     return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 end
 
+-- The tutor's extmarks in `buf`, each as its row, columns, group and
+-- priority, in buffer order.
+local function extmarks(buf)
+    local namespace = vim.api.nvim_get_namespaces().truth_table_tutor
+    local found = {}
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })) do
+        found[#found + 1] = {
+            row = mark[2], col = mark[3], end_col = mark[4].end_col,
+            hl_group = mark[4].hl_group, priority = mark[4].priority,
+        }
+    end
+    return found
+end
+
+-- The marks a lesson's spans should become, in the same shape.
+local function expected_marks(marked)
+    local marks = {}
+    for i, span in ipairs(marked) do
+        marks[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, hl_group = span.group, priority = spans.PRIORITY }
+    end
+    return marks
+end
+
 -- The reader is at this lesson and step: the lesson pane shows it, on the
 -- left, and the cursor is in the scratch pane.
 local function at(lesson, step)
@@ -86,7 +110,9 @@ local function at(lesson, step)
         ("%s: lesson pane at column %d, scratch pane at column %d"):format(label, lesson_column, scratch_column)
     )
     assert.are.equal(scratch_win, vim.api.nvim_get_current_win(), label .. ": current window")
-    assert.are.same(page.render(course, lesson, step), text("lesson"), label .. ": lesson pane text")
+    local markdown, marked = page.render(course, lesson, step)
+    assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
+    assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
     assert.are.equal("nofile", vim.bo[lesson_buf].buftype, label .. ": lesson buftype")
     assert.is_false(vim.bo[lesson_buf].modifiable, label .. ": lesson modifiable")
     assert.are.equal("nofile", vim.bo[scratch_buf].buftype, label .. ": scratch buftype")
@@ -99,8 +125,12 @@ local function at(lesson, step)
 end
 
 local function starting_text(lesson, step)
-    local template = page.lines(course[lesson].steps[step].template)
+    local template = assert(page.template(course[lesson].steps[step].template))
     return #template > 0 and template or { "" }
+end
+
+local function starting_marks(lesson, step)
+    return expected_marks(select(2, page.template(course[lesson].steps[step].template)))
 end
 
 local function tab_count()
@@ -144,6 +174,12 @@ describe("the course", function()
         end
     end)
 
+    -- A colour span belongs in a ```logic block or a template, and its
+    -- markers have to be well formed, or the tutor refuses to open.
+    it("has every colour span where one may be, and well formed", function()
+        assert.is_nil(page.check(course))
+    end)
+
     -- The first lesson shows the reader around and the last is the reference;
     -- every lesson between them is there to be worked through.
     it("has an exercise in every lesson between the first and the last", function()
@@ -167,7 +203,7 @@ describe("the course", function()
         for number, lesson in ipairs(course) do
             for index, step in ipairs(lesson.steps) do
                 local fenced = false
-                for _, line in ipairs(page.lines(step.text)) do
+                for _, line in ipairs((assert(page.body(step.text)))) do
                     if line:match("^```") then
                         fenced = not fenced
                     elseif fenced and line:find("≡", 1, true) then
@@ -356,6 +392,94 @@ describe(":TruthTableTutor", function()
     end)
 end)
 
+-- A course of one lesson, written to a directory put first on the runtimepath,
+-- so :TruthTableTutor! reads it in place of the real one. Each case writes the
+-- lesson it needs and starts from a reader tab with no tutor pane.
+describe("a lesson with colour spans", function()
+    local directory, tabs
+    local red, blue = "TruthTableTutorRed", "TruthTableTutorBlue"
+
+    local function lesson(body, template)
+        local file = directory .. "/tutor/truth-table/01-spans.lua"
+        vim.fn.writefile(vim.split(([[
+return {
+    title = "Spans",
+    aim = "See a part.",
+    steps = {
+        {
+            text = "Look at the group:\n\n```logic\n%s\n```\n",
+            template = "%s\n",
+        },
+    },
+}]]):format(body, template), "\n"), file)
+    end
+
+    before_each(function()
+        directory = vim.fn.tempname()
+        vim.fn.mkdir(directory .. "/tutor/truth-table", "p")
+        vim.opt.rtp:prepend(directory)
+        lesson("A ∨ [:red ¬(B] ∧ ¬C)", "[:blue p] and q")
+        vim.cmd("tabnew")
+        vim.cmd("silent tabonly!")
+        vim.cmd("enew!")
+        tabs = tab_count()
+        warnings = {}
+    end)
+
+    after_each(function()
+        vim.opt.rtp:remove(directory)
+        vim.fn.delete(directory, "rf")
+    end)
+
+    it("paints the span in the lesson pane where its line landed, and the template's in the scratch", function()
+        vim.cmd("TruthTableTutor!")
+        assert.are.same({}, warnings)
+        local _, lesson_buf = pane("lesson")
+        local _, scratch_buf = pane("scratch")
+        assert.are.equal("A ∨ ¬(B ∧ ¬C)", vim.api.nvim_buf_get_lines(lesson_buf, 9, 10, false)[1])
+        assert.are.same({ { row = 9, col = 6, end_col = 10, hl_group = red, priority = 200 } }, extmarks(lesson_buf))
+        assert.are.same({ "p and q" }, vim.api.nvim_buf_get_lines(scratch_buf, 0, -1, false))
+        assert.are.same({ { row = 0, col = 0, end_col = 1, hl_group = blue, priority = 200 } }, extmarks(scratch_buf))
+    end)
+
+    it("lets the scratch mark follow the reader's edits", function()
+        vim.cmd("TruthTableTutor!")
+        local _, scratch_buf = pane("scratch")
+        vim.api.nvim_buf_set_text(scratch_buf, 0, 0, 0, 0, { "xx" })
+        assert.are.same({ { row = 0, col = 2, end_col = 3, hl_group = blue, priority = 200 } }, extmarks(scratch_buf))
+    end)
+
+    it("refuses to open on a wrong marker, naming the lesson, step, field and byte", function()
+        lesson("A ∨ [:purple ¬(B] ∧ ¬C)", "p and q")
+        vim.cmd("TruthTableTutor!")
+        assert.are.same(
+            { 'Tutorial lesson 1 step 1: text: unknown colour "purple" at byte 7: A ∨ [:purple ¬(B] ∧ ¬C)' },
+            warnings
+        )
+        assert.is_nil((pane("lesson")))
+        assert.are.equal(tabs, tab_count())
+    end)
+
+    it("defines the palette as default links, and leaves a group the reader set alone", function()
+        vim.api.nvim_set_hl(0, red, { fg = "#ff0000" })
+        finally(function()
+            vim.cmd("highlight clear " .. red)
+            vim.api.nvim_set_hl(0, red, { default = true, link = "DiagnosticError" })
+            assert.are.equal("DiagnosticError", vim.api.nvim_get_hl(0, { name = red }).link)
+        end)
+        vim.cmd("TruthTableTutor!")
+        for _, entry in ipairs(spans.PALETTE) do
+            local hl = vim.api.nvim_get_hl(0, { name = entry.group })
+            if entry.group == red then
+                assert.are.equal(0xff0000, hl.fg)
+            else
+                assert.are.equal(entry.link, hl.link, entry.group)
+                assert.is_true(hl.default, entry.group)
+            end
+        end
+    end)
+end)
+
 -- One case per lesson, with a fresh session so any lesson can run on its own.
 describe("working through the course", function()
     local function trimmed(lines)
@@ -388,6 +512,7 @@ describe("working through the course", function()
                 local label = ("lesson %d step %d"):format(number, index)
                 at(number, index)
                 assert.are.same(starting_text(number, index), text("scratch"), label)
+                assert.are.same(starting_marks(number, index), extmarks(select(2, pane("scratch"))), label .. ": scratch marks")
                 for _, move in ipairs(step.solution or {}) do
                     local row = 1
                     if move.on then

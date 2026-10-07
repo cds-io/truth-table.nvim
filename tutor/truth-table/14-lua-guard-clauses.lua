@@ -103,11 +103,12 @@ return true
 ```
 
 Here `c` is `E ∧ G`, and the rest is `return true`, which is `1`. So this tail
-of the function is `¬(E ∧ G) ∧ 1`, the expression in the scratch pane.
-Simplify (`<leader>ttz`) and apply it as a step (`<leader>ttA`).
+of the function is `¬(E ∧ G) ∧ 1`, the expression in the scratch pane; the
+red part is about to go. Simplify (`<leader>ttz`) and apply it as a step
+(`<leader>ttA`).
 ]],
             template = [[
-not (E and G) and 1
+not (E and G) [:red and 1]
 ]],
             expect = [[
 not (E and G) and 1
@@ -127,13 +128,13 @@ reason to say no.
 **Stage 2 of 5: translate** (second of two steps).
 
 Work upward from there. Each earlier guard puts its own `¬c ∧` in front of
-everything below it:
+everything below it, in green:
 
-```text
+```logic
 guard 4, then return true     ¬(E ∧ G) ∧ 1
-guard 3 in front of that      ¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1)
-guard 2 in front of that      ¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1))
-guard 1 in front of that      ¬¬R ∧ (¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1)))
+guard 3 in front of that      [:green ¬(S ∧ L) ∧] (¬(E ∧ G) ∧ 1)
+guard 2 in front of that      [:green ¬(B ∨ A) ∧] (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1))
+guard 1 in front of that      [:green ¬¬R ∧] (¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1)))
 ```
 
 Guard 1 tests `not range`, so its `c` is `¬R`, and negating that gives `¬¬R`.
@@ -176,10 +177,11 @@ holds.
 
 The expression is correct and still phrased as reasons to say no. Turn them
 into the conditions for yes: De Morgan (`<leader>ttd`) with the cursor on each
-`¬(` in turn, applying every preview as a step (`<leader>ttA`).
+`¬(` in turn, the yellow ones, applying every preview as a step
+(`<leader>ttA`).
 ]],
             template = [[
-R ∧ ¬(B ∨ A) ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)
+R ∧ [:yellow ¬(]B ∨ A) ∧ [:yellow ¬(]S ∧ L) ∧ [:yellow ¬(]E ∧ G)
 ]],
             expect = [[
 R ∧ ¬(B ∨ A) ∧ ¬(S ∧ L) ∧ ¬(E ∧ G)
@@ -220,24 +222,24 @@ there before reading it here.
 
 First, put each test back in place of its letter:
 
-```text
+```logic
 R ∧ ¬(line < start.line) ∧ ¬(line > stop.line)
   ∧ (¬(line == start.line) ∨ ¬(char < start.character))
   ∧ (¬(line == stop.line) ∨ ¬(char > stop.character))
 ```
 
 Then turn each negated comparison around. A comparison has an opposite that
-says the same thing with no `¬`:
+says the same thing with no `¬`, red to green:
 
-```text
-¬(x < y)      x >= y
-¬(x > y)      x <= y
-¬(x == y)     x ~= y
+```logic
+[:red ¬(x < y)]      [:green x >= y]
+[:red ¬(x > y)]      [:green x <= y]
+[:red ¬(x == y)]     [:green x ~= y]
 ```
 
 (`~=` is how Lua writes "not equal".) That removes every negation:
 
-```text
+```logic
 R ∧ (line >= start.line) ∧ (line <= stop.line)
   ∧ ((line ~= start.line) ∨ (char >= start.character))
   ∧ ((line ~= stop.line) ∨ (char <= stop.character))

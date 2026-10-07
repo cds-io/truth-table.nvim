@@ -62,11 +62,12 @@ Each group is the reduction law at work. The two cells of the first group are
         {
             text = [[
 The formula line invites one more step. Its first two terms are the
-exclusive-or pattern from the previous lesson. Put the cursor on `¬A`, preview
-`:TruthTableXor` (`<leader>tto`), and apply it as a step (`<leader>ttA`).
+exclusive-or pattern from the previous lesson. Put the cursor on `¬A`, in
+yellow, preview `:TruthTableXor` (`<leader>tto`), and apply it as a step
+(`<leader>ttA`).
 ]],
             template = [[
-(A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
+(A ⊕ B) ∨ (A ∧ C) ≡ ([:yellow ¬A] ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
 ]],
             expect = [[
 (A ⊕ B) ∨ (A ∧ C) ≡ (¬A ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)

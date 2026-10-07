@@ -80,12 +80,12 @@ person would say.
 **Stage 3 of 5: rewrite** (first of two steps).
 
 Start by pushing the negation in. De Morgan (`<leader>ttd`) on the leading
-`not`; De Morgan again on the `¬(` that appears; then simplify
+`not`, in yellow; De Morgan again on the `¬(` that appears; then simplify
 (`<leader>ttz`) for the double negation. Apply each as a step
 (`<leader>ttA`).
 ]],
             template = [[
-not (C and (not Q or L)) and Q
+[:yellow not] (C and (not Q or L)) and Q
 ]],
             expect = [[
 not (C and (not Q or L)) and Q
@@ -116,8 +116,8 @@ deals with that.
 **Stage 3 of 5: rewrite** (second of two steps).
 
 The scratch pane starts from where the last step ended. The target is to
-remove the redundant inner `Q` while retaining the outer requirement that
-there is a quote: `Q ∧ (¬C ∨ ¬L)`.
+remove the redundant inner `Q`, in red, while retaining the outer one, in
+yellow, the requirement that there is a quote: `Q ∧ (¬C ∨ ¬L)`.
 
 The inner `Q` is inside an `or` group, so idempotence cannot yet reach it
 from the outer `Q`. Distributing brings the two together; after idempotence
@@ -134,7 +134,7 @@ Try to reach the target yourself, applying each move as a step
 - Factor `Q` back out: cursor on a `Q`, `<leader>ttf`.
 ]],
             template = [[
-(¬C ∨ (Q ∧ ¬L)) ∧ Q
+(¬C ∨ ([:red Q] ∧ ¬L)) ∧ [:yellow Q]
 ]],
             expect = [[
 (¬C ∨ (Q ∧ ¬L)) ∧ Q
@@ -176,12 +176,12 @@ side:
 **Stage 4 of 5: back into Lua.**
 
 Put the tests back in place of the letters, then turn the negated comparison
-around (`¬(x < y)` is `x >= y`):
+around, red to green (`¬(x < y)` is `x >= y`):
 
-```text
+```logic
 Q ∧ (¬C ∨ ¬L)
-quote ∧ (¬comment ∨ ¬(comment < quote))
-quote ∧ (¬comment ∨ comment >= quote)
+quote ∧ (¬comment ∨ [:red ¬(comment < quote)])
+quote ∧ (¬comment ∨ [:green comment >= quote])
 ```
 
 In Lua, with a name for what it says:

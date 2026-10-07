@@ -618,6 +618,27 @@ file-name order. A lesson is a `title`, an `aim`, and a list of `steps`, each
 with its `text`, the scratch pane's `template`, the `expect`ed result, a `note`
 on it, and the `solution` that the test suite replays.
 
+Expressions a step shows go in a ```` ```logic ```` fenced block, and there, or
+anywhere in the `template`, a line may colour a span of itself:
+
+```text
+[:blue A] ∨ ¬(B ∧ ¬C)      shows A ∨ ¬(B ∧ ¬C) with A in blue
+A ∨ [:red ¬(B] ∧ ¬C)       colours ¬(B: bytes, not a node of the expression
+```
+
+The colours are blue, red, green and yellow, as the groups
+`TruthTableTutorBlue`, `TruthTableTutorRed`, `TruthTableTutorGreen` and
+`TruthTableTutorYellow`, linked by default to `DiagnosticInfo`,
+`DiagnosticError`, `DiagnosticOk` and `DiagnosticWarn`; one you define before
+the tutor opens stands. The markers come out before the text is shown, and the
+span is painted in both panes (in the scratch pane it moves with your edits).
+Brackets inside a span pair up, so `[:blue result[1]]` ends at the second `]`.
+A span inside a span, one outside a logic block or in `expect`, a colour not in
+the palette or a span that never closes is an error naming the lesson, step,
+field and byte, and the tutor does not open. A line vellum has to wrap is shown
+without its colour. A span that closes a line writes `]]`, which also closes a
+`[[ ... ]]` Lua string, so such a block uses `[=[ ... ]=]`.
+
 ## Keymaps
 
 `setup()` registers these by default, in three families:
@@ -865,9 +886,11 @@ menu of every rewrite (`vim.ui.select`) and writes the pick through the same
 two paths.
 - `tutor.lua` reads the lessons in `tutor/truth-table/` and shows them in two
 panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
-turns a step into the lesson pane's Markdown, and `tutor_vellum.lua` turns
-that into styled lines when vellum.nvim is installed (and into nothing when it
-is absent or fails, which is `tutor.lua`'s cue to show the Markdown).
+turns a step into the lesson pane's Markdown, `tutor_spans.lua` (pure) reads
+the `[:colour ...]` markers out of its lines and finds the spans again on
+rendered lines, and `tutor_vellum.lua` turns the Markdown into styled lines
+when vellum.nvim is installed (and into nothing when it is absent or fails,
+which is `tutor.lua`'s cue to show the Markdown).
 `spec/tutor_nvim_spec.lua` replays every
 step's `solution` in its scratch buffer and requires the result to be the
 step's own `expect` block, so the course stays true as the plugin changes. It
@@ -943,8 +966,8 @@ without the next file inheriting any of it:
 | `abbreviations_nvim_spec.lua` | the `abbreviations` option of `setup()` | independent; each starts from the defaults the plugin entry point installs |
 | `integration_nvim_spec.lua` | commands and default keymaps, malformed tables left alone | independent; each writes its buffer |
 | `preview_nvim_spec.lua` | rewrite previews, applying in place and as a step, headings, refusals, the menu of every rewrite | independent; each in a fresh buffer |
-| `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, every exercise replayed | fresh sessions for navigation; one independent case per lesson |
-| `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and a stand-in | scoped renderer modules; one continuous stand-in lifecycle case |
+| `tutor_nvim_spec.lua` | the course's shape and laws, the two panes, colour spans in both, every exercise replayed | fresh sessions for navigation; a stand-in course per span case; one independent case per lesson |
+| `tutor_vellum_nvim_spec.lua` | the lesson pane with no vellum, an installed one, and two stand-ins | scoped renderer modules; one continuous stand-in lifecycle case |
 | `startup_nvim_spec.lua` | Neovim loading `plugin/` by itself | independent |
 
 The startup spec is the odd one: a spec runs inside a Neovim that has already

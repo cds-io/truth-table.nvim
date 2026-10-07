@@ -3,7 +3,10 @@
 -- spans that style them, and tutor.lua paints both. The renderer is a module
 -- vellum keeps for its own preview, with no promise that it stays as it is,
 -- so what comes back is checked here and every surprise comes out as nil:
--- tutor.lua then shows the Markdown itself.
+-- tutor.lua then shows the Markdown itself. The lesson's own colour spans
+-- ride along: vellum says which rendered rows each Markdown block became,
+-- and tutor_spans.lua finds the spans' lines in there.
+local spans = require("truth-table.tutor_spans")
 local M = {}
 
 -- The widest column of text, as in vellum's own preview.
@@ -21,7 +24,18 @@ local function vellum()
     end
 end
 
-local function compose(render, theme, markdown, width)
+-- One of vellum's block anchors: four numbers placing the block's source rows
+-- in `markdown` and its rendered rows in `lines`.
+local function anchored(block, markdown, lines)
+    for i = 1, 4 do
+        if type(block[i]) ~= "number" then
+            return false
+        end
+    end
+    return block[1] >= 0 and block[1] + block[2] <= #markdown and block[3] >= 0 and block[3] + block[4] <= #lines
+end
+
+local function compose(render, theme, markdown, width, marked)
     if not themed then
         theme.apply()
         -- Rendered blocks are cached with the groups they were given.
@@ -31,7 +45,7 @@ local function compose(render, theme, markdown, width)
     -- The renderer parses a buffer; this one is never shown.
     local source = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(source, 0, -1, false, markdown)
-    local ok, lines, rows, margin = pcall(render.render, source, width, MEASURE)
+    local ok, lines, rows, margin, blocks = pcall(render.render, source, width, MEASURE)
     vim.api.nvim_buf_delete(source, { force = true })
     assert(ok, lines)
 
@@ -46,19 +60,29 @@ local function compose(render, theme, markdown, width)
             marks[#marks + 1] = { row = row - 1, col = from, end_col = to, group = group, priority = span[4] }
         end
     end
+    assert(type(blocks) == "table", "no block anchors")
+    for _, block in ipairs(blocks) do
+        assert(anchored(block, markdown, lines), "a block anchor outside the page")
+    end
+    for _, mark in ipairs(spans.place(marked or {}, markdown, lines, blocks)) do
+        local line = lines[mark.row + 1]
+        assert(mark.col >= 0 and mark.col <= mark.end_col and mark.end_col <= #line, "a colour span outside its line")
+        marks[#marks + 1] = mark
+    end
     return lines, marks
 end
 
--- `markdown` (a list of lines) for a pane `width` columns wide: the lines to
--- show and the marks { row, col, end_col, group, priority } that style them,
--- rows and byte columns counted from zero. Nil when vellum is not installed,
--- and nil with one warning when it is and cannot do this.
-function M.render(markdown, width)
+-- `markdown` (a list of lines) for a pane `width` columns wide, with the
+-- lesson's colour spans `marked` (rows into `markdown`, from one): the lines
+-- to show and the marks { row, col, end_col, group, priority } that style
+-- them, rows and byte columns counted from zero. Nil when vellum is not
+-- installed, and nil with one warning when it is and cannot do this.
+function M.render(markdown, width, marked)
     local render, theme = vellum()
     if not render then
         return
     end
-    local ok, lines, marks = pcall(compose, render, theme, markdown, width)
+    local ok, lines, marks = pcall(compose, render, theme, markdown, width, marked)
     if ok then
         return lines, marks
     end
@@ -73,6 +97,11 @@ end
 -- render.
 function M.restyle()
     themed = false
+end
+
+-- A session started over is told again, once, should vellum still fail.
+function M.forget()
+    warned = false
 end
 
 return M

@@ -12,12 +12,12 @@ thing, and the plugin reads both.
 
 The laws of *Boolean algebra*, the rules for rewriting one expression into an
 equivalent one, start with what `or` does when it already knows one of its
-operands. Here they are in each spelling:
+operands. Here they are in each spelling, the operand that drops out in red:
 
-```text
-a ∨ 1  ≡  1        a ∨ ⊤  ≡  ⊤
-a ∨ 0  ≡  a        a ∨ ⊥  ≡  a
-a ∨ a  ≡  a
+```logic
+[:red a] ∨ 1  ≡  1        [:red a] ∨ ⊤  ≡  ⊤
+a ∨ [:red 0]  ≡  a        a ∨ [:red ⊥]  ≡  a
+a ∨ [:red a]  ≡  a
 ```
 
 In words: once one side of an `or` is true, the other side has no say; a false
@@ -67,12 +67,13 @@ directly. From here on the course writes `1` and `0`, to match the cells.
         },
         {
             text = [[
-`and` has the same three laws, with the constants trading places:
+`and` has the same three laws, with the constants trading places; again the
+red operand drops out:
 
-```text
-a ∧ 1  ≡  a
-a ∧ 0  ≡  0
-a ∧ a  ≡  a
+```logic
+a ∧ [:red 1]  ≡  a
+[:red a] ∧ 0  ≡  0
+a ∧ [:red a]  ≡  a
 ```
 
 The trade is a pattern, called *duality*: take any law, swap `∧` with `∨` and
@@ -105,11 +106,12 @@ products*, a name that returns in the lesson on Karnaugh maps.
         {
             text = [[
 The *complement* of `a` is its negation, `¬a`. A proposition and its
-complement cover every case between them, and never hold together:
+complement cover every case between them, and never hold together: the blue
+pair is the green constant.
 
-```text
-a ∨ ¬a  ≡  1
-a ∧ ¬a  ≡  0
+```logic
+[:blue a ∨ ¬a]  ≡  [:green 1]
+[:blue a ∧ ¬a]  ≡  [:green 0]
 ```
 
 The second is the contradiction from the lesson on equivalence; the first is

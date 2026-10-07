@@ -78,13 +78,13 @@ The condition denies two things, and a reader has to hold both to see when
 the rule is tried. De Morgan can pull the two negations into one.
 
 Which De Morgan, though? The command takes the nearest match around the
-cursor. On the first `not`, that is the group behind it, and the negation
-would be pushed inward. Put the cursor on the `and` between the two negated
-groups, so that the match is the pair. Preview (`<leader>ttd`) and apply it as
-a step (`<leader>ttA`).
+cursor. On the first `not`, in red, that is the group behind it, and the
+negation would be pushed inward. Put the cursor on the `and` between the two
+negated groups, in yellow, so that the match is the pair. Preview
+(`<leader>ttd`) and apply it as a step (`<leader>ttA`).
 ]],
             template = [[
-not (N and W) and not A
+[:red not] (N and W) [:yellow and] not A
 ]],
             expect = [[
 not (N and W) and not A
@@ -106,8 +106,8 @@ character it must not follow.
 The scratch pane holds the derived line and the letters. Put each test back
 in place of its letter:
 
-```text
-¬((rule.needs_word_start ∧ prev:match '[%w_]') ∨ rule.not_after == prev)
+```logic
+¬[:blue ((rule.needs_word_start ∧ prev:match '[%w_]') ∨ rule.not_after == prev)]
 ```
 
 There are no negated comparisons to turn around this time: the `not` that sat

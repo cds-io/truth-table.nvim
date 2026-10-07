@@ -1,7 +1,12 @@
 -- The tutorial's lesson pane as text. A course is a list of lessons, each
 -- { title, aim, steps }; a step is { text, template, expect, note, solution },
 -- where the prose and the buffer contents are block strings as a lesson file
--- writes them. Pure string handling: tutor.lua owns the windows.
+-- writes them. Inside a ```logic fenced block of `text` or `note`, and
+-- anywhere in `template`, a line may colour a span with `[:colour ...]`
+-- (tutor_spans.lua has the grammar): the markers come out here and the spans
+-- go to tutor.lua, which paints them. Pure string handling: tutor.lua owns
+-- the windows.
+local spans = require("truth-table.tutor_spans")
 local M = {}
 
 -- A block string as a list of lines, without the newlines that close it.
@@ -37,6 +42,54 @@ function M.reflow(lines)
     return out
 end
 
+-- The lines of `lines` with their markers out, and the spans found, each
+-- with the `row` it was on. `allowed(row)` says whether that row may carry
+-- spans; a marker that is wrong, or a span where none is allowed, is nil
+-- and a message ending in the line.
+local function stripped(lines, allowed)
+    local out, found = {}, {}
+    for row, line in ipairs(lines) do
+        local clean, marked = spans.strip(line)
+        if not clean then
+            return nil, marked .. ": " .. line
+        end
+        if #marked > 0 and not allowed(row) then
+            return nil, "a colour span outside a ```logic block: " .. line
+        end
+        out[row] = clean
+        for _, span in ipairs(marked) do
+            span.row = row
+            found[#found + 1] = span
+        end
+    end
+    return out, found
+end
+
+-- A step's `text` or `note` as pane lines, reflowed, with the spans of its
+-- ```logic blocks.
+function M.body(block)
+    local lines = M.reflow(M.lines(block))
+    local logic, info = {}, nil
+    for row, line in ipairs(lines) do
+        local fence = line:match("^%s*```%s*(%S*)")
+        if fence then
+            info = info == nil and fence or nil
+        else
+            logic[row] = info == "logic"
+        end
+    end
+    return stripped(lines, function(row)
+        return logic[row] == true
+    end)
+end
+
+-- A step's `template` as the scratch pane's starting lines, with its spans.
+function M.template(block)
+    return stripped(M.lines(block), function()
+        return true
+    end)
+end
+
 local function append(out, lines)
     for _, line in ipairs(lines) do
         out[#out + 1] = line
@@ -45,7 +98,8 @@ end
 
 -- The pane for one step: where the reader is, the lesson's aim, the step's
 -- instructions, what the scratch pane should hold afterwards, and any remark
--- on that result.
+-- on that result. The spans come back with rows into these lines. Nil and a
+-- message, naming the field, for a step whose markers are wrong.
 function M.render(course, lesson_index, step_index)
     local lesson = course[lesson_index]
     local step = lesson.steps[step_index]
@@ -57,18 +111,59 @@ function M.render(course, lesson_index, step_index)
         "**Aim:** " .. lesson.aim,
         "",
     }
-    append(out, M.reflow(M.lines(step.text)))
+    local found = {}
+    local function body(field)
+        local lines, marked = M.body(step[field])
+        if not lines then
+            return field .. ": " .. marked
+        end
+        local offset = #out
+        append(out, lines)
+        for _, span in ipairs(marked) do
+            span.row = span.row + offset
+            found[#found + 1] = span
+        end
+    end
+    local err = body("text")
+    if err then
+        return nil, err
+    end
     if step.expect then
         append(out, { "", "You should see:", "", "```text" })
+        for _, line in ipairs(M.lines(step.expect)) do
+            if line:find("%[:%w+") then
+                return nil, "expect: a colour span in the expected result: " .. line
+            end
+        end
         append(out, M.lines(step.expect))
         append(out, { "```" })
     end
     if step.note then
         append(out, { "" })
-        append(out, M.reflow(M.lines(step.note)))
+        err = body("note")
+        if err then
+            return nil, err
+        end
     end
     append(out, { "", "---", "", "`]]` next step, `[[` previous step" })
-    return out
+    return out, found
+end
+
+-- The first step of `course` whose markers are wrong, as a message naming
+-- lesson, step and field; nil when every step renders.
+function M.check(course)
+    for number, lesson in ipairs(course) do
+        for index, step in ipairs(lesson.steps) do
+            local lines, err = M.render(course, number, index)
+            if not lines then
+                return ("lesson %d step %d: %s"):format(number, index, err)
+            end
+            local template, template_err = M.template(step.template)
+            if not template then
+                return ("lesson %d step %d: template: %s"):format(number, index, template_err)
+            end
+        end
+    end
 end
 
 return M

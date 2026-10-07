@@ -426,6 +426,25 @@ it; running a different rewrite command replaces it.
     suite replays (a list of moves, each the line to put the cursor `on`,
     the text on it the cursor sits `at`, and the commands to `run`).
 
+    Expressions a step shows go in a ```logic fenced block. There, and
+    anywhere in the `template`, a line may colour a span of itself:
+    `[:blue A] ∨ ¬(B ∧ ¬C)` shows `A ∨ ¬(B ∧ ¬C)` with `A` in blue, and
+    `A ∨ [:red ¬(B] ∧ ¬C)` colours `¬(B`, bytes rather than a node of the
+    expression. The colours are blue, red, green and yellow: the groups
+    TruthTableTutorBlue, TruthTableTutorRed, TruthTableTutorGreen and
+    TruthTableTutorYellow, linked by default to DiagnosticInfo,
+    DiagnosticError, DiagnosticOk and DiagnosticWarn; one you define before
+    the tutor opens, or in a ColorScheme autocommand, stands. The markers
+    come out before the text is shown, and the span is painted in both
+    panes; in the scratch pane it moves with your edits. Inside a span,
+    brackets pair up, so `[:blue result[1]]` ends at the second `]`. A span
+    inside a span, a span outside a logic block or in `expect`, a colour
+    not in the palette or a span that never closes is an error naming the
+    lesson, step, field and byte, and the tutor does not open. A line vellum
+    has to wrap, one wider than the pane, is shown without its colour. N.B.
+    a span that closes a line writes `]]`, which also closes a `[[ ... ]]`
+    Lua string: such a block uses `[=[ ... ]=]`.
+
                                                         *:TruthTableTutorNext*
 :TruthTableTutorNext
     Go to the tutorial's next step, across lesson boundaries. Mapped to `]]`
@@ -694,9 +713,11 @@ All pure modules support Lua 5.1 and have no vim dependency:
   of every rewrite and writes the pick through the same two paths.
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
-  turns a step into the lesson pane's Markdown, and tutor_vellum.lua turns
-  that into styled lines when vellum.nvim is installed (nothing when it is
-  absent or fails, and tutor.lua then shows the Markdown).
+  turns a step into the lesson pane's Markdown, tutor_spans.lua (pure) reads
+  the `[:colour ...]` markers out of its lines and finds the spans again on
+  rendered lines, and tutor_vellum.lua turns the Markdown into styled lines
+  when vellum.nvim is installed (nothing when it is absent or fails, and
+  tutor.lua then shows the Markdown).
   spec/tutor_nvim_spec.lua replays each
   step's solution and requires the scratch buffer to end as its expectation,
   and evaluates every law a lesson states (`left ≡ right` in a fenced block)
