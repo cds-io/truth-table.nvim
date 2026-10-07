@@ -84,7 +84,7 @@ end
 
 -- A source is the expression the cursor selects, the byte from zero where it
 -- `start`s in its line (nil when it is escaped there), plus the ways to
--- write a rendered transaction, { text, law, produced, consumed }, back:
+-- write a rendered rewrite, { text, law, produced, consumed }, back:
 -- `replace(rewritten)` gives the edited line and the byte, from zero, where
 -- the text starts in it (nil when the text is escaped there), and
 -- `step(rewritten)`, for expression lines only, gives the line to insert
@@ -174,19 +174,13 @@ local function source_at(buf)
     return source, ast
 end
 
--- A transaction as the source will write it: the consumed ranges lie in the
--- first change's input, the source expression, and the produced ones in the
--- last change's result, the text written; the laws of a composed one are
--- listed in order.
-local function rendered(tx)
-    local first, last = tx.changes[1], tx.changes[#tx.changes]
-    local laws = {}
-    for i, change in ipairs(tx.changes) do
-        laws[i] = change.law
-    end
+-- A rewrite as the source will write it: the consumed ranges lie in the
+-- source expression's text, the produced ones in the text written.
+local function rendered(rewritten)
+    local change = rewritten.change
     return {
-        text = trees.heading(tx.value), law = table.concat(laws, ", "),
-        produced = last.produced_ranges, consumed = first.consumed_ranges,
+        text = trees.heading(rewritten.value), law = change.law,
+        produced = change.produced_ranges, consumed = change.consumed_ranges,
     }
 end
 
@@ -221,9 +215,9 @@ local function resolve(buf, kind)
     if not kind.whole and not source.offset then
         return nil, "Put the cursor on the heading row to choose an operand"
     end
-    -- A successful transaction carries its law and both sides of the change.
-    local tx, reason = kind.run(ast, source.offset)
-    if not tx then
+    -- A rewrite carries its law and both sides of the change.
+    local rewritten, reason = kind.run(ast, source.offset)
+    if not rewritten then
         -- Factor and Distribute are one law used from either side, and easy
         -- to reach for the wrong way round: say so when the other applies.
         local opposite = kind.opposite
@@ -232,7 +226,7 @@ local function resolve(buf, kind)
         end
         return nil, reason
     end
-    local preview, err = prepare(buf, source, rendered(tx))
+    local preview, err = prepare(buf, source, rendered(rewritten))
     if not preview then
         return nil, err
     end
@@ -333,7 +327,7 @@ local function write_in_place(buf, preview)
             additions[#additions + 1] = mark
         end
     end
-    edit.apply(buf, edit.prepare(buf, preview.row, preview.replacement, false, additions))
+    edit.apply(buf, edit.prepare(buf, { row = preview.row, replacement = preview.replacement, additions = additions }))
     written(buf, preview.row + 1, "in_place")
 end
 
@@ -352,7 +346,7 @@ local function write_step(win, preview)
             additions[#additions + 1] = mark
         end
     end
-    edit.apply(buf, edit.prepare(buf, preview.row, preview.step, true, additions))
+    edit.apply(buf, edit.prepare(buf, { row = preview.row, replacement = preview.step, inserted = true, additions = additions }))
     written(buf, preview.row + 2, "step")
     vim.api.nvim_win_set_cursor(win, { preview.row + 2, preview.step_column })
 end
@@ -423,7 +417,7 @@ function M.choose()
             vim.notify("The buffer changed while the menu was open; nothing was written", vim.log.levels.WARN)
             return
         end
-        local preview, err = prepare(buf, source, rendered(move.transaction))
+        local preview, err = prepare(buf, source, rendered(move.rewritten))
         if not preview then
             vim.notify(err, vim.log.levels.WARN)
         elseif preview.step then

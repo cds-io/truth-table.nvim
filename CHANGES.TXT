@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- A rewrite returns { value, change }, the new tree with the record of the
+  change that made it; truth-table.transaction, whose bind and pure nothing
+  in the plugin called, is gone, and rewrite.moves entries carry each move's
+  `rewritten`. edit.prepare takes the write as one table. markdown.row reads
+  one table row strictly, nil and the reason for a line that is no row, in
+  place of split_row, which answered an empty array; parse_table_lines
+  reports a separator line it cannot read as "Line 2: ...".
 - Tutor: lessons 3 (connectives) and 5 (equivalence) colour the parts their
   notes point at: the operand that decides each reading of `p or q and r`,
   where the suspension check applies in the original and in the merged

@@ -306,7 +306,7 @@ describe("rewrite.simplify", function()
         local ast = assert(predicate.parse_located(source))
         local tx, law = rewrite.simplify(ast, needle and byte_of(source, needle, occurrence))
         local tree = tx and tx.value
-        law = tx and tx.changes[1].law or law
+        law = tx and tx.change.law or law
         if not tree then
             return nil, law
         end
@@ -523,8 +523,8 @@ describe("rewrite.moves", function()
 
     it("returns each move's tree, canonical and without spans", function()
         local move = rewrite.moves(assert(predicate.parse_located("A ∧ B")))[1]
-        assert.are.equal("B ∧ A", trees.heading(move.transaction.value))
-        assert.is_nil(move.transaction.value.span)
+        assert.are.equal("B ∧ A", trees.heading(move.rewritten.value))
+        assert.is_nil(move.rewritten.value.span)
     end)
 end)
 
@@ -643,11 +643,11 @@ describe("rewrite soundness", function()
                 local where = move.law .. " of " .. source .. " gave " .. move.text
                 assert.is_nil(seen[move.text], where)
                 seen[move.text] = true
-                assert.are.equal(move.text, trees.heading(move.transaction.value), where)
-                assert.is_true(same_function(ast, move.transaction.value, variables), where)
+                assert.are.equal(move.text, trees.heading(move.rewritten.value), where)
+                assert.is_true(same_function(ast, move.rewritten.value, variables), where)
                 local reparsed = assert(predicate.parse_expression(move.text), where)
                 assert.are.equal(move.text, trees.heading(reparsed), where)
-                assert.is_nil(move.transaction.value.span, where)
+                assert.is_nil(move.rewritten.value.span, where)
             end
             assert.are.equal(before, trees.heading(ast), source)
         end
@@ -686,7 +686,7 @@ describe("the region a rewrite changed", function()
         local tx, law = run(ast, needle and byte_of(source, needle))
         local tree = tx and tx.value
         assert.is_truthy(tree, law)
-        local text, regions = trees.rendered(tree, tx.changes[1].produced)
+        local text, regions = trees.rendered(tree, tx.change.produced)
         assert.are.equal(1, #regions, "expected one region in " .. text)
         return text:sub(regions[1][1] + 1, regions[1][2]), text
     end
@@ -732,7 +732,7 @@ describe("the region a rewrite changed", function()
         local moves = rewrite.moves(ast)
         assert.is_true(#moves > 0)
         for _, move in ipairs(moves) do
-            local _, regions = trees.rendered(move.transaction.value, move.transaction.changes[1].produced)
+            local _, regions = trees.rendered(move.rewritten.value, move.rewritten.change.produced)
             assert.is_true(#regions > 0, move.law .. ": " .. move.text)
         end
     end)
@@ -752,8 +752,8 @@ describe("the terms a rewrite consumed", function()
         local ast = assert(predicate.parse_located(source))
         local tx, law = run(ast, needle and byte_of(source, needle), ...)
         local tree = tx and tx.value
-        local terms = tx and tx.changes[1].consumed
-        law = tx and tx.changes[1].law or law
+        local terms = tx and tx.change.consumed
+        law = tx and tx.change.law or law
         assert.is_truthy(tree, law)
         assert.is_truthy(terms, law .. ": no consumed terms")
         local texts, starts = {}, {}
@@ -807,10 +807,39 @@ describe("the terms a rewrite consumed", function()
         local moves = rewrite.moves(ast)
         assert.is_true(#moves > 0)
         for _, move in ipairs(moves) do
-            assert.is_truthy(move.transaction.changes[1].consumed and #move.transaction.changes[1].consumed > 0, move.law .. ": " .. move.text)
-            for _, node in ipairs(move.transaction.changes[1].consumed) do
+            assert.is_truthy(move.rewritten.change.consumed and #move.rewritten.change.consumed > 0, move.law .. ": " .. move.text)
+            for _, node in ipairs(move.rewritten.change.consumed) do
                 assert.is_truthy(node.span, move.law .. ": " .. move.text)
             end
         end
+    end)
+end)
+
+describe("a rewrite's record", function()
+    it("keeps the trees before and after and the terms consumed and produced", function()
+        local before = assert(predicate.parse_located("r ∧ ¬(s ∨ t)"))
+        local rewritten = assert(rewrite.de_morgan(before, 7))
+        local change = rewritten.change
+        assert.are.equal(before, change.before)
+        assert.are.equal(rewritten.value, change.after)
+        local text, regions = trees.rendered(rewritten.value, change.produced)
+        assert.are.equal("¬s ∧ ¬t", text:sub(regions[1][1] + 1, regions[1][2]))
+        assert.are.same(change.produced_ranges, regions)
+        assert.are.equal("¬(s ∨ t)", ("r ∧ ¬(s ∨ t)"):sub(change.consumed_ranges[1][1] + 1, change.consumed_ranges[1][2]))
+        assert.is_nil(before.changed)
+        assert.is_nil(rewritten.value.changed)
+    end)
+
+    it("lets a canonical result be rewritten again without reparsing", function()
+        local before = assert(predicate.parse_located("¬(A ∨ B)"))
+        local first = assert(rewrite.de_morgan(before))
+        assert.is_nil(first.value.span)
+        local second = assert(rewrite.commute(first.value, 1))
+        assert.are.equal("¬B ∧ ¬A", trees.heading(second.value))
+        assert.are.equal(first.value, second.change.before)
+        assert.are.same({ { 0, #"¬A" }, { #"¬A ∧ ", #"¬A ∧ ¬B" } }, second.change.consumed_ranges)
+        assert.are.same({ { 0, #"¬B ∧ ¬A" } }, second.change.produced_ranges)
+        local collapsed = assert(rewrite.simplify(assert(rewrite.commute(assert(predicate.parse_located("A ∧ 1")), 1)).value, 1))
+        assert.are.equal("A", trees.heading(collapsed.value))
     end)
 end)
