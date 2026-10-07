@@ -12,6 +12,18 @@ require("truth-table").setup()
 local page = require("truth-table.tutor_page")
 local styled = require("truth-table.tutor_vellum")
 
+-- A course of one step with a colour span in a logic block, for the vellums
+-- to place: the span's line has to come back under its mark.
+local spanned = {
+    {
+        title = "Spans",
+        aim = "See a part.",
+        steps = {
+            { text = "Look:\n\n```logic\nA ∨ [:red ¬(B] ∧ ¬C)\na ∧ [:blue (a ∨ b)]  ≡  a\n```\n\nDone.\n" },
+        },
+    },
+}
+
 local warnings = {}
 vim.notify = function(message, level)
     if level == vim.log.levels.WARN then
@@ -78,18 +90,110 @@ describe("the lesson pane with the installed vellum", function()
             for number, lesson in ipairs(course) do
                 for index in ipairs(lesson.steps) do
                     local label = ("lesson %d step %d at width %d"):format(number, index, width)
-                    local markdown = page.render(course, number, index)
-                    local lines, marks = styled.render(markdown, width)
+                    local markdown, marked = page.render(course, number, index)
+                    local lines, marks = styled.render(markdown, width, marked)
                     assert.is_truthy(lines, label .. ": " .. table.concat(warnings, "; "))
                     assert.is_true(#marks > 0, label .. ": " .. table.concat(warnings, "; "))
                     assert.are.equal(alnum(markdown), alnum(lines), label .. ": text went missing")
+                    -- At the widest width no logic line wraps, so every span of
+                    -- the course lands.
+                    if width == 104 then
+                        local placed = vim.tbl_filter(function(mark)
+                            return mark.priority == 200
+                        end, marks)
+                        assert.are.equal(#marked, #placed, label .. ": colour spans placed")
+                    end
                 end
             end
         end)
     end
 
+    it("places every colour span on its line, under its own text, at every width", function()
+        local markdown, marked = page.render(spanned, 1, 1)
+        for _, width in ipairs({ 104, 70, 50 }) do
+            local lines, marks = styled.render(markdown, width, marked)
+            assert.is_truthy(lines, table.concat(warnings, "; "))
+            local placed = vim.tbl_filter(function(mark)
+                return mark.priority == 200
+            end, marks)
+            assert.are.equal(#marked, #placed, ("width %d: spans placed"):format(width))
+            for i, mark in ipairs(placed) do
+                local span = marked[i]
+                local expected = markdown[span.row]:sub(span.col + 1, span.end_col)
+                assert.are.equal(expected, lines[mark.row + 1]:sub(mark.col + 1, mark.end_col), ("width %d: span %d"):format(width, i))
+                assert.are.equal(span.group, mark.group)
+            end
+        end
+    end)
+
     it("warns nothing along the way", function()
         assert.are.equal(0, #warnings)
+    end)
+end)
+
+-- A stand-in that draws one code panel the way vellum does: a label row, the
+-- code behind a margin and a prefix, a blank row, and the anchor that says
+-- which Markdown rows it came from. `anchor` lets a case hand back a wrong one.
+describe("the lesson pane with a stand-in vellum that pads code", function()
+    local anchor
+    local saved
+    setup(function()
+        saved = { render = package.loaded["vellum.render"], theme = package.loaded["vellum.theme"] }
+        styled.restyle()
+        package.loaded["vellum.theme"] = { apply = function() end }
+        package.loaded["vellum.render"] = {
+            reset = function() end,
+            render = function(buf)
+                local source = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+                local lines, rows, opened = { "" }, { {} }, nil
+                for row, line in ipairs(source) do
+                    if line:match("^```") then
+                        if opened then
+                            lines[#lines + 1], rows[#rows + 1] = "  ", {}
+                            return lines, rows, 2, anchor or { { opened - 1, row - opened + 1, 1, #lines - 1 } }
+                        end
+                        opened = row
+                        lines[#lines + 1], rows[#rows + 1] = "  " .. line:sub(4), {}
+                    elseif opened then
+                        lines[#lines + 1], rows[#rows + 1] = "    " .. line .. "    ", {}
+                    end
+                end
+                return lines, rows, 2, {}
+            end,
+        }
+    end)
+
+    teardown(function()
+        package.loaded["vellum.render"], package.loaded["vellum.theme"] = saved.render, saved.theme
+        styled.restyle()
+    end)
+
+    before_each(function()
+        anchor = nil
+        warnings = {}
+        styled.forget()
+    end)
+
+    it("puts each span after the margin and the prefix of its rendered line", function()
+        local markdown, marked = page.render(spanned, 1, 1)
+        local lines, marks = styled.render(markdown, 80, marked)
+        assert.are.same({ "", "  logic", "    A ∨ ¬(B ∧ ¬C)    ", "    a ∧ (a ∨ b)  ≡  a    ", "  " }, lines)
+        assert.are.same({
+            { row = 2, col = 10, end_col = 14, group = "TruthTableTutorRed", priority = 200 },
+            { row = 3, col = 10, end_col = 19, group = "TruthTableTutorBlue", priority = 200 },
+        }, marks)
+        assert.are.equal("¬(B", lines[3]:sub(11, 14))
+        assert.are.equal("(a ∨ b)", lines[4]:sub(11, 19))
+    end)
+
+    it("refuses whole a page whose anchor points past its lines, and says why once", function()
+        anchor = { { 8, 4, 9, 4 } }
+        local markdown, marked = page.render(spanned, 1, 1)
+        assert.is_nil((styled.render(markdown, 80, marked)))
+        assert.are.equal(1, #warnings)
+        assert.is_truthy(warnings[1]:find("a block anchor outside the page", 1, true), warnings[1])
+        assert.is_nil((styled.render(markdown, 80, marked)))
+        assert.are.equal(1, #warnings)
     end)
 end)
 
@@ -107,6 +211,7 @@ describe("the lesson pane with a stand-in vellum", function()
         saved = { render = package.loaded["vellum.render"], theme = package.loaded["vellum.theme"] }
         warnings = {}
         styled.restyle()
+        styled.forget()
         package.loaded["vellum.theme"] = {
             apply = function()
                 calls.apply = calls.apply + 1

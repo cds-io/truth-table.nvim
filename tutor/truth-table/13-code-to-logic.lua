@@ -82,15 +82,15 @@ return G;
   let execution continue, and the final return must be true.
 - The first guard lets us continue only when `F` is false: `not F`.
 - The second guard lets us continue only when its test, `!T`, is false:
-  `not (not T)`. The guard contributes one negation; its test already has
-  another.
+  `not (not T)`. The guard contributes one negation, in green; its test
+  already has another, in blue.
 - The final `return G` contributes `G`.
 - Join these requirements with `and` because **all three must hold**. If
   either guard fires, the function returns false before reaching `G`.
 
-```text
-not F and
-not not T and
+```logic
+[:green not] F and
+[:green not] [:blue not T] and
 G
 ```
 
@@ -142,13 +142,13 @@ function canAccess({ isSuperAdmin, isAdmin, hasGrant, isClassified }) {
 
 Name the four checks `S`, `A`, `G`, `C`. Reading from the top, the function
 is the three branches joined by `or`, which is the expression in the scratch
-pane. The repeated `not C` is the thing to tidy. Put the cursor on either `not C`,
-preview `:TruthTableFactor` (`<leader>ttf`), and apply it as a step
-(`<leader>ttA`); then, with the cursor on `S` in the new line, commute
-(`<leader>tts`) and apply that as a step as well.
+pane. The repeated `not C` is the thing to tidy. Put the cursor on either
+`not C`, in yellow, preview `:TruthTableFactor` (`<leader>ttf`), and apply it
+as a step (`<leader>ttA`); then, with the cursor on `S` in the new line,
+commute (`<leader>tts`) and apply that as a step as well.
 ]],
             template = [[
-S or (A and not C) or (G and not C)
+S or (A and [:yellow not C]) or (G and [:yellow not C])
 ]],
             expect = [[
 S or (A and not C) or (G and not C)
@@ -173,11 +173,11 @@ S or (A and not C) or (G and not C)
 Single letters keep an expression short and a table narrow, which is why logic
 uses them. The plugin takes any identifier, though, and with the real names the
 result reads straight back into code. The same two steps again: factor with the
-cursor on either `not isClassified`, then commute `isSuperAdmin` in the new
-line, each applied as a step.
+cursor on either `not isClassified`, in yellow, then commute `isSuperAdmin` in
+the new line, each applied as a step.
 ]],
             template = [[
-isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)
+isSuperAdmin or (isAdmin and [:yellow not isClassified]) or (hasGrant and [:yellow not isClassified])
 ]],
             expect = [[
 isSuperAdmin or (isAdmin and not isClassified) or (hasGrant and not isClassified)

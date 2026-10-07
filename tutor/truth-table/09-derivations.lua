@@ -14,13 +14,13 @@ line above to this one. It then moves the cursor to the new line so the next
 step can start from there.
 
 Simplify the expression in the scratch pane in two steps. First expand the
-negated group: put the cursor on the first `not`, preview De Morgan
-(`<leader>ttd`), and apply it as a step (`<leader>ttA`). The cursor is now on
+negated group: put the cursor on the first `not`, in yellow, preview De
+Morgan (`<leader>ttd`), and apply it as a step (`<leader>ttA`). The cursor is now on
 `¬g` in the new line. Both terms contain `¬g`, so factor it out (`<leader>ttf`)
 and apply that as a step too.
 ]],
             template = [[
-not (g or h) or (not g and k)
+[:yellow not] (g or h) or (not g and k)
 ]],
             expect = [[
 not (g or h) or (not g and k)

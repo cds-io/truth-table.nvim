@@ -7,11 +7,11 @@ return {
 `⊕` can be written with the basic connectives: "exactly one of `t` and `e`" is
 "`e` without `t`, or `t` without `e`". Going the other way, spotting that
 pattern lets you replace four operands with two. `:TruthTableXor`
-(`<leader>tto`) recognises it; the cursor can be anywhere in either term.
-Preview, then apply with `<leader>tta`.
+(`<leader>tto`) recognises it; the cursor can be anywhere in either term, both
+in yellow. Preview, then apply with `<leader>tta`.
 ]],
             template = [[
-(not t and e) or (t and not e)
+[:yellow (not t and e)] or [:yellow (t and not e)]
 ]],
             expect = [[
 t ⊕ e
@@ -42,11 +42,12 @@ function shouldRetry({ isTimeout, isServerError, hasRetries }) {
 Each branch that returns true is a term, so with `T`, `E`, `R` for the three
 checks the function is the expression in the scratch pane. Derive the short
 form in three steps, applying each with `<leader>ttA`: factor `R` out (cursor
-on either `R`, `<leader>ttf`), recognise the exclusive or (cursor on `¬T`,
-`<leader>tto`), and commute `R` to the end (cursor on `R`, `<leader>tts`).
+on either `R`, in yellow, `<leader>ttf`), recognise the exclusive or (cursor
+on `¬T`, `<leader>tto`), and commute `R` to the end (cursor on `R`,
+`<leader>tts`).
 ]],
             template = [[
-(not T and E and R) or (T and not E and R)
+(not T and E and [:yellow R]) or (T and not E and [:yellow R])
 ]],
             expect = [[
 (not T and E and R) or (T and not E and R)
@@ -90,7 +91,7 @@ One more proposal arrives in review: "`!==` on booleans is odd, just use
 and the table says what the difference is. Build it.
 ]],
             template = [[
-(T xor E) and R | (T or E) and R
+(T [:blue xor] E) and R | (T [:red or] E) and R
 ]],
             expect = [[
 |  T  |  E  |  R  | (T ⊕ E) ∧ R | (T ∨ E) ∧ R |

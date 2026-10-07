@@ -1,6 +1,27 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: a lesson may colour a span of an expression it shows. Inside a
+  ```logic fenced block of a step's text or note, and anywhere in its
+  template, `[:blue A] ∨ ¬(B ∧ ¬C)` shows the expression with `A` in blue;
+  the span is bytes, so `[:red ¬(B]` colours `¬(B`. Blue, red, green and
+  yellow are the groups TruthTableTutorBlue, TruthTableTutorRed,
+  TruthTableTutorGreen and TruthTableTutorYellow, default links to the
+  Diagnostic groups. The markers come out before the text is shown; the span
+  is painted in the lesson pane, styled or not, and in the scratch pane,
+  where it moves with the reader's edits. A wrong marker (a colour not in the
+  palette, a span that never closes, one inside another, one outside a logic
+  block or in expect) names the lesson, step, field and byte, and the tutor
+  does not open.
+  - The lessons' expression blocks are ```logic blocks, and twelve lessons
+    colour the parts their prose points at: blue the thing under discussion,
+    red what disappears or is wrong, green what appears, yellow the cursor
+    target in the scratch pane. The prose names the colour beside the role.
+  - tutor_spans.lua (pure): strip(line) and place(spans, markdown, lines,
+    anchors); tutor_page.body, template and check; tutor_vellum keeps
+    vellum's block anchors, which say where each Markdown block was drawn.
+  - vellum's "could not render" warning is given again, once, after
+    :TruthTableTutor! starts the course over.
 - Previews light both ends of a rewrite. While one is pending, the terms the
   law takes are lit on the line in TruthTableConsumed (a default link to
   DiagnosticWarn): the operands a commute moves, each occurrence a factoring

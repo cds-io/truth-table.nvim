@@ -7,7 +7,7 @@ return {
 Laws, each with its dual beside it (below it, for the distributive pair),
 under the name a preview or a step's `| by` gives it:
 
-```text
+```logic
 identity         a ∨ 0 ≡ a                      a ∧ 1 ≡ a
 domination       a ∨ 1 ≡ 1                      a ∧ 0 ≡ 0
 idempotence      a ∨ a ≡ a                      a ∧ a ≡ a

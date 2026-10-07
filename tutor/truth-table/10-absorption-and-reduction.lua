@@ -8,10 +8,11 @@ The laws so far reshape an expression. The next two families shrink one, which
 is what simplifying a condition comes down to.
 
 *Absorption*: beside `a` itself, a term that already contains `a` adds nothing.
+The blue `a` stays; the red term goes.
 
-```text
-a ∨ (a ∧ b)  ≡  a
-a ∧ (a ∨ b)  ≡  a
+```logic
+[:blue a] ∨ [:red (a ∧ b)]  ≡  a
+[:blue a] ∧ [:red (a ∨ b)]  ≡  a
 ```
 
 In words, for the first: `a ∧ b` can only be true when `a` is, so `or`-ing it
@@ -40,17 +41,17 @@ Both columns repeat `a`: `b` has been absorbed. In code,
         },
         {
             text = [[
-A second form of absorption drops a negation:
+A second form of absorption drops a negation, the red one:
 
-```text
-a ∨ (¬a ∧ b)  ≡  a ∨ b
-a ∧ (¬a ∨ b)  ≡  a ∧ b
+```logic
+a ∨ ([:red ¬a] ∧ b)  ≡  a ∨ b
+a ∧ ([:red ¬a] ∨ b)  ≡  a ∧ b
 ```
 
 In words, for the first: "`a`, or failing that, `b`" is "`a` or `b`". A table
-would confirm it; a derivation shows why. Put the cursor on the first `a`,
-preview `:TruthTableDistribute` (`<leader>ttx`), and apply it as a step
-(`<leader>ttA`). The new line contains `a ∨ ¬a`, which the complement law
+would confirm it; a derivation shows why. Put the cursor on the first `a`, the
+yellow one, preview `:TruthTableDistribute` (`<leader>ttx`), and apply it as a
+step (`<leader>ttA`). The new line contains `a ∨ ¬a`, which the complement law
 turns into `1`, and the identity law then removes the `1`.
 
 `:TruthTableSimplify` (`<leader>ttz`), which removed the double negations in
@@ -60,7 +61,7 @@ used. Run it on the new line and apply it as a step, then do the same once
 more.
 ]],
             template = [[
-a or (not a and b)
+[:yellow a] or (not a and b)
 ]],
             expect = [[
 a or (not a and b)
@@ -70,8 +71,16 @@ a or (not a and b)
 ]],
             note = [[
 Read the justifications down the right: the derivation is three laws you
-already had. The second law of the pair goes the same way: distributing `a`
-into `¬a ∨ b` gives `(a ∧ ¬a) ∨ (a ∧ b)`, then `0 ∨ (a ∧ b)`, then `a ∧ b`.
+already had. The second law of the pair goes the same way, distributing `a`
+into `¬a ∨ b`: the pair the complement law collapses is blue, and what the
+identity law then removes is red.
+
+```logic
+a ∧ (¬a ∨ b)
+≡ [:blue (a ∧ ¬a)] ∨ (a ∧ b)
+≡ [:red 0 ∨] (a ∧ b)
+≡ a ∧ b
+```
 
 Simplify applies one law per run, the nearest to the cursor: first a law that
 involves the operand under the cursor, then one inside the group the cursor is
@@ -95,11 +104,11 @@ on, then one anywhere on the line.
             text = [[
 The derivation was the long way round, taken once to see why the law holds.
 Simplify also knows absorption as a law in its own right. The scratch pane
-holds the same expression: put the cursor on the first `a`, preview
+holds the same expression: put the cursor on the first `a`, in yellow, preview
 (`<leader>ttz`), and apply it as a step (`<leader>ttA`).
 ]],
             template = [[
-a or (not a and b)
+[:yellow a] or (not a and b)
 ]],
             expect = [[
 a or (not a and b)
@@ -116,20 +125,20 @@ absorbed, and every term that holds `¬a` loses it.
         {
             text = [[
 *Reduction* removes a variable that appears both plain and negated beside the
-same partner:
+same partner. The red pair goes; the partner stays.
 
-```text
-(a ∧ b) ∨ (¬a ∧ b)  ≡  b
-(a ∨ b) ∧ (¬a ∨ b)  ≡  b
+```logic
+([:red a] ∧ b) ∨ ([:red ¬a] ∧ b)  ≡  b
+([:red a] ∨ b) ∧ ([:red ¬a] ∨ b)  ≡  b
 ```
 
 In words, for the first: if `b` decides the outcome when `a` is true and also
 when `a` is false, then `a` has no say. Derive it: with the cursor on either
-`b`, preview `:TruthTableFactor` (`<leader>ttf`) and apply it as a step
-(`<leader>ttA`). Then simplify twice (`<leader>ttz`), applying each as a step.
+`b`, in yellow, preview `:TruthTableFactor` (`<leader>ttf`) and apply it as a
+step (`<leader>ttA`). Then simplify twice (`<leader>ttz`), applying each as a step.
 ]],
             template = [[
-(a and b) or (not a and b)
+(a and [:yellow b]) or (not a and [:yellow b])
 ]],
             expect = [[
 (a and b) or (not a and b)
@@ -161,11 +170,11 @@ Karnaugh maps, where every group of neighbouring cells is a reduction.
             text = [[
 The second reduction law is the dual of the first: the same three steps with
 `∧` and `∨` traded, and `0` in place of `1`. This time take it in one move.
-With the cursor anywhere in either term, preview `:TruthTableSimplify`
-(`<leader>ttz`) and apply it as a step.
+With the cursor anywhere in either term, both in yellow, preview
+`:TruthTableSimplify` (`<leader>ttz`) and apply it as a step.
 ]],
             template = [[
-(a or b) and (not a or b)
+[:yellow (a or b)] and [:yellow (not a or b)]
 ]],
             expect = [[
 (a or b) and (not a or b)

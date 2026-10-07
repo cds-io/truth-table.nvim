@@ -6,13 +6,13 @@ return {
             text = [[
 De Morgan's laws say how `not` moves across `and` and `or`:
 
-```text
-¬(p ∧ q)  ≡  ¬p ∨ ¬q
-¬(p ∨ q)  ≡  ¬p ∧ ¬q
+```logic
+¬(p [:red ∧] q)  ≡  ¬p [:green ∨] ¬q
+¬(p [:red ∨] q)  ≡  ¬p [:green ∧] ¬q
 ```
 
 In words: "not both" is "at least one is false", and "neither" is "both are
-false". The negation moves inward and the connective flips.
+false". The negation moves inward and the connective flips, red to green.
 
 The plugin applies the law to an expression on a line of its own. A rewrite
 happens in two moves, so you can look before you commit: `:TruthTableDeMorgan`
@@ -63,11 +63,11 @@ log line would attach.
         },
         {
             text = [[
-The law runs in the other direction too, pulling a negation outward. Preview
-and apply as before.
+The law runs in the other direction too, pulling a negation outward: the two
+in blue become one. Preview and apply as before.
 ]],
             template = [[
-not x and not y
+[:blue not] x and [:blue not] y
 ]],
             expect = [[
 ¬(x ∨ y)
@@ -79,11 +79,11 @@ not x and not y
         {
             text = [[
 Which part is rewritten when an expression has several? The nearest match
-around the cursor. Put the cursor on the word `not` before previewing; the
-rewrite applies to that group and leaves `r` alone.
+around the cursor. Put the cursor on the word `not`, in yellow, before
+previewing; the rewrite applies to that group and leaves `r` alone.
 ]],
             template = [[
-r and not (s or t)
+r and [:yellow not] (s or t)
 ]],
             expect = [[
 r ∧ ¬s ∧ ¬t
@@ -103,20 +103,20 @@ function showBanner({ isFreeUser, hasDismissedBanner }) {
 }
 ```
 
-"Not (not free, or dismissed)": a reader has to undo two negations in their
-head to learn who sees the banner. Pushing the negation inward turns the
-reasons to reject into a *list of requirements*. Apply De Morgan
+"Not (not free, or dismissed)": a reader has to undo the two negations in
+blue in their head to learn who sees the banner. Pushing the negation inward
+turns the reasons to reject into a *list of requirements*. Apply De Morgan
 (`<leader>ttd`, then `<leader>tta`). That leaves `¬¬isFreeUser`, and a double
 negation cancels:
 
-```text
-¬¬p  ≡  p
+```logic
+[:red ¬¬]p  ≡  p
 ```
 
 `:TruthTableSimplify` (`<leader>ttz`) previews the cancellation. Apply it too.
 ]],
             template = [[
-not (not isFreeUser or hasDismissedBanner)
+[:blue not] ([:blue not] isFreeUser or hasDismissedBanner)
 ]],
             expect = [[
 isFreeUser ∧ ¬hasDismissedBanner

@@ -3,9 +3,11 @@
 -- starting text for the reader to run commands on. The course is data, one
 -- file per lesson under tutor/truth-table/, read in file-name order;
 -- tutor_page.lua turns a step into the lesson pane's Markdown, and
--- tutor_vellum.lua styles that when vellum.nvim is installed.
+-- tutor_vellum.lua styles that when vellum.nvim is installed. A lesson's
+-- colour spans (tutor_spans.lua) are painted in both panes.
 local page = require("truth-table.tutor_page")
 local styled = require("truth-table.tutor_vellum")
+local spans = require("truth-table.tutor_spans")
 
 local M = {}
 
@@ -59,7 +61,39 @@ local function load()
             steps[#steps + 1] = { lesson = lesson, step = step }
         end
     end
+    local err = page.check(course)
+    if err then
+        vim.notify("Tutorial " .. err, vim.log.levels.WARN)
+        return
+    end
     return { course = course, steps = steps, at = 1, scratch = {} }
+end
+
+-- The colour spans' highlight groups, as defaults: one the reader defines
+-- stands.
+local function palette()
+    for _, entry in ipairs(spans.PALETTE) do
+        vim.api.nvim_set_hl(0, entry.group, { default = true, link = entry.link })
+    end
+end
+
+-- A lesson's spans as marks on the lines they were found in.
+local function marks_of(marked)
+    local marks = {}
+    for i, span in ipairs(marked) do
+        marks[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, group = span.group, priority = spans.PRIORITY }
+    end
+    return marks
+end
+
+local function paint(buf, marks)
+    for _, mark in ipairs(marks) do
+        vim.api.nvim_buf_set_extmark(buf, MARKS, mark.row, mark.col, {
+            end_col = mark.end_col,
+            hl_group = mark.group,
+            priority = mark.priority,
+        })
+    end
 end
 
 local function live(buf)
@@ -126,12 +160,15 @@ local function panes()
 end
 
 -- The reader's step in the lesson pane `win`, which shows the lesson buffer:
--- styled for the width the pane has now, or as Markdown when that fails.
+-- styled for the width the pane has now, or as Markdown when that fails. The
+-- lesson's colour spans are painted either way; load() checked every step
+-- renders.
 local function draw(win)
     local at = session.steps[session.at]
-    local markdown = page.render(session.course, at.lesson, at.step)
+    local markdown, marked = page.render(session.course, at.lesson, at.step)
+    assert(markdown, marked)
     local width = vim.api.nvim_win_get_width(win)
-    local lines, marks = styled.render(markdown, width)
+    local lines, marks = styled.render(markdown, width, marked)
     local pane = lines and LESSON_PANE.styled or LESSON_PANE.markdown
     session.width = lines and width
 
@@ -141,13 +178,7 @@ local function draw(win)
     vim.api.nvim_buf_clear_namespace(buf, MARKS, 0, -1)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or markdown)
     vim.bo[buf].modifiable = false
-    for _, mark in ipairs(marks or {}) do
-        vim.api.nvim_buf_set_extmark(buf, MARKS, mark.row, mark.col, {
-            end_col = mark.end_col,
-            hl_group = mark.group,
-            priority = mark.priority,
-        })
-    end
+    paint(buf, lines and marks or marks_of(marked))
     dress(buf, pane.filetype)
     -- Set after the buffer is in the window, and local to it. A window takes
     -- fresh options when it first shows a buffer: set any earlier, these are
@@ -167,6 +198,7 @@ local function watch()
     local function redraw(event)
         if event.event == "ColorScheme" then
             styled.restyle()
+            palette()
         end
         local win = window("lesson")
         if not (win and session.width and vim.api.nvim_win_get_buf(win) == session.lesson) then
@@ -188,7 +220,11 @@ local function show()
     local scratch = session.scratch[session.at]
     if not live(scratch) then
         local name = ("truth-table-tutor://scratch/%d.%d"):format(at.lesson, at.step)
-        scratch = buffer(name, page.lines(session.course[at.lesson].steps[at.step].template), scratch)
+        local lines, marked = page.template(session.course[at.lesson].steps[at.step].template)
+        scratch = buffer(name, assert(lines, marked), scratch)
+        -- Painted once the text is in, so undo has nothing of it; from here
+        -- the marks move with the reader's edits.
+        paint(scratch, marks_of(marked))
         dress(scratch, "markdown")
         session.scratch[session.at] = scratch
     end
@@ -210,6 +246,7 @@ local function discard()
         end
     end
     vim.api.nvim_del_augroup_by_name(ROLE)
+    styled.forget()
     session = nil
 end
 
@@ -228,6 +265,7 @@ function M.open(opts)
         end
         watch()
     end
+    palette()
     if opts.lesson then
         local target
         for index, at in ipairs(session.steps) do

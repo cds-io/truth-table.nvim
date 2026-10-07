@@ -80,12 +80,13 @@ time you supply the branch expressions.
 One row in eight. Look at the rows before reaching for a law, though: some of
 them describe a value that is a number and a table at once.
 
-Compare the four conditions you wrote with this key:
+Compare the four conditions you wrote with this key; the condition the two
+table actions share is in blue:
 
-```text
+```logic
 write the value itself           N ∨ S
-write the table's earlier name   ¬(N ∨ S) ∧ T ∧ V
-write a new table and recurse    ¬(N ∨ S) ∧ T ∧ ¬V
+write the table's earlier name   [:blue ¬(N ∨ S) ∧ T] ∧ V
+write a new table and recurse    [:blue ¬(N ∨ S) ∧ T] ∧ ¬V
 raise the error                  ¬(N ∨ S) ∧ ¬T
 ```
 ]],

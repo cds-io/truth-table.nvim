@@ -10,11 +10,11 @@ meaning.
 The *commutative* laws say order is free: `m ∧ n ≡ n ∧ m`, and the same for
 `∨`, `⊕`, and `⇔`. `:TruthTableCommute` (`<leader>tts`) swaps the operand under
 the cursor with the one to its right (`:TruthTableCommute!`, `<leader>ttS`, with
-the one to its left). Put the cursor on `m`, preview, then apply with
-`<leader>tta`.
+the one to its left). Put the cursor on `m`, in yellow, preview, then apply
+with `<leader>tta`.
 ]],
             template = [[
-m and n
+[:yellow m] and n
 ]],
             expect = [[
 n ∧ m
@@ -35,14 +35,14 @@ when `b()` does something, or when the left operand guards the right, as in
 The *associative* laws say grouping is free too, as long as the connective
 stays the same:
 
-```text
-(x ∨ y) ∨ z  ≡  x ∨ (y ∨ z)
-(x ∧ y) ∧ z  ≡  x ∧ (y ∧ z)
+```logic
+[:blue (x ∨ y)] ∨ z  ≡  x ∨ [:blue (y ∨ z)]
+[:blue (x ∧ y)] ∧ z  ≡  x ∧ [:blue (y ∧ z)]
 ```
 
 To test the first with a table, the two groupings have to be kept apart, and
 stored columns do that. The table in the scratch pane already has the two
-inner groups, `x ∨ y` and `y ∨ z`, computed in columns 4 and 5. With the cursor
+inner groups, the blue ones, `x ∨ y` and `y ∨ z`, computed in columns 4 and 5. With the cursor
 in the table, finish each grouping from its stored column:
 
     :TruthTableExpand :h4 or z, x or :h5
@@ -96,31 +96,39 @@ connectives showed that `p ∨ (q ∧ r)` and `(p ∨ q) ∧ r` differ.
 The *distributive* laws relate `∧` and `∨` the way arithmetic relates
 multiplication and addition:
 
-```text
-u ∧ (v ∨ w)  ≡  (u ∧ v) ∨ (u ∧ w)
-u ∨ (v ∧ w)  ≡  (u ∨ v) ∧ (u ∨ w)
+```logic
+[:red u] ∧ (v ∨ w)  ≡  ([:green u] ∧ v) ∨ ([:green u] ∧ w)
+[:red u] ∨ (v ∧ w)  ≡  ([:green u] ∨ v) ∧ ([:green u] ∨ w)
 ```
 
 (The second one has no counterpart in arithmetic: in logic each connective
 distributes over the other.)
 
 A law can be used from either of its sides, and here each use has a name for
-what happens to `u`. Starting from the left side, `u` moves *in*: the one `u`
-outside the group becomes a `u` in each term. That is *distributing*.
+what happens to `u`. Starting from the left side, `u` moves *in*: the red `u`
+outside the group becomes the green `u` in each term. That is *distributing*.
 `:TruthTableDistribute` (`<leader>ttx`) moves the operand under the cursor into
-the group next to it. Put the cursor on `u`, preview, then apply.
+the group next to it. Put the cursor on `u`, in yellow, preview, then apply.
 ]],
             template = [[
-u and (v or w)
+[:yellow u] and (v or w)
 ]],
             expect = [[
 (u ∧ v) ∨ (u ∧ w)
 ]],
             note = [[
 The cursor position matters, because the command needs to know which operand
-you mean. In `u ∧ (v ∨ w)`, the cursor on the inner `∨` or either parenthesis
-selects the whole `(v ∨ w)` group. The outer `∧` selects no operand; put the
-cursor on `u` to distribute it.
+you mean. In `u ∧ (v ∨ w)`, each place the cursor can be selects something
+different:
+
+```logic
+u ∧ [:blue (v ∨ w)]
+u [:red ∧] (v ∨ w)
+[:yellow u] ∧ (v ∨ w)
+```
+
+On the inner `∨` or either parenthesis it selects the whole group. On the
+outer `∧` it selects no operand. On `u` it selects the operand to distribute.
 ]],
             solution = {
                 { on = "u and (v or w)", at = "u", run = { "TruthTableDistribute", "TruthTableApply" } },
@@ -132,15 +140,16 @@ Starting from the other side of the same law, the shared operand moves *out*:
 the `c` that both terms have is written once, in front, and what is left of
 the terms becomes a group. That is *factoring*.
 
-```text
-(c ∧ d) ∨ (c ∧ e)  ≡  c ∧ (d ∨ e)
+```logic
+([:red c] ∧ d) ∨ ([:red c] ∧ e)  ≡  [:green c] ∧ (d ∨ e)
 ```
 
 `:TruthTableFactor` (`<leader>ttf`) pulls the operand under the cursor out of
-every term that has it. Put the cursor on either `c`, preview, then apply.
+every term that has it. Put the cursor on either `c`, in yellow, preview, then
+apply.
 ]],
             template = [[
-(c and d) or (c and e)
+([:yellow c] and d) or ([:yellow c] and e)
 ]],
             expect = [[
 c ∧ (d ∨ e)
@@ -167,10 +176,10 @@ function canMerge({ isRepoAdmin, ciPasses, hasBlockingReviews }) {
 ```
 
 It is correct, and it says the admin check twice. Put the cursor on either
-`isRepoAdmin`, preview the factoring (`<leader>ttf`), and apply.
+`isRepoAdmin`, in yellow, preview the factoring (`<leader>ttf`), and apply.
 ]],
             template = [[
-(isRepoAdmin or ciPasses) and (isRepoAdmin or not hasBlockingReviews)
+([:yellow isRepoAdmin] or ciPasses) and ([:yellow isRepoAdmin] or not hasBlockingReviews)
 ]],
             expect = [[
 isRepoAdmin ∨ (ciPasses ∧ ¬hasBlockingReviews)
