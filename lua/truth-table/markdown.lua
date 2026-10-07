@@ -108,7 +108,9 @@ function M.column_index(line, byte_column)
     return math.max(1, count)
 end
 
-local function read_row(line)
+-- The cells of one Markdown table row, trimmed, with escaped pipes and
+-- backslashes read; nil and the reason for a line that is no row.
+function M.row(line)
     if type(line) ~= "string" then
         return nil, "Expected a Markdown table row"
     end
@@ -132,26 +134,25 @@ local function read_row(line)
     return cells
 end
 
--- The cells of a row, or an empty array where read_row would report an error.
-function M.split_row(line)
-    return read_row(line) or {}
-end
-
 -- Parse a Markdown table into one validated semantic model.
 function M.parse_table_lines(lines)
     if #lines < 2 or not M.is_separator(lines[2]) then
         return nil, "Expected a heading and separator"
     end
-    local headers, err = read_row(lines[1])
+    local headers, err = M.row(lines[1])
     if not headers then
         return nil, err
     end
-    if #M.split_row(lines[2]) ~= #headers then
+    local separator, separator_err = M.row(lines[2])
+    if not separator then
+        return nil, "Line 2: " .. separator_err
+    end
+    if #separator ~= #headers then
         return nil, "Separator column count does not match heading"
     end
     local rows = {}
     for i = 3, #lines do
-        local row, row_err = read_row(lines[i])
+        local row, row_err = M.row(lines[i])
         if not row then
             return nil, "Line " .. i .. ": " .. row_err
         end
@@ -243,7 +244,7 @@ end
 
 -- Replace one header cell without rewriting separators or stored data rows.
 function M.replace_heading(line, index, heading)
-    local headers, err = read_row(line)
+    local headers, err = M.row(line)
     if not headers then
         return nil, err
     end

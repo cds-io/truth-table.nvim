@@ -4,14 +4,12 @@
 -- Pure: trees in, trees out. Inputs come from predicate.parse_located, whose
 -- node spans say where the cursor is; outputs are fresh trees without spans,
 -- in canonical form (trees.canonical), which is where their grouping and
--- parentheses are decided. A rewrite returns a transaction
--- (truth-table.transaction): the new value with one change record, the law,
--- the trees before and after, and the terms it consumed and produced as
--- nodes and as byte ranges in each tree's text; or nil and the reason it
--- does not apply. Which terms those are is data beside the trees, never a
--- flag inside them.
+-- parentheses are decided. A rewrite returns { value, change }: the new tree
+-- and the record of the change that made it, the law, the trees before and
+-- after, and the terms it consumed and produced as nodes and as byte ranges
+-- in each tree's text; or nil and the reason it does not apply. Which terms
+-- those are is data beside the trees, never a flag inside them.
 local trees = require("truth-table.trees")
-local transaction = require("truth-table.transaction")
 local operators = require("truth-table.operators")
 local SYMBOLS = require("truth-table.symbols")
 local fp = require("truth-table.fp")
@@ -170,11 +168,14 @@ local function completed(ast, tree, law, consumed, produced)
         local span = node.span or positions[node]
         input[#input + 1] = { span.start_byte - 1, span.end_byte }
     end
-    return transaction.record(value, {
-        law = law, before = ast, after = value,
-        consumed = consumed, produced = mapped,
-        consumed_ranges = input, produced_ranges = output,
-    })
+    return {
+        value = value,
+        change = {
+            law = law, before = ast, after = value,
+            consumed = consumed, produced = mapped,
+            consumed_ranges = input, produced_ranges = output,
+        },
+    }
 end
 
 local function operation(run)
@@ -786,8 +787,8 @@ local OPERAND_REWRITES = {
     end },
 }
 
--- Every rewrite the expression allows, as { law, transaction, text }: one
--- entry per distinct result, with its transaction. The laws that shrink
+-- Every rewrite the expression allows, as { law, rewritten, text }: one
+-- entry per distinct result, `rewritten` its { value, change }. The laws that shrink
 -- the expression come first, then De Morgan, ⊕ and ⇔ recognition, factoring,
 -- distributing and, the most numerous, the swaps. The shrinking laws go
 -- innermost site first, as simplify tries them, and the rest outermost
@@ -796,11 +797,11 @@ local OPERAND_REWRITES = {
 function M.moves(ast)
     local found, seen = {}, { [trees.heading(ast)] = true }
     local function add(tree, law, consumed, produced)
-        local tx = tree and completed(ast, tree, law, consumed, produced)
-        local text = tx and trees.heading(tx.value)
+        local rewritten = tree and completed(ast, tree, law, consumed, produced)
+        local text = rewritten and trees.heading(rewritten.value)
         if text and not seen[text] then
             seen[text] = true
-            found[#found + 1] = { law = law, transaction = tx, text = text }
+            found[#found + 1] = { law = law, rewritten = rewritten, text = text }
         end
     end
 

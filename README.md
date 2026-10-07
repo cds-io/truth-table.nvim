@@ -861,17 +861,13 @@ which would leave a hole that `ipairs` stops at.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law
-(simplify): trees in, transactions out. A transaction is the new `value` with
-the log of `changes` that made it, one per law: the `before` and `after`
-trees, the terms the law consumed and produced, and where those terms sit as
-byte ranges in each tree's text. A canonical result can be the input of the
-next rewrite without reparsing. `moves` lists what all of them give from
-every place in a tree: each rewrite is written against an operand's path from
-the root, which a cursor byte or a walk of the tree supplies.
-- `transaction.lua` is that shape: `record` makes a transaction of one
-change, `pure` one of none, and `bind` runs the next rewrite on a
-transaction's value and appends its changes, keeping both inputs as they
-were; a refusal is `nil, reason`, as everywhere else.
+(simplify): trees in, `{ value, change }` out, the new tree with the record
+of the change that made it: the law, the `before` and `after` trees, the
+terms the law consumed and produced, and where those terms sit as byte ranges
+in each tree's text. A canonical result can be the input of the next rewrite
+without reparsing. `moves` lists what all of them give from every place in a
+tree: each rewrite is written against an operand's path from the root, which
+a cursor byte or a walk of the tree supplies.
 - `edit.lua` writes a rewrite's text and marks as one patch, and keeps the
 marks in step with Neovim's undo tree: each undo sequence number has the
 marks that went with it, so undo and redo restore them with the text,

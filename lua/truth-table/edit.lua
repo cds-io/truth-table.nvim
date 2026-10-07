@@ -74,9 +74,13 @@ local function watch(buf)
     return history
 end
 
--- A patch owns both annotation states. Existing marks are shifted for an
--- insertion or removed from the replaced line before new marks are added.
-function M.prepare(buf, row, replacement, inserted, additions)
+-- The patch for writing `replacement` at `row` (from zero): in place of the
+-- line there, or below it with `inserted`; with the marks `additions` on the
+-- result. A patch holds the text and marks before and after: the marks
+-- there already are shifted down for an insertion, or dropped from the line
+-- written over.
+function M.prepare(buf, write)
+    local row, replacement, inserted, additions = write.row, write.replacement, write.inserted, write.additions or {}
     buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
     local history = watch(buf)
     synchronize(buf, history)

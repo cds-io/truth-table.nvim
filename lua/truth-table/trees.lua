@@ -193,7 +193,7 @@ local function render(node, offset, selected, regions, positions)
 end
 
 -- Locate a tree's nodes in its own text without mutating it or parsing it
--- again. This lets a subsequent transaction target a canonical output tree.
+-- again. This lets a later rewrite target a canonical result.
 function M.positions(node)
     local positions = {}
     render(node, 0, {}, {}, positions)
