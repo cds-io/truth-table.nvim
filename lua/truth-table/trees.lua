@@ -170,6 +170,16 @@ function M.canonical(node, selected)
     return tree, produced
 end
 
+-- The text between a binary operator's operands, and the set of every such
+-- text: a gap between two lit regions that is one of these joins them.
+local function glue(op)
+    return " " .. SYMBOLS[op] .. " "
+end
+local JOINS = {}
+for op in pairs(BINARY) do
+    JOINS[glue(op)] = true
+end
+
 -- Render as it stands, collecting selected regions and optional positions
 -- into separate tables. Parentheses come from paren nodes alone.
 local function render(node, offset, selected, regions, positions)
@@ -180,9 +190,9 @@ local function render(node, offset, selected, regions, positions)
         text = SYMBOLS["not"] .. render(node.operand, offset + #SYMBOLS["not"], selected, regions, positions)
     elseif BINARY[node.type] then
         local left = render(node.left, offset, selected, regions, positions)
-        local glue = " " .. SYMBOLS[node.type] .. " "
-        local right = render(node.right, offset + #left + #glue, selected, regions, positions)
-        text = left .. glue .. right
+        local between = glue(node.type)
+        local right = render(node.right, offset + #left + #between, selected, regions, positions)
+        text = left .. between .. right
     elseif node.type == "reference" then
         text = ":h" .. node.index
     elseif node.type == "column" then
@@ -228,11 +238,10 @@ function M.rendered(node, produced)
     local merged = {}
     for _, region in ipairs(regions) do
         local previous = merged[#merged]
-        local glue = previous and text:sub(previous[2] + 1, region[1])
+        local gap = previous and text:sub(previous[2] + 1, region[1])
         -- Adjacent produced operands include their joining operator. A gap
         -- containing an untouched operand stays unlit.
-        local joins = glue == " ∧ " or glue == " ∨ " or glue == " ⊕ " or glue == " ⇔ " or glue == " → "
-        if previous and (region[1] <= previous[2] or joins) then
+        if previous and (region[1] <= previous[2] or JOINS[gap]) then
             previous[2] = math.max(previous[2], region[2])
         else
             merged[#merged + 1] = { region[1], region[2] }
