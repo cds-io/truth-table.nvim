@@ -300,7 +300,7 @@ describe("the lesson pane with a stand-in vellum", function()
         -- takes the keys from the styled pane, and reuses the theme on a step change.
         vim.api.nvim_set_current_win((pane("lesson")))
         vim.cmd("normal ]]")
-        styled_at(2, 1)
+        styled_at(1, 2)
         assert.are.equal(1, calls.apply)
 
         -- styles the lesson a jump lands on.

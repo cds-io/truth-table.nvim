@@ -1,6 +1,9 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the welcome is three steps (the course and its two panes; commands
+  and keys; moving around, the parts and the winbar), each under a screen,
+  and the reader presses `]]` twice before any logic appears.
 - Tutor: toggling a table's cells, dropping a column and dropping a row are
   one step at the end of lesson 4, on the table that lesson builds; lesson 5
   runs from equivalence through tautology and contradiction straight to the

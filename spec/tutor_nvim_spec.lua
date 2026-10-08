@@ -194,8 +194,10 @@ describe("the course", function()
         end
         assert.are.equal("string", type(course[1].part), "lesson 1 opens no part")
         local listed = {}
-        for name, first in course[1].steps[1].text:gmatch("\n%- ([%w ]+), lessons? (%d+)") do
-            listed[#listed + 1] = { name = name, first = tonumber(first) }
+        for _, step in ipairs(course[1].steps) do
+            for name, first in step.text:gmatch("\n%- ([%w ]+), lessons? (%d+)") do
+                listed[#listed + 1] = { name = name, first = tonumber(first) }
+            end
         end
         assert.are.same(opened, listed)
     end)
@@ -295,6 +297,10 @@ describe(":TruthTableTutor", function()
     end)
 
     it("moves Next one step, across a lesson boundary", function()
+        for _ = 2, #course[1].steps do
+            vim.cmd("TruthTableTutorNext")
+        end
+        at(1, #course[1].steps)
         vim.cmd("TruthTableTutorNext")
         at(2, 1)
         assert.are.same({ "p q" }, text("scratch"))

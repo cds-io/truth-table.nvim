@@ -22,17 +22,28 @@ The tutor has two panes:
   yours to edit: `u` undoes back to the starting text, and every step keeps
   its own scratch, so your work is still there when you come back to it.
 
-Commands and keys:
-
+Press `]]` to continue.
+]=],
+            template = [[
+This is the scratch pane. Each step's starting text appears here.
+]],
+        },
+        {
+            text = [=[
 A command is given as `:Command`, with its default key after it in
 parentheses: `:.TruthTable` (`<leader>ttn`). The key is a sequence: press your
 leader key, let it go, then `t`, `t`, `n`. `<leader>` is Neovim's name for the
 key you set aside as the prefix of your own mappings: `\` out of the box,
 Space in LazyVim and most other distributions. `:echo get(g:, "mapleader", '\')`
-prints yours. Every key in this course starts with `<leader>tt`, so with
-which-key installed you can press that much and pause: the popup lists the
-rest, each with what it does.
+prints yours.
 
+Every key in this course starts with `<leader>tt`, so with which-key installed
+you can press that much and pause: the popup lists the rest, each with what it
+does. Try it now, then press `]]`.
+]=],
+        },
+        {
+            text = [=[
 Moving around:
 
 - `:TruthTableTutorNext` (`]]` in either pane) goes to the next step, and
@@ -61,9 +72,6 @@ finish an exercise before you quit, or do it again.
 
 Press `]]` to begin.
 ]=],
-            template = [[
-This is the scratch pane. Each step's starting text appears here.
-]],
         },
     },
 }
