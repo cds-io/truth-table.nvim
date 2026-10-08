@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- rewrite.lua: a rewrite's `change` record carries `text`, the text of
+  `after`, which preview.lua and `moves` read. Inside the module every
+  rewrite drafts what it finds as `{ tree, law, consumed, produced }`, each
+  draft in order of preference with the reason when there are none; the
+  command takes the first draft and `moves` takes them all. A collapsing
+  law answers with the operand lists it finds. `substitute` is
+  `trees.transform` with one replacement, and `trees.children` is public,
+  read by the canonical form's traversals and by rewrite.lua's path walks.
 - Tutor: the yellow span, which marks where the cursor goes, is underlined
   as well as coloured (TruthTableTutorYellow takes DiagnosticWarn's colour
   with an underline; one you define yourself still stands). Lesson 9's
