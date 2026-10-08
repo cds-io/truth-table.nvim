@@ -9,14 +9,15 @@ Engineering texts write Boolean algebra in the notation of arithmetic:
 | Logic   | Arithmetic | Name       |
 |:-------:|:----------:|:-----------|
 | `a ∨ b` | `a + b`    | sum        |
-| `a ∧ b` | `ab`       | product    |
+| `a ∧ b` | `a · b`    | product    |
 | `¬a`    | `a'`       | complement |
 
-The product is two letters side by side, the way `xy` means `x` times `y`.
-The complement is a bar over `a` in print, and `a'` where a bar is hard to
-typeset, as it is here. The notation brings arithmetic's binding order with
-it: a product groups before a sum, so `ab + c` is `(a ∧ b) ∨ c`, which is the
-plugin's order too (`and` before `or`, from the lesson on connectives).
+Print usually drops the dot, so `ab` is `a · b`, the way `xy` means `x` times
+`y`; the formulas below drop it too. The complement is a bar over `a` in
+print, and `a'` where a bar is hard to typeset, as it is here. The notation
+brings arithmetic's binding order with it: a product groups before a sum, so
+`ab + c` is `(a ∧ b) ∨ c`, which is the plugin's order too (`and` before
+`or`, from the lesson on connectives).
 
 The plugin reads and writes the logic symbols, so a formula from a textbook or
 a datasheet is translated before a table can check it. Here is one:
@@ -53,14 +54,14 @@ of its own, so the binding order need not be recalled to read it.
 The six laws from the lesson on constants and complements, in this spelling:
 
 ```text
-a + 0 = a    a1 = a
-a + 1 = 1    a0 = 0
-a + a = a    aa = a
+a + 0 = a    a · 1 = a
+a + 1 = 1    a · 0 = 0
+a + a = a    a · a = a
 ```
 
-Three read as ordinary arithmetic: `a + 0 = a`, `a1 = a` and `a0 = 0` hold
-for numbers as they stand, and `aa = a` holds because `0` and `1` are their
-own squares. The last two are where logic parts ways with arithmetic:
+Three read as ordinary arithmetic: `a + 0 = a`, `a · 1 = a` and `a · 0 = 0`
+hold for numbers as they stand, and `a · a = a` holds because `0` and `1` are
+their own squares. The last two are where logic parts ways with arithmetic:
 `a + 1 = 1` and `a + a = a`, since there is no `2` to count up to.
 
 An `or` of `and` terms is a *sum of products* in this spelling, and one can
