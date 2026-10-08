@@ -10,6 +10,7 @@ require("truth-table").setup()
 
 local core = require("truth-table.core")
 local markdown = require("truth-table.markdown")
+local model = require("truth-table.table_model")
 local ns = vim.api.nvim_get_namespaces()["truth-table.preview"]
 
 local function marks()
@@ -348,7 +349,7 @@ end)
 
 describe("a table heading", function()
     local function format(headers, rows)
-        return assert(core.format({ headers = headers, rows = rows }))
+        return core.format(assert(model.parse(headers, rows)))
     end
 
     local indented = format({ "A", "¬(A ∧ B)" }, { { "0", "1" }, { "1", "0" } })
@@ -535,7 +536,7 @@ describe("the rewrite menu", function()
     end
 
     local function format(headers, rows)
-        return assert(core.format({ headers = headers, rows = rows }))
+        return core.format(assert(model.parse(headers, rows)))
     end
 
     local source = "(a and b) or (not a and b)"
@@ -730,7 +731,7 @@ describe("what a rewrite consumed and put in", function()
     end)
 
     it("is lit in a heading rewritten in place, whose consumed term was lit while pending", function()
-        set(assert(core.format({ headers = { "A", "B", "A ∧ ¬(A ∧ B)" }, rows = { { 0, 0, 0 }, { 1, 0, 1 } } })), 1, 20)
+        set(core.format({ headers = { "A", "B", "A ∧ ¬(A ∧ B)" }, rows = { { 0, 0, 0 }, { 1, 0, 1 } }, encoding = "bits" }), 1, 20)
         on("¬(")
         vim.cmd("TruthTableDeMorgan")
         assert.are.same({ { row = 1, text = "¬(A ∧ B)", group = consumed } }, targets())
@@ -1016,10 +1017,7 @@ describe("the transient apply keys", function()
     end)
 
     it("warn on <CR> over a heading and stay; <Space> still renames it", function()
-        local heading_table = assert(core.format({
-            headers = { "A", "B", "A ∧ B" },
-            rows = { { "0", "0", "0" }, { "1", "1", "1" } },
-        }))
+        local heading_table = core.format(assert(model.parse({ "A", "B", "A ∧ B" }, { { "0", "0", "0" }, { "1", "1", "1" } })))
         set(heading_table)
         on("A ∧")
         vim.cmd("TruthTableCommute")
