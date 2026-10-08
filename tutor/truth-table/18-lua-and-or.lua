@@ -164,7 +164,8 @@ your own verdict: keep the idiom or use the `if`? Give one benefit, one cost,
 and the two premises that make the idiom safe in this callback.
 
 Then consider a change in the input contract: the list may now contain
-`false`. Does the existing guard still make the idiom safe? State what each
+`false` as an item. Does the existing guard still make the idiom safe? State
+what each
 version would put in `loc` for `result = {false}`.
 
 There is no plugin command to run. `]]` reveals the review; `[[` returns to

@@ -17,8 +17,8 @@ in yellow. Preview, then apply with `<leader>tta`.
 t ⊕ e
 ]],
             note = [[
-The same command recognises the pattern for `⇔`, which is `(t ∧ e) ∨ (¬t ∧ ¬e)`:
-both true or both false.
+The same command recognises the pattern for `⇔`, both true or both false,
+which is `(t ∧ e) ∨ (¬t ∧ ¬e)` spelled out.
 ]],
             solution = {
                 { on = "(not t and e) or (t and not e)", at = "t", run = { "TruthTableXor", "TruthTableApply" } },
@@ -43,8 +43,8 @@ Each branch that returns true is a term, so with `T`, `E`, `R` for the three
 checks the function is the expression in the scratch pane. Derive the short
 form in three steps, applying each with `<leader>ttA`: factor `R` out (cursor
 on either `R`, in yellow, `<leader>ttf`), recognise the exclusive or (cursor
-on `¬T`, `<leader>tto`), and commute `R` to the end (cursor on `R`,
-`<leader>tts`).
+on `¬T`, `<leader>tto`), and commute `R` to the end (cursor on `R`, then
+`<leader>tts` to swap).
 ]],
             template = [[
 (not T and E and [:yellow R]) or (T and not E and [:yellow R])
@@ -86,8 +86,8 @@ return exactlyOneFailure && hasRetries;
         },
         {
             text = [[
-One more proposal arrives in review: "`!==` on booleans is odd, just use
-`||`." That is `(T ∨ E) ∧ R` in place of `(T ⊕ E) ∧ R`. The two sound alike,
+One more proposal arrives in review: "`!==` on booleans is odd; `||` will
+do." That is `(T ∨ E) ∧ R` in place of `(T ⊕ E) ∧ R`. The two sound alike,
 and the table says what the difference is. Build it.
 ]],
             template = [[

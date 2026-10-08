@@ -1,6 +1,9 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: seven sentences that ended in a code span, where vellum's padding
+  let the full stop or parenthesis wrap onto a row of its own at 80
+  columns, end in a word instead (lessons 3, 10 and 12).
 - Tutor: code shown in the lessons fits a 79-column pane without breaking
   inside a word (vellum wraps a code panel character by character, 8
   columns inside the pane): long Lua and JavaScript lines are wrapped at an

@@ -124,8 +124,8 @@ from the outer `Q`. Distributing brings the two together; after idempotence
 removes the duplicate, factoring restores the compact form. The expression
 gets larger temporarily so the repeated check can be removed.
 
-Try to reach the target yourself, applying each move as a step
-(`<leader>ttA`). If you need a route, use these four moves:
+Try to reach the target yourself, with `<leader>ttA` applying each move as a
+step. If you need a route, use these four moves:
 
 - Bring the outer `Q` to the front: cursor on the last `Q`, commute
   (`<leader>tts`).

@@ -7,7 +7,7 @@ return {
 A *derivation* is a chain of equivalent expressions, each obtained from the one
 before by a law. It shows the reasoning as well as the result.
 
-Any preview can be applied a second way: `:TruthTableApplyStep` (`<leader>ttA`)
+`:TruthTableApplyStep` (`<leader>ttA`) applies a preview as a step: it
 leaves the line as it is and writes the rewrite below it as `≡ ...`, followed
 by its *justification*, `| by` and the name of the law that takes you from the
 line above to this one. It then moves the cursor to the new line so the next
