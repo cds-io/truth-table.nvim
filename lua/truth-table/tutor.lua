@@ -230,12 +230,13 @@ local function panes()
 end
 
 -- The reader's step in the lesson pane `win`, which shows the lesson buffer:
--- styled for the width the pane has now, or as Markdown when that fails. The
--- lesson's colour spans are painted either way; load() checked every step
--- renders.
+-- styled for the width the pane has now, or as Markdown when that fails,
+-- with the place and the progress bar in the pane's winbar, where scrolling
+-- leaves them. The lesson's colour spans are painted either way; load()
+-- checked every step renders.
 local function draw(win)
     local at = session.steps[session.at]
-    local markdown, marked = page.render(session.course, { lesson = at.lesson, step = at.step, done = done() })
+    local markdown, marked = page.render(session.course, { lesson = at.lesson, step = at.step })
     assert(markdown, marked)
     local width = vim.api.nvim_win_get_width(win)
     local lines, marks = styled.render(markdown, width, marked)
@@ -256,6 +257,8 @@ local function draw(win)
     for name, value in pairs(pane.options) do
         vim.api.nvim_set_option_value(name, value, { win = win, scope = "local" })
     end
+    local progress = page.progress(session.course, { lesson = at.lesson, step = at.step, done = done() })
+    vim.api.nvim_set_option_value("winbar", progress, { win = win, scope = "local" })
     vim.api.nvim_win_call(win, function()
         vim.fn.winrestview(view)
     end)

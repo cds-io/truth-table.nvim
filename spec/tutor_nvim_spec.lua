@@ -108,7 +108,8 @@ end
 
 -- The reader is at this lesson and step: the lesson pane shows it, on the
 -- left, with `done` lessons moved past (by default, what reaching this step
--- alone makes), and the cursor is in the scratch pane.
+-- alone makes) in its winbar, and the cursor is in the scratch pane, which
+-- has no winbar.
 local function at(lesson, step, done)
     local label = ("lesson %d step %d"):format(lesson, step)
     local lesson_win, lesson_buf = pane("lesson")
@@ -125,8 +126,11 @@ local function at(lesson, step, done)
         ("%s: lesson pane at column %d, scratch pane at column %d"):format(label, lesson_column, scratch_column)
     )
     assert.are.equal(scratch_win, vim.api.nvim_get_current_win(), label .. ": current window")
-    local markdown, marked = page.render(course, { lesson = lesson, step = step, done = done or done_at(lesson, step) })
+    local markdown, marked = page.render(course, { lesson = lesson, step = step })
     assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
+    local place = { lesson = lesson, step = step, done = done or done_at(lesson, step) }
+    assert.are.equal(page.progress(course, place), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
+    assert.are.equal("", vim.wo[scratch_win].winbar, label .. ": scratch winbar")
     assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
     assert.are.equal("nofile", vim.bo[lesson_buf].buftype, label .. ": lesson buftype")
     assert.is_false(vim.bo[lesson_buf].modifiable, label .. ": lesson modifiable")
@@ -469,8 +473,8 @@ return {
         assert.are.same({}, warnings)
         local _, lesson_buf = pane("lesson")
         local _, scratch_buf = pane("scratch")
-        assert.are.equal("A ∨ ¬(B ∧ ¬C)", vim.api.nvim_buf_get_lines(lesson_buf, 11, 12, false)[1])
-        assert.are.same({ { row = 11, col = 6, end_col = 10, hl_group = red, priority = 200 } }, extmarks(lesson_buf))
+        assert.are.equal("A ∨ ¬(B ∧ ¬C)", vim.api.nvim_buf_get_lines(lesson_buf, 7, 8, false)[1])
+        assert.are.same({ { row = 7, col = 6, end_col = 10, hl_group = red, priority = 200 } }, extmarks(lesson_buf))
         assert.are.same({ "p and q" }, vim.api.nvim_buf_get_lines(scratch_buf, 0, -1, false))
         assert.are.same({ { row = 0, col = 0, end_col = 1, hl_group = blue, priority = 200 } }, extmarks(scratch_buf))
     end)

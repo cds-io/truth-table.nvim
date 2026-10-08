@@ -5,14 +5,16 @@ truth-table.nvim changes
   alone; the `⊤` and `⊥` spelling, the words `true` and `false`, and the
   abbreviations are a short second step, so the lesson has four steps.
 - Tutor: the course is in four parts (Tables, Rewriting, Code, Reference; a
-  lesson file's `part` opens one), every step's header names the part and
-  shows a bar with a cell per lesson, filled for the lessons moved past, and
-  the reader's place, with the furthest step reached, is saved on every move
+  lesson file's `part` opens one), the lesson pane's winbar shows a bar with
+  a cell per lesson, filled for the lessons moved past, then the lesson and
+  step, then the part (the page header is the title and aim), and the
+  reader's place, with the furthest step reached, is saved on every move
   to truth-table/tutor.json under stdpath("state"): :TruthTableTutor in a new
   Neovim opens where they stopped, and ! saves the first step. The welcome
   lesson lists the parts.
-  - tutor_page.render takes the place as one table { lesson, step, done };
-    check refuses a course whose first lesson opens no part.
+  - tutor_page.render takes the place as one table { lesson, step }, and
+    progress gives the winbar for { lesson, step, done }; check refuses a
+    course whose first lesson opens no part.
   - make test-nvim runs with a temporary XDG_STATE_HOME, and the tutor spec
     points tutor.state_file at a file of its own.
 - Tutor: the welcome lesson says how to read a key like `<leader>ttn` (press

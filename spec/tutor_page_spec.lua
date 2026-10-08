@@ -87,32 +87,15 @@ describe("tutor_page.render", function()
         },
     }
 
-    -- A lesson's part is the one the last lesson at or before it opened. The
-    -- bar has a cell per lesson, filled for the lessons the reader has moved
-    -- past: `done` says how many, and a place that leaves it out has done the
-    -- lessons before its own.
-    it("heads the pane with the lesson, its part, the reader's progress, and the aim", function()
+    it("heads the pane with the lesson and the aim", function()
         local lines = page.render(course, { lesson = 2, step = 2 })
         assert.are.same({
             "# 2. Second",
             "",
-            "Part 2 of 2, Rewriting: lesson 2 of 2, step 2 of 2",
-            "",
-            "█░ 1 of 2 lessons done",
-            "",
             "**Aim:** Build a table.",
             "",
             "Run it on the line.",
-        }, slice(lines, 1, 9))
-        lines = page.render(course, { lesson = 1, step = 1, done = 2 })
-        assert.are.equal("Part 1 of 2, Tables: lesson 1 of 2, step 1 of 1", lines[3])
-        assert.are.equal("██ 2 of 2 lessons done", lines[5])
-    end)
-
-    it("keeps a lesson in the part opened before it", function()
-        local three = { course[1], { title = "Between", aim = "Stay.", steps = { { text = "Read.\n" } } }, course[2] }
-        assert.are.equal("Part 1 of 2, Tables: lesson 2 of 3, step 1 of 1", page.render(three, { lesson = 2, step = 1 })[3])
-        assert.are.equal("Part 2 of 2, Rewriting: lesson 3 of 3, step 1 of 2", page.render(three, { lesson = 3, step = 1 })[3])
+        }, slice(lines, 1, 5))
     end)
 
     it("shows the expectation fenced, between the instructions and the remark", function()
@@ -132,7 +115,7 @@ describe("tutor_page.render", function()
             "---",
             "",
             "`]]` next step, `[[` previous step",
-        }, slice(lines, 9, #lines))
+        }, slice(lines, 5, #lines))
     end)
 
     it("leaves the expectation out of a step that has only reading", function()
@@ -230,11 +213,11 @@ describe("tutor_page.render with spans", function()
 
     it("offsets the rows past the header, and past the expectation for the note", function()
         local lines, spans = page.render(course, { lesson = 1, step = 1 })
-        assert.are.equal("a ∨ b", lines[12])
-        assert.are.equal("a ∨ b", lines[24])
+        assert.are.equal("a ∨ b", lines[8])
+        assert.are.equal("a ∨ b", lines[20])
         assert.are.same({
-            { row = 12, col = 0, end_col = 1, group = blue },
-            { row = 24, col = 6, end_col = 7, group = red },
+            { row = 8, col = 0, end_col = 1, group = blue },
+            { row = 20, col = 6, end_col = 7, group = red },
         }, spans)
     end)
 
@@ -247,8 +230,35 @@ describe("tutor_page.render with spans", function()
     it("renders a step with no markers as before, with no spans", function()
         local plain = { { part = "P", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
         local lines, spans = page.render(plain, { lesson = 1, step = 1 })
-        assert.are.equal("Read.", lines[9])
+        assert.are.equal("Read.", lines[5])
         assert.are.same({}, spans)
+    end)
+end)
+
+-- A lesson's part is the one the last lesson at or before it opened. The
+-- bar has a cell per lesson, filled for the `done` lessons the reader has
+-- moved past.
+describe("tutor_page.progress", function()
+    local course = {
+        { part = "Tables", title = "First", aim = "A.", steps = { { text = "Read.\n" } } },
+        { title = "Between", aim = "B.", steps = { { text = "Read.\n" } } },
+        { part = "Rewriting", title = "Third", aim = "C.", steps = { { text = "Read.\n" }, { text = "Read.\n" } } },
+    }
+
+    it("is the bar, the lesson and step, and the part, in winbar format", function()
+        assert.are.equal(
+            "█░░ lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            page.progress(course, { lesson = 2, step = 1, done = 1 })
+        )
+        assert.are.equal(
+            "███ lesson 3 of 3, step 2 of 2 %<%=Part 2 of 2: Rewriting",
+            page.progress(course, { lesson = 3, step = 2, done = 3 })
+        )
+    end)
+
+    it("doubles a % in a part's name, which the winbar would otherwise read", function()
+        local odd = { { part = "100% logic", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
+        assert.are.equal("░ lesson 1 of 1, step 1 of 1 %<%=Part 1 of 1: 100%% logic", page.progress(odd, { lesson = 1, step = 1, done = 0 }))
     end)
 end)
 

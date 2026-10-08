@@ -113,26 +113,29 @@ local function part_of(course, lesson_index)
     return number, count, name
 end
 
--- The pane for one step: where the reader is (`place` is the lesson and step
--- shown, and `done`, the lessons moved past, which a bar with a cell per
--- lesson shows; left out, it is the lessons before the one shown), the
--- lesson's aim, the step's instructions, what the scratch pane should hold
+-- The lesson pane's winbar for one step: a bar with a cell per lesson,
+-- filled for the `done` lessons the reader has moved past, the lesson and
+-- step, and the part, set to the right and the first to go when the pane
+-- is too narrow for all of it. In the winbar's own format, so a `%` in a
+-- part's name is doubled.
+function M.progress(course, place)
+    local number, count, name = part_of(course, place.lesson)
+    local bar = ("█"):rep(place.done) .. ("░"):rep(#course - place.done)
+    return ("%s lesson %d of %d, step %d of %d %%<%%=Part %d of %d: %s"):format(
+        bar, place.lesson, #course, place.step, #course[place.lesson].steps, number, count, (name:gsub("%%", "%%%%"))
+    )
+end
+
+-- The pane for one step (`place` is its lesson and step): the lesson's
+-- title and aim, the step's instructions, what the scratch pane should hold
 -- afterwards, and any remark on that result. The spans come back with rows
 -- into these lines. Nil and a message, naming the field, for a step whose
 -- markers are wrong.
 function M.render(course, place)
     local lesson = course[place.lesson]
     local step = lesson.steps[place.step]
-    local done = place.done or place.lesson - 1
-    local number, count, name = part_of(course, place.lesson)
     local out = {
         ("# %d. %s"):format(place.lesson, lesson.title),
-        "",
-        ("Part %d of %d, %s: lesson %d of %d, step %d of %d"):format(
-            number, count, name, place.lesson, #course, place.step, #lesson.steps
-        ),
-        "",
-        ("█"):rep(done) .. ("░"):rep(#course - done) .. (" %d of %d lessons done"):format(done, #course),
         "",
         "**Aim:** " .. lesson.aim,
         "",

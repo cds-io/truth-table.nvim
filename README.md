@@ -573,12 +573,8 @@ pane, on the right, holds that step's starting text, and is where you run the
 commands:
 
 ```text
-# 3. Connectives: not, and, or            │ p and q | p or q | not p
-│
-Part 1 of 4, Tables: lesson 3 of 19,      │
-step 1 of 2                               │
-│
-██░░░░░░░░░░░░░░░░░ 2 of 19 lessons done  │
+██░░░░░░░░░░░░░░░░░ lesson 3 of 19, step >│ p and q | p or q | not p
+# 3. Connectives: not, and, or            │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │
@@ -592,7 +588,8 @@ You should see:                           │
 |:---:|:---:|:-----:|:-----:|:---:|       │
 ```
 
-That picture is the lesson pane showing the step's Markdown. With
+That picture is the lesson pane showing the step's Markdown, under its
+winbar. With
 [vellum.nvim](https://github.com/blackhat-7/vellum.nvim) installed, the pane
 shows the step rendered instead: prose wrapped to the pane's width (100 columns
 at most), the title in a band, code in shaded panels with syntax colours, and
@@ -625,9 +622,11 @@ and your work is still there when you return to a step. Running
 `:TruthTableTutor` again brings you back to your place from anywhere;
 `:TruthTableTutor!` starts the course over.
 
-The course is in four parts (tables, rewriting, code, and a reference), and
-every step's header names the part and shows a bar with a cell per lesson,
-filled for the lessons you have moved past. Your place, with the furthest step
+The course is in four parts (tables, rewriting, code, and a reference). The
+lesson pane's winbar, the line above its text, which stays while the lesson
+scrolls, shows a bar with a cell per lesson, filled for the lessons you have
+moved past, then the lesson and step, then the part (the part goes first when
+the pane is too narrow for all three). Your place, with the furthest step
 you have reached, is saved on every move to `truth-table/tutor.json` under
 `stdpath("state")` (`~/.local/state/nvim` on Linux and macOS), so
 `:TruthTableTutor` in a new Neovim opens where you stopped. The scratch

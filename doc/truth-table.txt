@@ -417,9 +417,11 @@ it; running a different rewrite command replaces it.
     lesson's first step. With [!] the course starts over: every scratch is
     reset and the lesson files are read again.
 
-    The course is in four parts, and every step's header names the part and
-    shows a bar with a cell per lesson, filled for the lessons you have moved
-    past. Your place, with the furthest step you have reached, is saved on
+    The course is in four parts. The lesson pane's 'winbar', which stays
+    while the lesson scrolls, shows a bar with a cell per lesson, filled for
+    the lessons you have moved past, then the lesson and step, then the part
+    (the first to go when the pane is too narrow for all three). Your place,
+    with the furthest step you have reached, is saved on
     every move to truth-table/tutor.json in the state directory (|stdpath()|
     with "state"), so the command in a new Neovim opens where you stopped;
     the scratch buffers live as long as their Neovim does. [!] saves the
