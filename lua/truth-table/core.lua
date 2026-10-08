@@ -20,10 +20,7 @@ local predicate = require("truth-table.predicate")
 local trees = require("truth-table.trees")
 local markdown = require("truth-table.markdown")
 local karnaugh = require("truth-table.karnaugh")
-
-local function trim(s)
-    return (s:gsub("^%s+", ""):gsub("%s+$", ""))
-end
+local trim = require("truth-table.text").trim
 
 -- An operation that can refuse returns one table, or nil and the reason.
 M.parse = markdown.parse_table_lines

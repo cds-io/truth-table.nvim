@@ -9,11 +9,8 @@ local operators = require("truth-table.operators")
 local trees = require("truth-table.trees")
 local OPERATORS, KEYWORDS, BY_NAME = operators.OPERATORS, operators.KEYWORDS, operators.BY_NAME
 local SYMBOL_OPS, CONSTANTS, CONSTANT_WORDS = operators.SYMBOL_OPS, operators.CONSTANTS, operators.CONSTANT_WORDS
+local trim = require("truth-table.text").trim
 local M = {}
-
-local function trim(s)
-    return (s:gsub("^%s+", ""):gsub("%s+$", ""))
-end
 
 -- Tokenizer -> recursive-descent parser -> AST.
 -- Precedence (loosest to tightest): iff, implies, xor, or, and, unary not, atom.
