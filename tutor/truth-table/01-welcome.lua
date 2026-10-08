@@ -1,4 +1,5 @@
 return {
+    part = "Tables",
     title = "Finding your way around",
     aim = "Learn the tutor's two panes, how its keys are written, and how to move from step to step.",
     steps = {
@@ -40,6 +41,21 @@ Moving around:
 - `:TruthTableTutor` brings you back to your place from anywhere, with your
   work intact. `:TruthTableTutor!` starts the course over with every scratch
   reset.
+
+The course in four parts:
+
+- Tables, lessons 1 to 5: propositions, connectives, and what makes two
+  expressions equivalent.
+- Rewriting, lessons 6 to 12: the laws of Boolean algebra, derivations that
+  record each step, and Karnaugh maps.
+- Code, lessons 13 to 18: conditions taken out of JavaScript and Lua,
+  rewritten, and put back.
+- Reference, lesson 19: every law and command on one page.
+
+Above each step, a bar has a cell per lesson, filled for the lessons you have
+moved past. Your place outlives Neovim: `:TruthTableTutor` tomorrow opens
+where you stopped today. The scratch panes last as long as Neovim does, so
+finish an exercise before you quit, or do it again.
 
 Press `]]` to begin.
 ]=],

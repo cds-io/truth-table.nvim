@@ -1,4 +1,5 @@
 return {
+    part = "Code",
     title = "From code to logic and back",
     aim = "Read a function that returns true or false as one expression, tidy it, and read the result back into code.",
     steps = {

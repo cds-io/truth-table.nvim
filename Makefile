@@ -19,9 +19,11 @@ test:
 # on a stdin that is no terminal as Lua once the specs are done, so it gets
 # an empty one. Each file gets a Neovim of its own: a spec sets the plugin
 # up, replaces vim.notify and opens windows as it needs, and the next one
-# starts clean.
+# starts clean. The state directory is a temporary one, so a spec that opens
+# the tutor saves its place there and leaves the reader's own alone.
 test-nvim:
 	@eval "$$($(LUAROCKS) --lua-version 5.1 path)" && \
+	export XDG_STATE_HOME="$$(mktemp -d)" && \
 	for spec in spec/*_nvim_spec.lua; do \
 		echo "$$spec"; \
 		$(BUSTED) --run=nvim --lua=$(NLUA) "$$spec" </dev/null || exit 1; \

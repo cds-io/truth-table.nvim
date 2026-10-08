@@ -1,4 +1,5 @@
 return {
+    part = "Rewriting",
     title = "Constants and complements",
     aim = "Learn what `or` and `and` do with `1`, `0`, a repeated operand, and an operand's own negation.",
     steps = {

@@ -1,5 +1,8 @@
 -- The tutorial's lesson pane as text. A course is a list of lessons, each
--- { title, aim, steps }; a step is { text, template, expect, note, solution },
+-- { part, title, aim, steps }, where `part` names the part of the course the
+-- lesson opens (the lessons after it belong to that part until the next
+-- opens one, so the first lesson names one and most lessons name none); a
+-- step is { text, template, expect, note, solution },
 -- where the prose and the buffer contents are block strings as a lesson file
 -- writes them. Inside a ```logic fenced block of `text` or `note`, and
 -- anywhere in `template`, a line may colour a span with `[:colour ...]`
@@ -96,17 +99,40 @@ local function append(out, lines)
     end
 end
 
--- The pane for one step: where the reader is, the lesson's aim, the step's
--- instructions, what the scratch pane should hold afterwards, and any remark
--- on that result. The spans come back with rows into these lines. Nil and a
--- message, naming the field, for a step whose markers are wrong.
-function M.render(course, lesson_index, step_index)
-    local lesson = course[lesson_index]
-    local step = lesson.steps[step_index]
+-- The part a lesson is in: its number, how many there are, and its name.
+local function part_of(course, lesson_index)
+    local number, count, name = 0, 0, nil
+    for index, lesson in ipairs(course) do
+        if lesson.part then
+            count = count + 1
+            if index <= lesson_index then
+                number, name = count, lesson.part
+            end
+        end
+    end
+    return number, count, name
+end
+
+-- The pane for one step: where the reader is (`place` is the lesson and step
+-- shown, and `done`, the lessons moved past, which a bar with a cell per
+-- lesson shows; left out, it is the lessons before the one shown), the
+-- lesson's aim, the step's instructions, what the scratch pane should hold
+-- afterwards, and any remark on that result. The spans come back with rows
+-- into these lines. Nil and a message, naming the field, for a step whose
+-- markers are wrong.
+function M.render(course, place)
+    local lesson = course[place.lesson]
+    local step = lesson.steps[place.step]
+    local done = place.done or place.lesson - 1
+    local number, count, name = part_of(course, place.lesson)
     local out = {
-        ("# %d. %s"):format(lesson_index, lesson.title),
+        ("# %d. %s"):format(place.lesson, lesson.title),
         "",
-        ("Lesson %d of %d, step %d of %d"):format(lesson_index, #course, step_index, #lesson.steps),
+        ("Part %d of %d, %s: lesson %d of %d, step %d of %d"):format(
+            number, count, name, place.lesson, #course, place.step, #lesson.steps
+        ),
+        "",
+        ("█"):rep(done) .. ("░"):rep(#course - done) .. (" %d of %d lessons done"):format(done, #course),
         "",
         "**Aim:** " .. lesson.aim,
         "",
@@ -149,12 +175,16 @@ function M.render(course, lesson_index, step_index)
     return out, found
 end
 
--- The first step of `course` whose markers are wrong, as a message naming
--- lesson, step and field; nil when every step renders.
+-- The first thing wrong with `course`, as a message: a first lesson that
+-- opens no part, or the first step whose markers are wrong, naming lesson,
+-- step and field; nil when every step renders.
 function M.check(course)
+    if type(course[1].part) ~= "string" then
+        return "lesson 1: no part"
+    end
     for number, lesson in ipairs(course) do
         for index, step in ipairs(lesson.steps) do
-            local lines, err = M.render(course, number, index)
+            local lines, err = M.render(course, { lesson = number, step = index })
             if not lines then
                 return ("lesson %d step %d: %s"):format(number, index, err)
             end

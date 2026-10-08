@@ -1,4 +1,5 @@
 return {
+    part = "Reference",
     title = "Quick reference",
     aim = "Every law, reading rule and command from the course in one place, with a scratch pane to try them in.",
     steps = {

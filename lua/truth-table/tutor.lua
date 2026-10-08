@@ -15,6 +15,10 @@ local LESSONS = "tutor/truth-table"
 local ROLE = "truth_table_tutor"
 local KEYS = { ["]]"] = "TruthTableTutorNext", ["[["] = "TruthTableTutorPrev" }
 local MARKS = vim.api.nvim_create_namespace(ROLE)
+-- Where the reader's place outlives Neovim: the lesson and step they are on
+-- and the furthest they have reached, as one line of JSON, written on every
+-- move. A spec points this at a file of its own.
+M.state_file = vim.fs.joinpath(vim.fn.stdpath("state"), "truth-table", "tutor.json")
 -- The lesson pane by what it shows. Markdown is one line per paragraph, for
 -- the window to wrap at whatever width it has. Styled text arrives wrapped to
 -- the window's full width, so the window gives up its gutter and leaves the
@@ -40,13 +44,64 @@ local LESSON_PANE = {
     },
 }
 
--- The course, the reader's place in it (an index into `steps`, every step of
--- every lesson in order), the lesson pane's buffer, the width its text was
--- wrapped to (nil while it shows Markdown), and a scratch buffer per step
--- visited, so the work in one survives moving to another.
+-- The course, the reader's place in it (`at`, an index into `steps`, every
+-- step of every lesson in order, and `furthest`, the highest `at` has been;
+-- `index[lesson][step]` is the other way round), the lesson pane's buffer,
+-- the width its text was wrapped to (nil while it shows Markdown), and a
+-- scratch buffer per step visited, so the work in one survives moving to
+-- another.
 local session
 
-local function load()
+-- The saved place as two indexes into `steps`: the file's lesson and step,
+-- each brought within the course (a lesson past the last is the last, a
+-- step past its lesson's last is that one), and the furthest reached, no
+-- earlier than the place itself. The first step, for a file that is missing
+-- or not the JSON remember() writes.
+local function recall(course, index)
+    local read, lines = pcall(vim.fn.readfile, M.state_file)
+    local decoded, saved = false, nil
+    if read then
+        decoded, saved = pcall(vim.json.decode, table.concat(lines, "\n"))
+    end
+    if not (decoded and type(saved) == "table") then
+        return 1, 1
+    end
+    local function within(value, last)
+        local number = tonumber(value)
+        return math.min(math.max(number and math.floor(number) or 1, 1), last)
+    end
+    local function position(place)
+        if type(place) ~= "table" then
+            return 1
+        end
+        local lesson = within(place.lesson, #course)
+        return index[lesson][within(place.step, #course[lesson].steps)]
+    end
+    local at = position(saved.at)
+    return at, math.max(at, position(saved.furthest))
+end
+
+-- The reader's place written for recall(). A place that cannot be written
+-- is said once a session, and the tutor goes on without it.
+local function remember()
+    local at, furthest = session.steps[session.at], session.steps[session.furthest]
+    local json = vim.json.encode({
+        at = { lesson = at.lesson, step = at.step },
+        furthest = { lesson = furthest.lesson, step = furthest.step },
+    })
+    local ok, err = pcall(function()
+        vim.fn.mkdir(vim.fs.dirname(M.state_file), "p")
+        vim.fn.writefile({ json }, M.state_file)
+    end)
+    if not ok and not session.unsaved then
+        session.unsaved = true
+        vim.notify("Tutorial place not saved to " .. M.state_file .. ": " .. tostring(err), vim.log.levels.WARN)
+    end
+end
+
+-- The course from its files, at the saved place, or at the first step when
+-- `fresh`.
+local function load(fresh)
     local directory = vim.api.nvim_get_runtime_file(LESSONS, false)[1]
     local files = directory and vim.fn.glob(directory .. "/*.lua", true, true) or {}
     if #files == 0 then
@@ -54,11 +109,13 @@ local function load()
         return
     end
     table.sort(files)
-    local course, steps = {}, {}
+    local course, steps, index = {}, {}, {}
     for lesson, file in ipairs(files) do
         course[lesson] = dofile(file)
+        index[lesson] = {}
         for step in ipairs(course[lesson].steps) do
             steps[#steps + 1] = { lesson = lesson, step = step }
+            index[lesson][step] = #steps
         end
     end
     local err = page.check(course)
@@ -66,7 +123,20 @@ local function load()
         vim.notify("Tutorial " .. err, vim.log.levels.WARN)
         return
     end
-    return { course = course, steps = steps, at = 1, scratch = {} }
+    local at, furthest = 1, 1
+    if not fresh then
+        at, furthest = recall(course, index)
+    end
+    return { course = course, steps = steps, index = index, at = at, furthest = furthest, scratch = {} }
+end
+
+-- The lessons the reader has moved past: those before the furthest step's
+-- lesson, or every lesson once the furthest step is the course's last.
+local function done()
+    if session.furthest == #session.steps then
+        return #session.course
+    end
+    return session.steps[session.furthest].lesson - 1
 end
 
 -- The colour spans' highlight groups, as defaults: one the reader defines
@@ -165,7 +235,7 @@ end
 -- renders.
 local function draw(win)
     local at = session.steps[session.at]
-    local markdown, marked = page.render(session.course, at.lesson, at.step)
+    local markdown, marked = page.render(session.course, { lesson = at.lesson, step = at.step, done = done() })
     assert(markdown, marked)
     local width = vim.api.nvim_win_get_width(win)
     local lines, marks = styled.render(markdown, width, marked)
@@ -212,6 +282,7 @@ local function watch()
 end
 
 local function show()
+    session.furthest = math.max(session.furthest, session.at)
     local at = session.steps[session.at]
     if not live(session.lesson) then
         session.lesson = buffer("truth-table-tutor://lesson", {}, session.lesson)
@@ -235,6 +306,7 @@ local function show()
     vim.api.nvim_win_set_cursor(lesson_win, { 1, 0 })
     vim.api.nvim_win_set_buf(scratch_win, scratch)
     vim.api.nvim_set_current_win(scratch_win)
+    remember()
 end
 
 local function discard()
@@ -250,16 +322,16 @@ local function discard()
     session = nil
 end
 
--- Show the reader's place with the work in it. `fresh` starts the course
--- over, rereading the lesson files; `lesson` moves to that lesson's first
--- step.
+-- Show the reader's place with the work in it: the saved place, in a Neovim
+-- the tutor has not run in. `fresh` starts the course over, rereading the
+-- lesson files; `lesson` moves to that lesson's first step.
 function M.open(opts)
     opts = opts or {}
     if opts.fresh and session then
         discard()
     end
     if not session then
-        session = load()
+        session = load(opts.fresh)
         if not session then
             return
         end

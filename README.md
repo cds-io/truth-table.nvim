@@ -575,7 +575,10 @@ commands:
 ```text
 # 3. Connectives: not, and, or            │ p and q | p or q | not p
 │
-Lesson 3 of 19, step 1 of 2               │
+Part 1 of 4, Tables: lesson 3 of 19,      │
+step 1 of 2                               │
+│
+██░░░░░░░░░░░░░░░░░ 2 of 19 lessons done  │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │
@@ -622,6 +625,15 @@ and your work is still there when you return to a step. Running
 `:TruthTableTutor` again brings you back to your place from anywhere;
 `:TruthTableTutor!` starts the course over.
 
+The course is in four parts (tables, rewriting, code, and a reference), and
+every step's header names the part and shows a bar with a cell per lesson,
+filled for the lessons you have moved past. Your place, with the furthest step
+you have reached, is saved on every move to `truth-table/tutor.json` under
+`stdpath("state")` (`~/.local/state/nvim` on Linux and macOS), so
+`:TruthTableTutor` in a new Neovim opens where you stopped. The scratch
+buffers live as long as that Neovim does. `:TruthTableTutor!` starts over and
+saves the first step.
+
 Every key a lesson names starts with `<leader>tt`. With
 [which-key.nvim](https://github.com/folke/which-key.nvim) installed, pressing
 that much and pausing lists the rest, each with what it does, which is worth
@@ -629,7 +641,8 @@ having while the keys are new; the first lesson says how to read a key like
 `<leader>ttn` and how to find your leader.
 
 The course is data: one Lua table per lesson in `tutor/truth-table/`, read in
-file-name order. A lesson is a `title`, an `aim`, and a list of `steps`, each
+file-name order. A lesson is a `title`, an `aim`, the `part` it opens (named
+on the first lesson of each part), and a list of `steps`, each
 with its `text`, the scratch pane's `template`, the `expect`ed result, a `note`
 on it, and the `solution` that the test suite replays.
 
