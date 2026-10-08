@@ -212,9 +212,10 @@ expressions are supported by expansion of an existing table.
 
 Parse errors identify the offending token or end of input with a one-based byte
 position in the reported expression. Positions count UTF-8 bytes, as Lua 5.1 and Neovim do, but diagnostics
-are one-based while Neovim cursor columns are zero-based. `tokenize` retains its token records
-and returns optional span metadata as its third result; `parse_predicate` accepts
-that metadata, or falls back to token indices when omitted.
+are one-based while Neovim cursor columns are zero-based. Each token carries
+the bytes it was read from, and `parse_predicate` places an error by them; it
+takes the byte after the source as an option, for a parser that runs out of
+tokens.
 
 ## Editing existing tables
 
@@ -818,8 +819,8 @@ or nonempty single-line strings without surrounding whitespace.
 ## Advanced: wrapping the tokenizer
 
 There is no built-in parser-alias option. The following wrapper depends on the
-current module exports and how the core facade captures the tokenizer; check
-those details when upgrading.
+current module exports (the parser reads the tokenizer through the module
+table, so a replacement there is the one it runs); check that when upgrading.
 
 For example, to accept `≠` as another spelling of XOR and insert it with `xor@`:
 
@@ -836,8 +837,6 @@ return {
         predicate.tokenize = function(input)
             return tokenize((input:gsub("≠", "⊕")))
         end
-        -- The core facade captured the original tokenizer when it loaded.
-        require("truth-table.core").tokenize = predicate.tokenize
     end,
 }
 ```

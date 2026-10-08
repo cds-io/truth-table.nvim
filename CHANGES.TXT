@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- predicate.lua: a token carries the bytes it was read from, as `span`, so
+  `tokenize` answers the tokens or nil and the reason, and `parse_predicate`
+  places every error by a byte, taking the byte after the source as an
+  option for a parser that runs out of tokens (the byte after the last
+  token without it) and `node_spans` for the located parse. result.lua:
+  `map` is `bind` under the name that says `fn` always answers. The README's
+  tokenizer wrapper sets `predicate.tokenize` alone, which the parser reads
+  through the module table.
 - preview.lua is the pending preview alone: the rewrite kinds, the
   per-buffer state, its extmarks, invalidation on edit, and applying in
   place or as a step. The expression under the cursor is source.lua's
