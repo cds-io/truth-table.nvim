@@ -3,7 +3,7 @@ return {
     aim = "Compare the truthiness and returned values of `c and x or y` with a ternary, then check what makes the idiom safe here.",
     steps = {
         {
-            text = [[
+            text = [=[
 **Stage 1 of 5: name the checks.**
 
 A *ternary* is an expression that picks one of two values: `c ? x : y` in
@@ -13,36 +13,47 @@ callback receives the answer to a "go to
 definition" request, which can be one location or a list of them:
 
 ```lua
-if err or not result or (type(result) == 'table' and vim.tbl_isempty(result)) then
+if err or not result
+    or (type(result) == 'table' and vim.tbl_isempty(result)) then
   vim.notify('No definition under cursor', vim.log.levels.WARN)
   return
 end
 local loc = vim.islist(result) and result[1] or result
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/lua/lsp.lua#L112-L116
+Source: [kickstart.nvim, lua/lsp.lua, lines 112 to 116](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/lsp.lua#L112-L116)
 
 The last line is meant as "if `result` is a list then its first item, else
 `result`". The idiom has three parts, and this time the letters stand for the
-parts of a pattern:
-
-```text
-c    vim.islist(result)    the condition
-x    result[1]             the value wanted when the condition holds
-y    result                the value wanted when it fails
-```
+parts of a pattern: `c` is the condition, `x` the value wanted when it holds,
+and `y` the value wanted when it fails. Find the three in the last line and
+write them beside their letters in the scratch pane.
 
 `x` and `y` are values, where the checks so far were tests. What matters to
 `and` and `or` is whether a value counts as true: in Lua everything does,
 except `false` and `nil`. So `x` in the table to come means "`x` is neither
 `false` nor `nil`".
 
-There is nothing to run in this step.
+There is no plugin command to run yet. `]]` reveals the key; `[[` brings you
+back to your work.
+]=],
+            template = [[
+c
+x
+y
 ]],
         },
         {
             text = [[
 **Stages 2 and 3 of 5: translate, and compare.**
+
+Compare your parts with this key:
+
+```text
+c    vim.islist(result)    the condition
+x    result[1]             the value wanted when the condition holds
+y    result                the value wanted when it fails
+```
 
 Two things to translate, the idiom and what it is meant to be:
 
@@ -102,7 +113,8 @@ where the condition holds and `x` is `false` or `nil`, even if the truthiness
 columns agree. Put the parts back in place of the letters:
 
 ```text
-c true, x false or nil      vim.islist(result) holds, and result[1] is false or nil
+c true, x false or nil    vim.islist(result) holds,
+                          and result[1] is false or nil
 ```
 
 Can that happen? There are two premises to check. The empty-table guard
@@ -133,7 +145,7 @@ config, the first operand protects the second:
 if not command_node or command_node:type() ~= 'command' then
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/lua/plugins/languages/zsh-utils.lua#L48
+Source: [kickstart.nvim, lua/plugins/languages/zsh-utils.lua, line 48](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/plugins/languages/zsh-utils.lua#L48)
 
 Commuting the two is sound as logic, and would call a method on `nil`. The
 laws are about truth values; which operand runs first is a second question,
@@ -162,7 +174,8 @@ your own verdict: keep the idiom or use the `if`? Give one benefit, one cost,
 and the two premises that make the idiom safe in this callback.
 
 Then consider a change in the input contract: the list may now contain
-`false`. Does the existing guard still make the idiom safe? State what each
+`false` as an item. Does the existing guard still make the idiom safe? State
+what each
 version would put in `loc` for `result = {false}`.
 
 There is no plugin command to run. `]]` reveals the review; `[[` returns to

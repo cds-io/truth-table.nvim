@@ -1,4 +1,5 @@
 return {
+    part = "Reference",
     title = "Quick reference",
     aim = "Every law, reading rule and command from the course in one place, with a scratch pane to try them in.",
     steps = {
@@ -8,20 +9,25 @@ Laws, each with its dual beside it (below it, for the distributive pair),
 under the name a preview or a step's `| by` gives it:
 
 ```logic
-identity         a ∨ 0 ≡ a                      a ∧ 1 ≡ a
-domination       a ∨ 1 ≡ 1                      a ∧ 0 ≡ 0
-idempotence      a ∨ a ≡ a                      a ∧ a ≡ a
-complement       a ∨ ¬a ≡ 1                     a ∧ ¬a ≡ 0
-commutativity    a ∨ b ≡ b ∨ a                  a ∧ b ≡ b ∧ a
-associativity    (a ∨ b) ∨ c ≡ a ∨ (b ∨ c)      (a ∧ b) ∧ c ≡ a ∧ (b ∧ c)
+identity         a ∨ 0 ≡ a                    a ∧ 1 ≡ a
+domination       a ∨ 1 ≡ 1                    a ∧ 0 ≡ 0
+idempotence      a ∨ a ≡ a                    a ∧ a ≡ a
+complement       a ∨ ¬a ≡ 1                   a ∧ ¬a ≡ 0
+commutativity    a ∨ b ≡ b ∨ a                a ∧ b ≡ b ∧ a
+associativity    (a ∨ b) ∨ c ≡ a ∨ (b ∨ c)    (a ∧ b) ∧ c ≡ a ∧ (b ∧ c)
 distributivity   a ∧ (b ∨ c) ≡ (a ∧ b) ∨ (a ∧ c)
                  a ∨ (b ∧ c) ≡ (a ∨ b) ∧ (a ∨ c)
-absorption       a ∨ (a ∧ b) ≡ a                a ∧ (a ∨ b) ≡ a
-                 a ∨ (¬a ∧ b) ≡ a ∨ b           a ∧ (¬a ∨ b) ≡ a ∧ b
-reduction        (a ∧ b) ∨ (¬a ∧ b) ≡ b         (a ∨ b) ∧ (¬a ∨ b) ≡ b
-De Morgan        ¬(a ∧ b) ≡ ¬a ∨ ¬b             ¬(a ∨ b) ≡ ¬a ∧ ¬b
+absorption       a ∨ (a ∧ b) ≡ a              a ∧ (a ∨ b) ≡ a
+                 a ∨ (¬a ∧ b) ≡ a ∨ b         a ∧ (¬a ∨ b) ≡ a ∧ b
+reduction        (a ∧ b) ∨ (¬a ∧ b) ≡ b       (a ∨ b) ∧ (¬a ∨ b) ≡ b
+De Morgan        ¬(a ∧ b) ≡ ¬a ∨ ¬b           ¬(a ∨ b) ≡ ¬a ∧ ¬b
 double negation  ¬¬a ≡ a
 ```
+
+Commutativity and associativity hold for `⊕` and `⇔` as well, but a flat run
+of either misleads (`a ⇔ b ⇔ c` is true when `a` is true and the other two are
+false, which is far from "all three agree"), so the plugin keeps their
+grouping in view: `(a ⇔ b) ⇔ c`.
 
 A function that returns true or false, read from the top as one expression,
 and the condition each branch of an `if` runs under (the syntax is beside the
@@ -39,17 +45,17 @@ else Z                          Z runs when ¬a ∧ ¬b
 
 From code to an expression and back, in five stages:
 
-- **1. Name the checks.** Find the smallest tests the code makes and give
+1. **Name the checks.** Find the smallest tests the code makes and give
   each a letter.
-- **2. Translate.** Write the code as an expression in those letters.
-- **3. Rewrite or compare.** Apply the laws, one step per line, or compare
+2. **Translate.** Write the code as an expression in those letters.
+3. **Rewrite or compare.** Apply the laws, one step per line, or compare
   expressions with a table. Exclude impossible rows only when an input
   constraint justifies it; the result then holds under that constraint.
-- **4. Back into the code.** Put the tests back in place of the letters, turn
+4. **Back into the code.** Put the tests back in place of the letters, turn
   negated comparisons around (`¬(x < y)` is `x >= y` for the positions in
   these examples), and write it out. Check evaluation order and, when the
   expression selects a value, the value returned as well as its truthiness.
-- **5. Review.** Before and after, side by side: what the change buys and
+5. **Review.** Before and after, side by side: what the change buys and
   what it costs.
 
 Tables:

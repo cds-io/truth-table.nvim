@@ -568,14 +568,14 @@ The verdicts differ: one review declines the rewrite and keeps a comment,
 and one calls it a matter of taste.
 
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
-the lesson's aim, what to do, and what you should see afterwards. The scratch
+the lesson's title (with its aim on the lesson's first step), what to do, and
+what you should see afterwards. The scratch
 pane, on the right, holds that step's starting text, and is where you run the
 commands:
 
 ```text
-# 3. Connectives: not, and, or            │ p and q | p or q | not p
-│
-Lesson 3 of 19, step 1 of 2               │
+██░░░░░░░░░░░░░░░░░░ lesson 3 of 20, step >│ p and q | p or q | not p
+## 3. Connectives: not, and, or           │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │
@@ -583,13 +583,13 @@ result off a table.                       │
 │
 ... then run `:.TruthTable` on the line.  │
 │
-You should see:                           │
-│
+```result                                 │
 |  p  |  q  | p ∧ q | p ∨ q | ¬p  |       │
 |:---:|:---:|:-----:|:-----:|:---:|       │
 ```
 
-That picture is the lesson pane showing the step's Markdown. With
+That picture is the lesson pane showing the step's Markdown, under its
+winbar. With
 [vellum.nvim](https://github.com/blackhat-7/vellum.nvim) installed, the pane
 shows the step rendered instead: prose wrapped to the pane's width (100 columns
 at most), the title in a band, code in shaded panels with syntax colours, and
@@ -622,8 +622,29 @@ and your work is still there when you return to a step. Running
 `:TruthTableTutor` again brings you back to your place from anywhere;
 `:TruthTableTutor!` starts the course over.
 
+The course is in four parts (tables, rewriting, code, and a reference). The
+lesson pane's winbar, the line above its text, which stays while the lesson
+scrolls, shows a bar with a cell per lesson, coloured by state (green for the
+lessons you have been to, yellow for the one shown, grey for those ahead, as
+the groups `TruthTableTutorVisited`, `TruthTableTutorCurrent` and
+`TruthTableTutorAhead`, linked by default to `DiagnosticOk`, `DiagnosticWarn`
+and `NonText`), then the lesson and step, then the part (the part goes first
+when the pane is too narrow for all three). Your place, with the furthest step
+you have reached, is saved on every move to `truth-table/tutor.json` under
+`stdpath("state")` (`~/.local/state/nvim` on Linux and macOS), so
+`:TruthTableTutor` in a new Neovim opens where you stopped. The scratch
+buffers live as long as that Neovim does. `:TruthTableTutor!` starts over and
+saves the first step.
+
+Every key a lesson names starts with `<leader>tt`. With
+[which-key.nvim](https://github.com/folke/which-key.nvim) installed, pressing
+that much and pausing lists the rest, each with what it does, which is worth
+having while the keys are new; the first lesson says how to read a key like
+`<leader>ttn` and how to find your leader.
+
 The course is data: one Lua table per lesson in `tutor/truth-table/`, read in
-file-name order. A lesson is a `title`, an `aim`, and a list of `steps`, each
+file-name order. A lesson is a `title`, an `aim`, the `part` it opens (named
+on the first lesson of each part), and a list of `steps`, each
 with its `text`, the scratch pane's `template`, the `expect`ed result, a `note`
 on it, and the `solution` that the test suite replays.
 
@@ -638,8 +659,11 @@ A ∨ [:red ¬(B] ∧ ¬C)       colours ¬(B: bytes, not a node of the expressi
 The colours are blue, red, green and yellow, as the groups
 `TruthTableTutorBlue`, `TruthTableTutorRed`, `TruthTableTutorGreen` and
 `TruthTableTutorYellow`, linked by default to `DiagnosticInfo`,
-`DiagnosticError`, `DiagnosticOk` and `DiagnosticWarn`; one you define before
-the tutor opens stands. The markers come out before the text is shown, and the
+`DiagnosticError` and `DiagnosticOk`, and yellow, which marks where the
+cursor goes, in `DiagnosticWarn`'s colour with an underline; one you define
+before the tutor opens stands, as does one of the progress bar's three groups
+(`TruthTableTutorVisited`, `TruthTableTutorCurrent`, `TruthTableTutorAhead`).
+The markers come out before the text is shown, and the
 span is painted in both panes (in the scratch pane it moves with your edits).
 Brackets inside a span pair up, so `[:blue result[1]]` ends at the second `]`.
 A span inside a span, one outside a logic block or in `expect`, a colour not in

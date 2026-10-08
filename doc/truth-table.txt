@@ -406,8 +406,9 @@ it; running a different rewrite command replaces it.
                                                             *:TruthTableTutor*
 :TruthTableTutor[!] [lesson]
     Open the tutorial in a new tab: a short logic course in two panes. The
-    lesson pane, on the left, shows one step at a time: the lesson's aim,
-    what to do, and what you should see afterwards. The scratch pane, on the
+    lesson pane, on the left, shows one step at a time: the lesson's title
+    (with its aim on the lesson's first step), what to do, and what you
+    should see afterwards. The scratch pane, on the
     right, holds the step's starting text and is where you run the commands.
 
     Every step keeps its own scratch buffer: undo stops at the starting
@@ -416,6 +417,23 @@ it; running a different rewrite command replaces it.
     reopens a pane you closed. With [lesson], a number, it moves to that
     lesson's first step. With [!] the course starts over: every scratch is
     reset and the lesson files are read again.
+
+    The course is in four parts. The lesson pane's 'winbar', which stays
+    while the lesson scrolls, shows a bar with a cell per lesson, coloured
+    by state (green for the lessons you have been to, yellow for the one
+    shown, grey for those ahead: the groups TruthTableTutorVisited,
+    TruthTableTutorCurrent and TruthTableTutorAhead, linked by default to
+    DiagnosticOk, DiagnosticWarn and NonText), then the lesson and step,
+    then the part (the first to go when the pane is too narrow for all
+    three). Your place, with the furthest step you have reached, is saved on
+    every move to truth-table/tutor.json in the state directory (|stdpath()|
+    with "state"), so the command in a new Neovim opens where you stopped;
+    the scratch buffers live as long as their Neovim does. [!] saves the
+    first step.
+
+    Every key a lesson names starts with `<leader>tt`; with which-key.nvim
+    installed, pressing that much and pausing lists the rest, each with what
+    it does. The first lesson says how to read a key like `<leader>ttn`.
 
     With vellum.nvim installed, the lesson pane shows the step rendered:
     prose wrapped to the pane's width (100 columns at most), code in shaded
@@ -429,8 +447,9 @@ it; running a different rewrite command replaces it.
     vellum's renderer module, so no `:Vellum` preview opens.
 
     The course is data: one Lua table per lesson in tutor/truth-table/, read
-    in file-name order. A lesson has a `title`, an `aim` and a list of
-    `steps`; a step has its `text`, the scratch pane's `template`, the
+    in file-name order. A lesson has a `title`, an `aim`, the `part` it
+    opens (named on the first lesson of each part) and a list of `steps`; a
+    step has its `text`, the scratch pane's `template`, the
     `expect`ed result, a `note` on that result, and the `solution` the test
     suite replays (a list of moves, each the line to put the cursor `on`,
     the text on it the cursor sits `at`, and the commands to `run`).
@@ -442,8 +461,10 @@ it; running a different rewrite command replaces it.
     expression. The colours are blue, red, green and yellow: the groups
     TruthTableTutorBlue, TruthTableTutorRed, TruthTableTutorGreen and
     TruthTableTutorYellow, linked by default to DiagnosticInfo,
-    DiagnosticError, DiagnosticOk and DiagnosticWarn; one you define before
-    the tutor opens, or in a ColorScheme autocommand, stands. The markers
+    DiagnosticError and DiagnosticOk, and yellow, which marks where the
+    cursor goes, in DiagnosticWarn's colour with an underline; one you
+    define before the tutor opens, or in a ColorScheme autocommand, stands,
+    as does one of the progress bar's three groups. The markers
     come out before the text is shown, and the span is painted in both
     panes; in the scratch pane it moves with your edits. Inside a span,
     brackets pair up, so `[:blue result[1]]` ends at the second `]`. A span

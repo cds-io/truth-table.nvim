@@ -1,6 +1,6 @@
 return {
     title = "More connectives, and growing a table",
-    aim = "Meet `xor`, `implies` and `iff`, and add computed columns to a table you already have.",
+    aim = "Meet `xor`, `implies` and `iff`, add computed columns to a table you already have, and tend it: toggle its cells, drop a column, drop a row.",
     steps = {
         {
             text = [[
@@ -43,6 +43,44 @@ row where `a` is `1` and `b` is `0`.
 ]],
             solution = {
                 { on = "|  a  |  b  |", run = { "TruthTableExpand a xor b, a implies b, a iff b" } },
+            },
+        },
+        {
+            text = [[
+Three commands tend a table you already have, all with the cursor inside it.
+The scratch pane holds the table from the last step.
+
+- `:TruthTableToggle` (`<leader>ttt`) switches the cells between `0`/`1` and
+  `F`/`T`. Run it once; running it again switches back.
+- `:TruthTableDropColumn` (`<leader>ttc`) removes the column under the cursor.
+  Put the cursor in the `a ⇔ b` column, in yellow, and run it.
+- `:TruthTableDropRow` (`<leader>ttr`) removes the row under the cursor in the
+  same way. Put the cursor on the last row and run it.
+]],
+            template = [[
+|  a  |  b  | a ⊕ b | a → b | [:yellow a ⇔ b] |
+|:---:|:---:|:-----:|:-----:|:-----:|
+|  0  |  0  |   0   |   1   |   1   |
+|  0  |  1  |   1   |   1   |   0   |
+|  1  |  0  |   1   |   0   |   0   |
+|  1  |  1  |   0   |   1   |   1   |
+]],
+            expect = [[
+|  a  |  b  | a ⊕ b | a → b |
+|:---:|:---:|:-----:|:-----:|
+|  F  |  F  |   F   |   T   |
+|  F  |  T  |   T   |   T   |
+|  T  |  F  |   T   |   F   |
+]],
+            note = [[
+The table has lost the column that said when `a` and `b` agree, and the row
+where both hold. Dropping a row is for a case that cannot occur; the lesson on
+Karnaugh maps puts that to use.
+]],
+            solution = {
+                { on = "|  a  |  b  | a ⊕ b | a → b | a ⇔ b |", run = { "TruthTableToggle" } },
+                { on = "|  a  |  b  | a ⊕ b | a → b | a ⇔ b |", at = "a ⇔ b", run = { "TruthTableDropColumn" } },
+                { on = "|  T  |  T  |   F   |   T   |", run = { "TruthTableDropRow" } },
             },
         },
     },

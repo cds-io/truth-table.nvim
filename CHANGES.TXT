@@ -1,6 +1,81 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the yellow span, which marks where the cursor goes, is underlined
+  as well as coloured (TruthTableTutorYellow takes DiagnosticWarn's colour
+  with an underline; one you define yourself still stands). Lesson 9's
+  aside on `⊕` and `⇔` being associative moves to the reference, lesson
+  13's reduction paragraph to the step that uses it, lesson 7's first
+  step gives the notation as a table (logic, arithmetic, name; the product
+  written `a · b`, with print's dropped dot explained) and its
+  second is shorter with the name sum of products in its note, and lesson
+  15 opens with a paragraph in place of two headings.
+- Tutor: every Lua lesson's first step asks the reader to name the checks
+  in the scratch pane (the letters are given, in order of appearance), and
+  the key opens the step after, as lesson 16 already did; the review count
+  tables in lessons 15 and 19 lose the backticks they showed raw.
+- Tutor: a one-line expected result reads as a sentence ("You should see
+  `¬p ∨ ¬q`."), and a longer one is a panel labelled "result", the fence's
+  info string, in place of a "You should see:" line, a blank and a panel
+  labelled "text". Four rows fewer per exercise.
+- Tutor: seven sentences that ended in a code span, where vellum's padding
+  let the full stop or parenthesis wrap onto a row of its own at 80
+  columns, end in a word instead (lessons 3, 10 and 12).
+- Tutor: code shown in the lessons fits a 79-column pane without breaking
+  inside a word (vellum wraps a code panel character by character, 8
+  columns inside the pane): long Lua and JavaScript lines are wrapped at an
+  operator, the naming keys in lessons 16 and 18 are tighter, the reference's
+  law table is narrower, and each source is a link whose label names the
+  file and lines (the URL carries a 7-character commit). Derivations whose
+  input runs past 45 columns still push their `| by` column out; that is
+  the aligner, and lessons 12 to 15 keep theirs.
+- Tutor: lesson 14's guard-clause step is two steps, translate (read the
+  function from the bottom, build its table) and simplify, and explains the
+  guard rule once, as the bottom-up reading with the guards' negations
+  coloured. Lesson prose may use numbered lists (`1. `): tutor_page.reflow
+  keeps each numbered item on a line of its own, as it does `- ` items, and
+  vellum numbers them; lessons 15 and 20 write their five stages that way.
+- Tutor: the welcome is three steps (the course and its two panes; commands
+  and keys; moving around, the parts and the winbar), each under a screen,
+  and the reader presses `]]` twice before any logic appears.
+- Tutor: toggling a table's cells, dropping a column and dropping a row are
+  one step at the end of lesson 4, on the table that lesson builds; lesson 5
+  runs from equivalence through tautology and contradiction straight to the
+  refactor it exists to catch, in four steps.
+- Tutor: the lesson pane's header is the title as a second-level heading,
+  with the aim on a lesson's first step only, and the footer is a rule; the
+  keys that move are named under the first lesson's steps alone. The winbar
+  carries the lesson and step. Six rows fewer per step at 80 columns.
+- Tutor: the arithmetic spelling is a lesson of its own, lesson 7, between
+  constants and complements and De Morgan: `a + b`, `ab` and `a'` for `∨`,
+  `∧` and `¬`, with arithmetic's binding order; the reader translates
+  `a'b + ab'` and sees it is `xor`, then the six laws in that spelling (three
+  read as arithmetic, `a + 1 = 1` and `a + a = a` do not), the name sum of
+  products, and a sum of products with a redundant term (`ab + a'c + bc`),
+  checked against its shorter form. Lesson 6's `and` step keeps a short note
+  on duality. Lessons 7 to 19 are now 8 to 20.
+- Tutor: lesson 6 opens with the three `or` laws in the `1` and `0` spelling
+  alone; the `⊤` and `⊥` spelling, the words `true` and `false`, and the
+  abbreviations are a short second step, so the lesson has four steps.
+- Tutor: the course is in four parts (Tables, Rewriting, Code, Reference; a
+  lesson file's `part` opens one), the lesson pane's winbar shows a bar with
+  a cell per lesson, coloured by state (visited, current, ahead: the groups
+  TruthTableTutorVisited, TruthTableTutorCurrent and TruthTableTutorAhead,
+  default links to DiagnosticOk, DiagnosticWarn and NonText), then the
+  lesson and step, then the part (the page header is the title and aim), and the
+  reader's place, with the furthest step reached, is saved on every move
+  to truth-table/tutor.json under stdpath("state"): :TruthTableTutor in a new
+  Neovim opens where they stopped, and ! saves the first step. The welcome
+  lesson lists the parts.
+  - tutor_page.render takes the place as one table { lesson, step }, and
+    progress gives the winbar for { lesson, step, furthest }; check refuses
+    a course whose first lesson opens no part.
+  - make test-nvim runs with a temporary XDG_STATE_HOME, and the tutor spec
+    points tutor.state_file at a file of its own.
+- Tutor: the welcome lesson says how to read a key like `<leader>ttn` (press
+  the leader, then `t`, `t`, `n`), what `<leader>` is and how to find yours,
+  and that with which-key installed `<leader>tt` and a pause lists the rest.
+  The README's Tutorial section and the help entry say the same.
 - While a rewrite preview is pending, <Space> applies it in place and <CR>
   writes it as a ≡ step. The keys are buffer-local and transient: they appear
   when a preview locks, act from anywhere in the buffer, and go when the

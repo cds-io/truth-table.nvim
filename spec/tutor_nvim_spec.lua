@@ -13,6 +13,10 @@ require("truth-table").setup()
 local page = require("truth-table.tutor_page")
 local predicate = require("truth-table.predicate")
 local spans = require("truth-table.tutor_spans")
+local tutor = require("truth-table.tutor")
+
+-- The place is saved to a file of this run's own, never the reader's.
+tutor.state_file = vim.fn.tempname() .. "/truth-table/tutor.json"
 
 local warnings = {}
 vim.notify = function(message, level)
@@ -93,8 +97,10 @@ local function expected_marks(marked)
 end
 
 -- The reader is at this lesson and step: the lesson pane shows it, on the
--- left, and the cursor is in the scratch pane.
-local function at(lesson, step)
+-- left, with the lessons up to `furthest` (this one, unless the reader has
+-- been further) visited in its winbar, and the cursor is in the scratch
+-- pane, which has no winbar.
+local function at(lesson, step, furthest)
     local label = ("lesson %d step %d"):format(lesson, step)
     local lesson_win, lesson_buf = pane("lesson")
     local scratch_win, scratch_buf = pane("scratch")
@@ -110,8 +116,11 @@ local function at(lesson, step)
         ("%s: lesson pane at column %d, scratch pane at column %d"):format(label, lesson_column, scratch_column)
     )
     assert.are.equal(scratch_win, vim.api.nvim_get_current_win(), label .. ": current window")
-    local markdown, marked = page.render(course, lesson, step)
+    local markdown, marked = page.render(course, { lesson = lesson, step = step })
     assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
+    local place = { lesson = lesson, step = step, furthest = furthest or lesson }
+    assert.are.equal(page.progress(course, place), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
+    assert.are.equal("", vim.wo[scratch_win].winbar, label .. ": scratch winbar")
     assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
     assert.are.equal("nofile", vim.bo[lesson_buf].buftype, label .. ": lesson buftype")
     assert.is_false(vim.bo[lesson_buf].modifiable, label .. ": lesson modifiable")
@@ -172,6 +181,25 @@ describe("the course", function()
                 )
             end
         end
+    end)
+
+    -- The welcome lesson lists the parts with their lessons, so the parts
+    -- the files open are checked against it.
+    it("opens the parts the welcome lesson lists, at the lessons it says", function()
+        local opened = {}
+        for number, lesson in ipairs(course) do
+            if lesson.part then
+                opened[#opened + 1] = { name = lesson.part, first = number }
+            end
+        end
+        assert.are.equal("string", type(course[1].part), "lesson 1 opens no part")
+        local listed = {}
+        for _, step in ipairs(course[1].steps) do
+            for name, first in step.text:gmatch("\n%- ([%w ]+), lessons? (%d+)") do
+                listed[#listed + 1] = { name = name, first = tonumber(first) }
+            end
+        end
+        assert.are.same(opened, listed)
     end)
 
     -- A colour span belongs in a ```logic block or a template, and its
@@ -269,6 +297,10 @@ describe(":TruthTableTutor", function()
     end)
 
     it("moves Next one step, across a lesson boundary", function()
+        for _ = 2, #course[1].steps do
+            vim.cmd("TruthTableTutorNext")
+        end
+        at(1, #course[1].steps)
         vim.cmd("TruthTableTutorNext")
         at(2, 1)
         assert.are.same({ "p q" }, text("scratch"))
@@ -403,6 +435,7 @@ describe("a lesson with colour spans", function()
         local file = directory .. "/tutor/truth-table/01-spans.lua"
         vim.fn.writefile(vim.split(([[
 return {
+    part = "Spans",
     title = "Spans",
     aim = "See a part.",
     steps = {
@@ -436,8 +469,8 @@ return {
         assert.are.same({}, warnings)
         local _, lesson_buf = pane("lesson")
         local _, scratch_buf = pane("scratch")
-        assert.are.equal("A ∨ ¬(B ∧ ¬C)", vim.api.nvim_buf_get_lines(lesson_buf, 9, 10, false)[1])
-        assert.are.same({ { row = 9, col = 6, end_col = 10, hl_group = red, priority = 200 } }, extmarks(lesson_buf))
+        assert.are.equal("A ∨ ¬(B ∧ ¬C)", vim.api.nvim_buf_get_lines(lesson_buf, 7, 8, false)[1])
+        assert.are.same({ { row = 7, col = 6, end_col = 10, hl_group = red, priority = 200 } }, extmarks(lesson_buf))
         assert.are.same({ "p and q" }, vim.api.nvim_buf_get_lines(scratch_buf, 0, -1, false))
         assert.are.same({ { row = 0, col = 0, end_col = 1, hl_group = blue, priority = 200 } }, extmarks(scratch_buf))
     end)
@@ -460,7 +493,7 @@ return {
         assert.are.equal(tabs, tab_count())
     end)
 
-    it("defines the palette as default links, and leaves a group the reader set alone", function()
+    it("defines the palette as default links, the cursor's colour underlined, and leaves a group the reader set alone", function()
         vim.api.nvim_set_hl(0, red, { fg = "#ff0000" })
         finally(function()
             vim.cmd("highlight clear " .. red)
@@ -468,10 +501,17 @@ return {
             assert.are.equal("DiagnosticError", vim.api.nvim_get_hl(0, { name = red }).link)
         end)
         vim.cmd("TruthTableTutor!")
-        for _, entry in ipairs(spans.PALETTE) do
+        local groups = vim.list_extend(vim.deepcopy(spans.PALETTE), vim.tbl_values(page.STATES))
+        assert.are.equal(#spans.PALETTE + 3, #groups)
+        for _, entry in ipairs(groups) do
             local hl = vim.api.nvim_get_hl(0, { name = entry.group })
             if entry.group == red then
                 assert.are.equal(0xff0000, hl.fg)
+            elseif entry.underline then
+                local linked = vim.api.nvim_get_hl(0, { name = entry.link, link = false })
+                assert.is_true(hl.underline, entry.group)
+                assert.are.equal(linked.fg, hl.fg, entry.group)
+                assert.is_true(hl.default, entry.group)
             else
                 assert.are.equal(entry.link, hl.link, entry.group)
                 assert.is_true(hl.default, entry.group)
@@ -550,5 +590,83 @@ describe("working through the course", function()
         at(#course, #course[#course].steps)
         assert.are.equal(1, #warnings, vim.inspect(warnings))
         assert.is_truthy(warnings[1]:find("last step", 1, true), warnings[1])
+    end)
+end)
+
+-- The reader's place, and the furthest step they have reached, outlive the
+-- Neovim they were made in. A restart here is the tutor's module and buffers
+-- gone, with the state file left where it is.
+describe("the reader's place", function()
+    local function restart()
+        vim.cmd("tabnew")
+        vim.cmd("silent tabonly!")
+        vim.cmd("enew!")
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+            if vim.api.nvim_buf_get_name(buf):find("truth-table-tutor://", 1, true) then
+                vim.api.nvim_buf_delete(buf, { force = true })
+            end
+        end
+        package.loaded["truth-table.tutor"] = nil
+        require("truth-table.tutor").state_file = tutor.state_file
+    end
+
+    local function saved()
+        return vim.json.decode(table.concat(vim.fn.readfile(tutor.state_file), "\n"))
+    end
+
+    before_each(function()
+        restart()
+        vim.fn.delete(tutor.state_file)
+        warnings = {}
+    end)
+
+    it("is saved on every move, as the lesson and step, with the furthest reached", function()
+        vim.cmd("TruthTableTutor 6")
+        assert.are.same({ at = { lesson = 6, step = 1 }, furthest = { lesson = 6, step = 1 } }, saved())
+        vim.cmd("TruthTableTutorNext")
+        vim.cmd("TruthTableTutorPrev")
+        vim.cmd("TruthTableTutorPrev")
+        assert.are.same({ at = { lesson = 5, step = #course[5].steps }, furthest = { lesson = 6, step = 2 } }, saved())
+        at(5, #course[5].steps, 6)
+    end)
+
+    it("is where the reader left off, after a restart", function()
+        vim.cmd("TruthTableTutor 6")
+        vim.cmd("TruthTableTutorNext")
+        vim.cmd("TruthTableTutorPrev")
+        vim.cmd("TruthTableTutorPrev")
+        restart()
+        vim.cmd("TruthTableTutor")
+        at(5, #course[5].steps, 6)
+        assert.are.same(starting_text(5, #course[5].steps), text("scratch"))
+        vim.cmd("TruthTableTutorNext")
+        at(6, 1)
+    end)
+
+    it("is the first step, with nothing visited, after ! and after a restart from that", function()
+        vim.cmd("TruthTableTutor 6")
+        restart()
+        vim.cmd("TruthTableTutor!")
+        at(1, 1)
+        restart()
+        vim.cmd("TruthTableTutor")
+        at(1, 1)
+    end)
+
+    it("is the first step when there is no file, or one that cannot be read", function()
+        vim.cmd("TruthTableTutor")
+        at(1, 1)
+        restart()
+        vim.fn.writefile({ "{ not json" }, tutor.state_file)
+        vim.cmd("TruthTableTutor")
+        at(1, 1)
+        assert.are.same({}, warnings)
+    end)
+
+    it("falls to the nearest step the course has, for a place it no longer has", function()
+        vim.fn.mkdir(vim.fs.dirname(tutor.state_file), "p")
+        vim.fn.writefile({ vim.json.encode({ at = { lesson = 3, step = 9 }, furthest = { lesson = 99, step = 1 } }) }, tutor.state_file)
+        vim.cmd("TruthTableTutor")
+        at(3, #course[3].steps, #course)
     end)
 end)

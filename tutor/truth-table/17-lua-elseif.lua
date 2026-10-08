@@ -22,10 +22,28 @@ else
 end
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/ftplugin/tla.lua#L160-L190
+Source: [kickstart.nvim, ftplugin/tla.lua, lines 160 to 190](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/ftplugin/tla.lua#L160-L190)
 
 `line:find` gives a position, or `nil` when there is nothing to find. The two
-tests of the `if` are built from three checks:
+tests of the `if` are built from three checks. Name them yourself in the
+scratch pane: `C`, `Q` and `L`, in order of appearance, each with its test
+and what it means.
+
+The question for the lesson: under what condition, exactly, does the middle
+branch run? There is no plugin command to run yet. `]]` reveals the key; `[[`
+brings you back to your work.
+]=],
+            template = [[
+C
+Q
+L
+]],
+        },
+        {
+            text = [[
+**Stage 2 of 5: translate.**
+
+Compare your names with this key:
 
 ```text
 C    comment            there is a line comment ahead
@@ -33,22 +51,14 @@ Q    quote              there is a quote ahead
 L    comment < quote    the comment starts before the quote
 ```
 
-There is nothing to run in this step. The question for the lesson: under what
-condition, exactly, does the middle branch run?
-]=],
-        },
-        {
-            text = [[
-**Stage 2 of 5: translate.**
-
 An `if` with an `elseif` hides a condition. A later branch runs when its own
 test holds and every test before it failed:
 
 - In `if a then X elseif b then Y else Z end`, `X` runs when `a`, `Y` runs
   when `¬a ∧ b`, and `Z` runs when `¬a ∧ ¬b`.
 
-Here `a` is the first test and `b` is `quote`. Use the code and naming key
-from the previous step to translate each one yourself. Then combine them
+Here `a` is the first test and `b` is `quote`. Use the code from the previous
+step and the key to translate each one yourself. Then combine them
 with the reading rule for the middle branch. Give your expression to
 `:TruthTable` (the scratch pane is empty), and compare your table with the
 one below.
@@ -124,8 +134,8 @@ from the outer `Q`. Distributing brings the two together; after idempotence
 removes the duplicate, factoring restores the compact form. The expression
 gets larger temporarily so the repeated check can be removed.
 
-Try to reach the target yourself, applying each move as a step
-(`<leader>ttA`). If you need a route, use these four moves:
+Try to reach the target yourself, with `<leader>ttA` applying each move as a
+step. If you need a route, use these four moves:
 
 - Bring the outer `Q` to the front: cursor on the last `Q`, commute
   (`<leader>tts`).

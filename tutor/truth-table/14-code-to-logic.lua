@@ -1,4 +1,5 @@
 return {
+    part = "Code",
     title = "From code to logic and back",
     aim = "Read a function that returns true or false as one expression, tidy it, and read the result back into code.",
     steps = {
@@ -57,9 +58,7 @@ lesson on equivalence, in another function.
         },
         {
             text = [[
-Guard clauses reject early. Translate this function in three moves:
-
-- **1. Start with the code.** Each guard is a reason to return false.
+Guard clauses reject early. Here each guard is a reason to return false:
 
 ```js
 function canPublish({ hasFatalError, hasTitle, hasTags }) {
@@ -69,8 +68,8 @@ function canPublish({ hasFatalError, hasTitle, hasTags }) {
 }
 ```
 
-- **2. Name the checks.** Replace `hasFatalError` with `F`, `hasTitle` with
-  `T`, and `hasTags` with `G`. Keep the control flow and the `!` unchanged.
+Name the checks `F`, `T` and `G`, and keep the control flow and the `!` as
+they are:
 
 ```js
 if (F) return false;
@@ -78,36 +77,48 @@ if (!T) return false;
 return G;
 ```
 
-- **3. Read what must hold for the result to be true.** Both guards must
-  let execution continue, and the final return must be true.
-- The first guard lets us continue only when `F` is false: `not F`.
-- The second guard lets us continue only when its test, `!T`, is false:
-  `not (not T)`. The guard contributes one negation, in green; its test
-  already has another, in blue.
-- The final `return G` contributes `G`.
-- Join these requirements with `and` because **all three must hold**. If
-  either guard fires, the function returns false before reaching `G`.
+Now read it from the bottom with the rule for a guard: `if (c) return false;`
+followed by the rest is `¬c ∧ rest`, since the result is true only when the
+guard lets execution continue and the rest is true. Each guard puts its
+negated test, in green, in front of everything below it; the second guard's
+test carries a negation of its own, in blue:
 
 ```logic
-[:green not] F and
-[:green not] [:blue not T] and
-G
+return G;                      G
+if (!T) return false;  rest    [:green not] [:blue not T] and G
+if (F) return false;   rest    [:green not] F and ([:green not] [:blue not T] and G)
 ```
 
-Reading from the bottom makes the same construction explicit:
-
-```text
-return G                     G
-if (!T) return false; rest    not not T and G
-if (F) return false; rest     not F and (not not T and G)
-```
-
-- **Why `not c and rest`?** When `c` is true the guard returns false. When
-  `c` is false the result comes from the rest. The whole result is true only
-  when `c` is false **and** the rest is true.
-- **Now simplify.** `and` is associative, so the scratch pane writes the
-  expression on one line without the grouping parentheses. Simplify
-  (`<leader>ttz`) and apply it as a step (`<leader>ttA`).
+The last line is the function. The scratch pane is empty: give the expression
+to `:TruthTable` and compare your table with the one below.
+]],
+            expect = [[
+|  F  |  T  |  G  | ¬F ∧ ¬¬T ∧ G |
+|:---:|:---:|:---:|:------------:|
+|  0  |  0  |  0  |      0       |
+|  0  |  0  |  1  |      0       |
+|  0  |  1  |  0  |      0       |
+|  0  |  1  |  1  |      1       |
+|  1  |  0  |  0  |      0       |
+|  1  |  0  |  1  |      0       |
+|  1  |  1  |  0  |      0       |
+|  1  |  1  |  1  |      0       |
+]],
+            note = [[
+`¬¬T` in the heading is the two negations, the guard's and the test's. The
+grouping parentheses are gone, since `and` is associative. If your table
+differs from this one, so does your reading of a guard, and the rows that
+differ say which.
+]],
+            solution = {
+                { run = { "TruthTable not F and not not T and G" } },
+            },
+        },
+        {
+            text = [[
+The expression is right, and it carries two negations where the code had one.
+The scratch pane holds it on a single line. Simplify (`<leader>ttz`) and
+apply it as a step (`<leader>ttA`).
 ]],
             template = [[
 not F and not not T and G

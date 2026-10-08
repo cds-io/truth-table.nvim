@@ -1,6 +1,7 @@
 return {
+    part = "Tables",
     title = "Finding your way around",
-    aim = "Learn the tutor's two panes and how to move from step to step.",
+    aim = "Learn the tutor's two panes, how its keys are written, and how to move from step to step.",
     steps = {
         {
             text = [=[
@@ -21,6 +22,28 @@ The tutor has two panes:
   yours to edit: `u` undoes back to the starting text, and every step keeps
   its own scratch, so your work is still there when you come back to it.
 
+Press `]]` to continue.
+]=],
+            template = [[
+This is the scratch pane. Each step's starting text appears here.
+]],
+        },
+        {
+            text = [=[
+A command is given as `:Command`, with its default key after it in
+parentheses: `:.TruthTable` (`<leader>ttn`). The key is a sequence: press your
+leader key, let it go, then `t`, `t`, `n`. `<leader>` is Neovim's name for the
+key you set aside as the prefix of your own mappings: `\` out of the box,
+Space in LazyVim and most other distributions. `:echo get(g:, "mapleader", '\')`
+prints yours.
+
+Every key in this course starts with `<leader>tt`, so with which-key installed
+you can press that much and pause: the popup lists the rest, each with what it
+does. Try it now, then press `]]`.
+]=],
+        },
+        {
+            text = [=[
 Moving around:
 
 - `:TruthTableTutorNext` (`]]` in either pane) goes to the next step, and
@@ -30,15 +53,25 @@ Moving around:
   work intact. `:TruthTableTutor!` starts the course over with every scratch
   reset.
 
-Commands are given as `:Command`, with the default key in parentheses. The
-keys all start with `<leader>tt` (`<leader>` is `\` unless you have set
-`mapleader`).
+The course in four parts:
+
+- Tables, lessons 1 to 5: propositions, connectives, and what makes two
+  expressions equivalent.
+- Rewriting, lessons 6 to 13: the laws of Boolean algebra, derivations that
+  record each step, and Karnaugh maps.
+- Code, lessons 14 to 19: conditions taken out of JavaScript and Lua,
+  rewritten, and put back.
+- Reference, lesson 20: every law and command on one page.
+
+The line above this pane says where you are, and stays put while the lesson
+scrolls: a bar with a cell per lesson (green for the lessons you have been
+to, yellow for this one, grey for those ahead), then the lesson and step,
+then the part. Your place outlives Neovim: `:TruthTableTutor` tomorrow opens
+where you stopped today. The scratch panes last as long as Neovim does, so
+finish an exercise before you quit, or do it again.
 
 Press `]]` to begin.
 ]=],
-            template = [[
-This is the scratch pane. Each step's starting text appears here.
-]],
         },
     },
 }

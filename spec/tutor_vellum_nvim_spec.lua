@@ -16,6 +16,7 @@ local styled = require("truth-table.tutor_vellum")
 -- to place: the span's line has to come back under its mark.
 local spanned = {
     {
+        part = "Spans",
         title = "Spans",
         aim = "See a part.",
         steps = {
@@ -90,7 +91,7 @@ describe("the lesson pane with the installed vellum", function()
             for number, lesson in ipairs(course) do
                 for index in ipairs(lesson.steps) do
                     local label = ("lesson %d step %d at width %d"):format(number, index, width)
-                    local markdown, marked = page.render(course, number, index)
+                    local markdown, marked = page.render(course, { lesson = number, step = index })
                     local lines, marks = styled.render(markdown, width, marked)
                     assert.is_truthy(lines, label .. ": " .. table.concat(warnings, "; "))
                     assert.is_true(#marks > 0, label .. ": " .. table.concat(warnings, "; "))
@@ -109,7 +110,7 @@ describe("the lesson pane with the installed vellum", function()
     end
 
     it("places every colour span on its line, under its own text, at every width", function()
-        local markdown, marked = page.render(spanned, 1, 1)
+        local markdown, marked = page.render(spanned, { lesson = 1, step = 1 })
         for _, width in ipairs({ 104, 70, 50 }) do
             local lines, marks = styled.render(markdown, width, marked)
             assert.is_truthy(lines, table.concat(warnings, "; "))
@@ -175,7 +176,7 @@ describe("the lesson pane with a stand-in vellum that pads code", function()
     end)
 
     it("puts each span after the margin and the prefix of its rendered line", function()
-        local markdown, marked = page.render(spanned, 1, 1)
+        local markdown, marked = page.render(spanned, { lesson = 1, step = 1 })
         local lines, marks = styled.render(markdown, 80, marked)
         assert.are.same({ "", "  logic", "    A ∨ ¬(B ∧ ¬C)    ", "    a ∧ (a ∨ b)  ≡  a    ", "  " }, lines)
         assert.are.same({
@@ -188,7 +189,7 @@ describe("the lesson pane with a stand-in vellum that pads code", function()
 
     it("refuses whole a page whose anchor points past its lines, and says why once", function()
         anchor = { { 8, 4, 9, 4 } }
-        local markdown, marked = page.render(spanned, 1, 1)
+        local markdown, marked = page.render(spanned, { lesson = 1, step = 1 })
         assert.is_nil((styled.render(markdown, 80, marked)))
         assert.are.equal(1, #warnings)
         assert.is_truthy(warnings[1]:find("a block anchor outside the page", 1, true), warnings[1])
@@ -258,7 +259,7 @@ describe("the lesson pane with a stand-in vellum", function()
     local function styled_at(lesson, step)
         local win, buf = pane("lesson")
         local width = vim.api.nvim_win_get_width(win)
-        local expected = { "", ("  width %d of 100"):format(width), "  " .. page.render(course, lesson, step)[1] }
+        local expected = { "", ("  width %d of 100"):format(width), "  " .. page.render(course, { lesson = lesson, step = step })[1] }
         assert.are.same(expected, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
         local found = marks()
         assert.are.equal(1, #found, "marks in the pane")
@@ -278,7 +279,7 @@ describe("the lesson pane with a stand-in vellum", function()
     -- The lesson pane holds the step's Markdown, as it does with no vellum.
     local function markdown_at(lesson, step)
         local win, buf = pane("lesson")
-        assert.are.same(page.render(course, lesson, step), vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+        assert.are.same(page.render(course, { lesson = lesson, step = step }), vim.api.nvim_buf_get_lines(buf, 0, -1, false))
         assert.are.equal(0, #marks(), "marks in the pane")
         assert.are.equal("markdown", vim.bo[buf].filetype)
         assert.is_false(vim.bo[buf].modifiable, "lesson pane modifiable")
@@ -299,7 +300,7 @@ describe("the lesson pane with a stand-in vellum", function()
         -- takes the keys from the styled pane, and reuses the theme on a step change.
         vim.api.nvim_set_current_win((pane("lesson")))
         vim.cmd("normal ]]")
-        styled_at(2, 1)
+        styled_at(1, 2)
         assert.are.equal(1, calls.apply)
 
         -- styles the lesson a jump lands on.

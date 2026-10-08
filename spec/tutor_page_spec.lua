@@ -46,6 +46,13 @@ describe("tutor_page.reflow", function()
         )
     end)
 
+    it("starts a line per numbered item as well", function()
+        assert.are.same(
+            { "1. Name the checks: the smallest tests.", "2. Translate." },
+            page.reflow({ "1. Name the checks: the", "   smallest tests.", "2. Translate." })
+        )
+    end)
+
     it("leaves fenced blocks, indented commands, table rows and headings as written", function()
         local lines = {
             "Run:",
@@ -70,8 +77,9 @@ end)
 
 describe("tutor_page.render", function()
     local course = {
-        { title = "First", aim = "Find your way.", steps = { { text = "Read\nthis.\n" } } },
+        { part = "Tables", title = "First", aim = "Find your way.", steps = { { text = "Read\nthis.\n" } } },
         {
+            part = "Rewriting",
             title = "Second",
             aim = "Build a table.",
             steps = {
@@ -86,27 +94,28 @@ describe("tutor_page.render", function()
         },
     }
 
-    it("heads the pane with the lesson, the reader's place, and the aim", function()
-        local lines = page.render(course, 2, 2)
+    it("heads a lesson's first step with the title and the aim", function()
+        local lines = page.render(course, { lesson = 2, step = 1 })
         assert.are.same({
-            "# 2. Second",
-            "",
-            "Lesson 2 of 2, step 2 of 2",
+            "## 2. Second",
             "",
             "**Aim:** Build a table.",
             "",
-            "Run it on the line.",
-        }, slice(lines, 1, 7))
+            "Warm up.",
+        }, slice(lines, 1, 5))
     end)
 
-    it("shows the expectation fenced, between the instructions and the remark", function()
-        local lines = page.render(course, 2, 2)
+    it("heads a later step with the title alone", function()
+        local lines = page.render(course, { lesson = 2, step = 2 })
+        assert.are.same({ "## 2. Second", "", "Run it on the line." }, slice(lines, 1, 3))
+    end)
+
+    it("shows the expectation as a labelled panel, between the instructions and the remark", function()
+        local lines = page.render(course, { lesson = 2, step = 2 })
         assert.are.same({
             "Run it on the line.",
             "",
-            "You should see:",
-            "",
-            "```text",
+            "```result",
             "|  p  |  q  |",
             "|:---:|:---:|",
             "```",
@@ -114,13 +123,25 @@ describe("tutor_page.render", function()
             "Rows count upward.",
             "",
             "---",
-            "",
-            "`]]` next step, `[[` previous step",
-        }, slice(lines, 7, #lines))
+        }, slice(lines, 3, #lines))
+    end)
+
+    it("shows a one-line expectation as a sentence", function()
+        local one = { { part = "P", title = "T", aim = "A.", steps = { { text = "Apply.\n", expect = "¬p ∨ ¬q\n" } } } }
+        local lines = page.render(one, { lesson = 1, step = 1 })
+        assert.are.same({ "Apply.", "", "You should see `¬p ∨ ¬q`.", "", "---" }, slice(lines, 5, 9))
+    end)
+
+    it("names the keys that move only in the first lesson", function()
+        local keys = "\n---\n\n`]]` next step, `[[` previous step"
+        local first = table.concat(page.render(course, { lesson = 1, step = 1 }), "\n")
+        assert.are.equal(keys, first:sub(-#keys))
+        local later = table.concat(page.render(course, { lesson = 2, step = 1 }), "\n")
+        assert.are.equal("\n---", later:sub(-4))
     end)
 
     it("leaves the expectation out of a step that has only reading", function()
-        local text = table.concat(page.render(course, 1, 1), "\n")
+        local text = table.concat(page.render(course, { lesson = 1, step = 1 }), "\n")
         assert.is_nil(text:find("You should see", 1, true))
         assert.is_truthy(text:find("Read this.", 1, true))
     end)
@@ -196,6 +217,7 @@ describe("tutor_page.render with spans", function()
     local blue, red = "TruthTableTutorBlue", "TruthTableTutorRed"
     local course = {
         {
+            part = "Spans",
             title = "Spans",
             aim = "See a part.",
             steps = {
@@ -212,38 +234,85 @@ describe("tutor_page.render with spans", function()
     }
 
     it("offsets the rows past the header, and past the expectation for the note", function()
-        local lines, spans = page.render(course, 1, 1)
-        assert.are.equal("a ∨ b", lines[10])
-        assert.are.equal("a ∨ b", lines[22])
+        local lines, spans = page.render(course, { lesson = 1, step = 1 })
+        assert.are.equal("a ∨ b", lines[8])
+        assert.are.equal("a ∨ b", lines[16])
         assert.are.same({
-            { row = 10, col = 0, end_col = 1, group = blue },
-            { row = 22, col = 6, end_col = 7, group = red },
+            { row = 8, col = 0, end_col = 1, group = blue },
+            { row = 16, col = 6, end_col = 7, group = red },
         }, spans)
     end)
 
     it("refuses a span in the expectation, naming the field", function()
-        local lines, err = page.render(course, 1, 2)
+        local lines, err = page.render(course, { lesson = 1, step = 2 })
         assert.is_nil(lines)
         assert.are.equal("expect: a colour span in the expected result: [:blue x]", err)
     end)
 
     it("renders a step with no markers as before, with no spans", function()
-        local plain = { { title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
-        local lines, spans = page.render(plain, 1, 1)
-        assert.are.equal("Read.", lines[7])
+        local plain = { { part = "P", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
+        local lines, spans = page.render(plain, { lesson = 1, step = 1 })
+        assert.are.equal("Read.", lines[5])
         assert.are.same({}, spans)
+    end)
+end)
+
+-- A lesson's part is the one the last lesson at or before it opened. The
+-- bar has a cell per lesson, coloured by state: the lessons up to `furthest`
+-- visited, the one shown current, the rest ahead.
+describe("tutor_page.progress", function()
+    local course = {
+        { part = "Tables", title = "First", aim = "A.", steps = { { text = "Read.\n" } } },
+        { title = "Between", aim = "B.", steps = { { text = "Read.\n" } } },
+        { part = "Rewriting", title = "Third", aim = "C.", steps = { { text = "Read.\n" }, { text = "Read.\n" } } },
+    }
+    local visited, current, ahead = "%#TruthTableTutorVisited#", "%#TruthTableTutorCurrent#", "%#TruthTableTutorAhead#"
+
+    it("is the bar by state, the lesson and step, and the part, in winbar format", function()
+        assert.are.equal(
+            current .. "█" .. ahead .. "██%* lesson 1 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            page.progress(course, { lesson = 1, step = 1, furthest = 1 })
+        )
+        assert.are.equal(
+            visited .. "█" .. current .. "█" .. visited .. "█%* lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            page.progress(course, { lesson = 2, step = 1, furthest = 3 })
+        )
+        assert.are.equal(
+            visited .. "██" .. current .. "█%* lesson 3 of 3, step 2 of 2 %<%=Part 2 of 2: Rewriting",
+            page.progress(course, { lesson = 3, step = 2, furthest = 3 })
+        )
+    end)
+
+    it("doubles a % in a part's name, which the winbar would otherwise read", function()
+        local odd = { { part = "100% logic", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
+        assert.are.equal(
+            current .. "█%* lesson 1 of 1, step 1 of 1 %<%=Part 1 of 1: 100%% logic",
+            page.progress(odd, { lesson = 1, step = 1, furthest = 1 })
+        )
+    end)
+
+    it("names a highlight group per state, with a default link", function()
+        for _, state in ipairs({ "visited", "current", "ahead" }) do
+            assert.are.equal("string", type(page.STATES[state].group), state)
+            assert.are.equal("string", type(page.STATES[state].link), state)
+        end
     end)
 end)
 
 describe("tutor_page.check", function()
     it("is nil for a course whose markers are all right", function()
-        local course = { { title = "T", aim = "A.", steps = { { text = "```logic\n[:blue a]\n```\n", template = "[:red a]\n" } } } }
+        local course = { { part = "P", title = "T", aim = "A.", steps = { { text = "```logic\n[:blue a]\n```\n", template = "[:red a]\n" } } } }
         assert.is_nil(page.check(course))
+    end)
+
+    it("refuses a course whose first lesson opens no part", function()
+        local course = { { title = "T", aim = "A.", steps = { { text = "Fine.\n" } } } }
+        assert.are.equal("lesson 1: no part", page.check(course))
     end)
 
     it("names the lesson, step and field of the first wrong marker", function()
         local course = {
-            { title = "T", aim = "A.", steps = { { text = "Fine.\n" } } },
+            { part = "P", title = "T", aim = "A.", steps = { { text = "Fine.\n" } } },
             { title = "U", aim = "B.", steps = { { text = "Fine.\n" }, { text = "Fine.\n", template = "[:blue a\n" } } },
         }
         assert.are.equal("lesson 2 step 2: template: no closing ] for the span at byte 1: [:blue a", page.check(course))
