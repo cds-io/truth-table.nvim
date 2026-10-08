@@ -92,14 +92,16 @@ local function block_of(blocks, row)
 end
 
 -- Where vellum put the lines that carry spans. `spans` carry `row`, from one
--- into `markdown`; `blocks` are vellum's anchors, one per block as
+-- into `page.markdown`; `page.lines` are the lines vellum rendered it to,
+-- and `page.blocks` its anchors between the two, one per block as
 -- { source_row, source_rows, rendered_row, rendered_rows }, rows from zero;
--- the marks come back with rows from zero into `lines`. A rendered line is
--- the clean line with spaces around it (vellum's margin, its code prefix,
--- its padding), which is what is searched for, inside the line's own block
--- and in order; a line that cannot be found that way (one vellum had to
--- wrap, say) gets no marks.
-function M.place(spans, markdown, lines, blocks)
+-- the marks come back with rows from zero into the rendered lines. A
+-- rendered line is the clean line with spaces around it (vellum's margin,
+-- its code prefix, its padding), which is what is searched for, inside the
+-- line's own block and in order; a line that cannot be found that way (one
+-- vellum had to wrap, say) gets no marks.
+function M.place(spans, page)
+    local markdown, lines, blocks = page.markdown, page.lines, page.blocks
     local by_row, rows = {}, {}
     for _, span in ipairs(spans) do
         if not by_row[span.row] then

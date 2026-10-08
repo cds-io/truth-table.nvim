@@ -8,12 +8,17 @@ local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
 local rewrite = require("truth-table.rewrite")
 local edit = require("truth-table.edit")
+local marks = require("truth-table.marks")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.preview")
 -- The consumed terms of a pending preview, cleared with it.
 local TARGET = vim.api.nvim_create_namespace("truth-table.target")
--- The lit regions of written rewrites stay with their lines.
+-- The lit regions of written rewrites stay with their lines. The consumed
+-- terms sit above whatever an earlier step lit on their line, and those of
+-- a pending preview above both.
 local CHANGED_GROUP, CONSUMED_GROUP = "TruthTableChanged", "TruthTableConsumed"
+local PRIORITY = { [CHANGED_GROUP] = 4096, [CONSUMED_GROUP] = 4097 }
+local PENDING = 4098
 local pending, attached = {}, {}
 
 -- Each rewrite maps a located tree and a cursor byte to a new tree and the
@@ -273,6 +278,23 @@ local function prepare(buf, source, rewritten)
     return preview
 end
 
+-- The marks for `ranges` of an expression whose text starts at `at`,
+-- { row, col }, in `group`; none when the text has no start (it is escaped
+-- there, and does not map byte for byte).
+local function lit(at, ranges, group)
+    if at.col == nil then
+        return {}
+    end
+    local out = {}
+    for _, range in ipairs(ranges) do
+        out[#out + 1] = {
+            row = at.row, col = at.col + range[1], end_col = at.col + range[2],
+            group = group, priority = PRIORITY[group],
+        }
+    end
+    return out
+end
+
 local function resolve(buf, kind)
     local source, ast = source_at(buf)
     if not source then
@@ -335,14 +357,11 @@ function M.toggle(name)
     preview.mark = vim.api.nvim_buf_set_extmark(buf, namespace, preview.row, 0, {
         virt_text = chunks, virt_text_pos = "eol",
     })
-    preview.targets = {}
-    for _, range in ipairs(preview.source and preview.consumed or {}) do
-        preview.targets[#preview.targets + 1] = vim.api.nvim_buf_set_extmark(buf, TARGET, preview.row, preview.source + range[1], {
-            end_col = preview.source + range[2],
-            hl_group = CONSUMED_GROUP,
-            priority = 4098,
-        })
+    local targets = lit({ row = preview.row, col = preview.source }, preview.consumed, CONSUMED_GROUP)
+    for _, mark in ipairs(targets) do
+        mark.priority = PENDING
     end
+    preview.targets = marks.paint(buf, TARGET, targets)
     pending[buf] = preview
     engage(buf)
     if preview.column then
@@ -362,20 +381,6 @@ local function current(buf)
     return preview
 end
 
--- A region of the expression that starts at byte `start` of `row`, as one
--- mark of an editor patch. The consumed terms sit above whatever an earlier
--- step lit on their line.
-local function annotation(row, start, range, group)
-    if start == nil or range == nil then
-        return nil
-    end
-    return {
-        row = row, column = start + range[1], end_row = row,
-        end_column = start + range[2], group = group,
-        priority = group == CONSUMED_GROUP and 4097 or 4096,
-    }
-end
-
 -- Anything that wants to follow a written rewrite: the buffer, the row it
 -- was written to (from one) and whether it is a step below its source or
 -- in its place. The plugin's own listener aligns the derivation's bars.
@@ -387,31 +392,16 @@ local function written(buf, row, kind)
 end
 
 local function write_in_place(buf, preview)
-    local additions = {}
-    for _, range in ipairs(preview.changed) do
-        local mark = annotation(preview.row, preview.written, range, CHANGED_GROUP)
-        if mark then
-            additions[#additions + 1] = mark
-        end
-    end
+    local additions = lit({ row = preview.row, col = preview.written }, preview.changed, CHANGED_GROUP)
     edit.apply(buf, edit.prepare(buf, { row = preview.row, replacement = preview.replacement, additions = additions }))
     written(buf, preview.row + 1, "in_place")
 end
 
 local function write_step(win, preview)
     local buf = vim.api.nvim_win_get_buf(win)
-    local additions = {}
-    for _, range in ipairs(preview.consumed) do
-        local mark = annotation(preview.row, preview.source, range, CONSUMED_GROUP)
-        if mark then
-            additions[#additions + 1] = mark
-        end
-    end
-    for _, range in ipairs(preview.changed) do
-        local mark = annotation(preview.row + 1, preview.step_column, range, CHANGED_GROUP)
-        if mark then
-            additions[#additions + 1] = mark
-        end
+    local additions = lit({ row = preview.row, col = preview.source }, preview.consumed, CONSUMED_GROUP)
+    for _, mark in ipairs(lit({ row = preview.row + 1, col = preview.step_column }, preview.changed, CHANGED_GROUP)) do
+        additions[#additions + 1] = mark
     end
     edit.apply(buf, edit.prepare(buf, { row = preview.row, replacement = preview.step, inserted = true, additions = additions }))
     written(buf, preview.row + 2, "step")

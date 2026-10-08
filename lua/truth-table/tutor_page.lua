@@ -125,16 +125,17 @@ M.STATES = {
     ahead = { group = "TruthTableTutorAhead", link = "NonText" },
 }
 
--- The lesson pane's winbar for one step: a bar with a cell per lesson,
--- coloured by state (visited means reached: `furthest` is the last lesson
--- the reader has been to), the lesson and step, and the part, set to the
--- right and the first to go when the pane is too narrow for all of it. In
--- the winbar's own format, so a `%` in a part's name is doubled.
-function M.progress(course, place)
+-- The lesson pane's winbar for one step (`place` is its lesson and step): a
+-- bar with a cell per lesson, coloured by state (visited means reached:
+-- `furthest` is the last lesson the reader has been to), the lesson and
+-- step, and the part, set to the right and the first to go when the pane
+-- is too narrow for all of it. In the winbar's own format, so a `%` in a
+-- part's name is doubled.
+function M.progress(course, place, furthest)
     local number, count, name = part_of(course, place.lesson)
     local cells, state = {}, nil
     for index = 1, #course do
-        local now = index == place.lesson and "current" or index <= place.furthest and "visited" or "ahead"
+        local now = index == place.lesson and "current" or index <= furthest and "visited" or "ahead"
         if now ~= state then
             state = now
             cells[#cells + 1] = "%#" .. M.STATES[state].group .. "#"

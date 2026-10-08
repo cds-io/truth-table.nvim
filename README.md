@@ -900,6 +900,7 @@ plain Lua 5.1 has none of the three, and `vim.iter` needs the editor. Map and
 filter return fresh arrays; reduce returns the final accumulator. Each takes
 its function last; `map` refuses a `nil` result,
 which would leave a hole that `ipairs` stops at.
+- `text.lua` is `trim`, the one string helper the pure modules share.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law
@@ -916,6 +917,9 @@ first draft and `moves` takes them all.
 marks in step with Neovim's undo tree: each undo sequence number has the
 marks that went with it, so undo and redo restore them with the text,
 branches included.
+- `marks.lua` is the highlight mark, `{ row, col, end_col, group, priority }`,
+with `paint` and `read` over lists of it: the lit terms of a written rewrite
+and of a pending preview, and the tutor's colour spans, are all this record.
 - `derivation.lua` splits a line into sides at `≡`, sets its `| by`
 justification apart, replaces one side, and builds an aligned, justified step
 line.

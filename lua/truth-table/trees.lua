@@ -180,42 +180,48 @@ for op in pairs(BINARY) do
     JOINS[glue(op)] = true
 end
 
--- Render as it stands, collecting selected regions and optional positions
--- into separate tables. Parentheses come from paren nodes alone.
-local function render(node, offset, selected, regions, positions)
-    local text
-    if node.type == "paren" then
-        text = "(" .. render(node.expr, offset + 1, selected, regions, positions) .. ")"
-    elseif node.type == "not" then
-        text = SYMBOLS["not"] .. render(node.operand, offset + #SYMBOLS["not"], selected, regions, positions)
-    elseif BINARY[node.type] then
-        local left = render(node.left, offset, selected, regions, positions)
-        local between = glue(node.type)
-        local right = render(node.right, offset + #left + #between, selected, regions, positions)
-        text = left .. between .. right
-    elseif node.type == "reference" then
-        text = ":h" .. node.index
-    elseif node.type == "column" then
-        text = node.variable or ("“" .. node.name .. "”")
-    elseif node.type == "var" then
-        text = node.name
-    else
-        text = node.symbol or tostring(node.value)
+-- A renderer over one traversal's context: the text of a node that starts
+-- at byte `offset` of the whole, as the tree stands, with parentheses from
+-- paren nodes alone. On the way it adds the byte range of each `selected`
+-- node to `regions`, and the position of every node to `positions` when
+-- given a table for them.
+local function renderer(selected, regions, positions)
+    local function render(node, offset)
+        local text
+        if node.type == "paren" then
+            text = "(" .. render(node.expr, offset + 1) .. ")"
+        elseif node.type == "not" then
+            text = SYMBOLS["not"] .. render(node.operand, offset + #SYMBOLS["not"])
+        elseif BINARY[node.type] then
+            local left = render(node.left, offset)
+            local between = glue(node.type)
+            local right = render(node.right, offset + #left + #between)
+            text = left .. between .. right
+        elseif node.type == "reference" then
+            text = ":h" .. node.index
+        elseif node.type == "column" then
+            text = node.variable or ("“" .. node.name .. "”")
+        elseif node.type == "var" then
+            text = node.name
+        else
+            text = node.symbol or tostring(node.value)
+        end
+        if positions then
+            positions[node] = { start_byte = offset + 1, end_byte = offset + #text }
+        end
+        if selected[node] then
+            regions[#regions + 1] = { offset, offset + #text }
+        end
+        return text
     end
-    if positions then
-        positions[node] = { start_byte = offset + 1, end_byte = offset + #text }
-    end
-    if selected[node] then
-        regions[#regions + 1] = { offset, offset + #text }
-    end
-    return text
+    return render
 end
 
 -- Locate a tree's nodes in its own text without mutating it or parsing it
 -- again. This lets a later rewrite target a canonical result.
 function M.positions(node)
     local positions = {}
-    render(node, 0, {}, {}, positions)
+    renderer({}, {}, positions)(node, 0)
     return positions
 end
 
@@ -231,7 +237,7 @@ function M.rendered(node, produced)
         selected[item] = true
     end
     local regions = {}
-    local text = render(tree, 0, selected, regions)
+    local text = renderer(selected, regions)(tree, 0)
     table.sort(regions, function(a, b)
         return a[1] < b[1] or a[1] == b[1] and a[2] > b[2]
     end)

@@ -8,6 +8,7 @@
 local page = require("truth-table.tutor_page")
 local styled = require("truth-table.tutor_vellum")
 local spans = require("truth-table.tutor_spans")
+local marks = require("truth-table.marks")
 
 local M = {}
 
@@ -85,10 +86,7 @@ end
 -- is said once a session, and the tutor goes on without it.
 local function remember()
     local at, furthest = session.steps[session.at], session.steps[session.furthest]
-    local json = vim.json.encode({
-        at = { lesson = at.lesson, step = at.step },
-        furthest = { lesson = furthest.lesson, step = furthest.step },
-    })
+    local json = vim.json.encode({ at = at, furthest = furthest })
     local ok, err = pcall(function()
         vim.fn.mkdir(vim.fs.dirname(M.state_file), "p")
         vim.fn.writefile({ json }, M.state_file)
@@ -153,21 +151,15 @@ end
 
 -- A lesson's spans as marks on the lines they were found in.
 local function marks_of(marked)
-    local marks = {}
+    local out = {}
     for i, span in ipairs(marked) do
-        marks[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, group = span.group, priority = spans.PRIORITY }
+        out[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, group = span.group, priority = spans.PRIORITY }
     end
-    return marks
+    return out
 end
 
-local function paint(buf, marks)
-    for _, mark in ipairs(marks) do
-        vim.api.nvim_buf_set_extmark(buf, MARKS, mark.row, mark.col, {
-            end_col = mark.end_col,
-            hl_group = mark.group,
-            priority = mark.priority,
-        })
-    end
+local function paint(buf, found)
+    marks.paint(buf, MARKS, found)
 end
 
 local function live(buf)
@@ -240,10 +232,10 @@ end
 -- checked every step renders.
 local function draw(win)
     local at = session.steps[session.at]
-    local markdown, marked = page.render(session.course, { lesson = at.lesson, step = at.step })
+    local markdown, marked = page.render(session.course, at)
     assert(markdown, marked)
     local width = vim.api.nvim_win_get_width(win)
-    local lines, marks = styled.render(markdown, width, marked)
+    local lines, styled_marks = styled.render(markdown, width, marked)
     local pane = lines and LESSON_PANE.styled or LESSON_PANE.markdown
     session.width = lines and width
 
@@ -253,7 +245,7 @@ local function draw(win)
     vim.api.nvim_buf_clear_namespace(buf, MARKS, 0, -1)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or markdown)
     vim.bo[buf].modifiable = false
-    paint(buf, lines and marks or marks_of(marked))
+    paint(buf, lines and styled_marks or marks_of(marked))
     dress(buf, pane.filetype)
     -- Set after the buffer is in the window, and local to it. A window takes
     -- fresh options when it first shows a buffer: set any earlier, these are
@@ -261,7 +253,7 @@ local function draw(win)
     for name, value in pairs(pane.options) do
         vim.api.nvim_set_option_value(name, value, { win = win, scope = "local" })
     end
-    local progress = page.progress(session.course, { lesson = at.lesson, step = at.step, furthest = visited() })
+    local progress = page.progress(session.course, at, visited())
     vim.api.nvim_set_option_value("winbar", progress, { win = win, scope = "local" })
     vim.api.nvim_win_call(win, function()
         vim.fn.winrestview(view)
