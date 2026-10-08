@@ -87,15 +87,20 @@ describe("tutor_page.render", function()
         },
     }
 
-    it("heads the pane with the lesson and the aim", function()
-        local lines = page.render(course, { lesson = 2, step = 2 })
+    it("heads a lesson's first step with the title and the aim", function()
+        local lines = page.render(course, { lesson = 2, step = 1 })
         assert.are.same({
-            "# 2. Second",
+            "## 2. Second",
             "",
             "**Aim:** Build a table.",
             "",
-            "Run it on the line.",
+            "Warm up.",
         }, slice(lines, 1, 5))
+    end)
+
+    it("heads a later step with the title alone", function()
+        local lines = page.render(course, { lesson = 2, step = 2 })
+        assert.are.same({ "## 2. Second", "", "Run it on the line." }, slice(lines, 1, 3))
     end)
 
     it("shows the expectation fenced, between the instructions and the remark", function()
@@ -113,9 +118,15 @@ describe("tutor_page.render", function()
             "Rows count upward.",
             "",
             "---",
-            "",
-            "`]]` next step, `[[` previous step",
-        }, slice(lines, 5, #lines))
+        }, slice(lines, 3, #lines))
+    end)
+
+    it("names the keys that move only in the first lesson", function()
+        local keys = "\n---\n\n`]]` next step, `[[` previous step"
+        local first = table.concat(page.render(course, { lesson = 1, step = 1 }), "\n")
+        assert.are.equal(keys, first:sub(-#keys))
+        local later = table.concat(page.render(course, { lesson = 2, step = 1 }), "\n")
+        assert.are.equal("\n---", later:sub(-4))
     end)
 
     it("leaves the expectation out of a step that has only reading", function()

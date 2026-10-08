@@ -406,8 +406,9 @@ it; running a different rewrite command replaces it.
                                                             *:TruthTableTutor*
 :TruthTableTutor[!] [lesson]
     Open the tutorial in a new tab: a short logic course in two panes. The
-    lesson pane, on the left, shows one step at a time: the lesson's aim,
-    what to do, and what you should see afterwards. The scratch pane, on the
+    lesson pane, on the left, shows one step at a time: the lesson's title
+    (with its aim on the lesson's first step), what to do, and what you
+    should see afterwards. The scratch pane, on the
     right, holds the step's starting text and is where you run the commands.
 
     Every step keeps its own scratch buffer: undo stops at the starting

@@ -568,13 +568,14 @@ The verdicts differ: one review declines the rewrite and keeps a comment,
 and one calls it a matter of taste.
 
 The tab has two panes. The lesson pane, on the left, shows one step at a time:
-the lesson's aim, what to do, and what you should see afterwards. The scratch
+the lesson's title (with its aim on the lesson's first step), what to do, and
+what you should see afterwards. The scratch
 pane, on the right, holds that step's starting text, and is where you run the
 commands:
 
 ```text
 ██░░░░░░░░░░░░░░░░░░ lesson 3 of 20, step >│ p and q | p or q | not p
-# 3. Connectives: not, and, or            │
+## 3. Connectives: not, and, or           │
 │
 **Aim:** Combine propositions with        │
 `not`, `and` and `or`, and read the       │

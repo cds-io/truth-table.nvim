@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the lesson pane's header is the title as a second-level heading,
+  with the aim on a lesson's first step only, and the footer is a rule; the
+  keys that move are named under the first lesson's steps alone. The winbar
+  carries the lesson and step. Six rows fewer per step at 80 columns.
 - Tutor: the arithmetic spelling is a lesson of its own, lesson 7, between
   constants and complements and De Morgan: `a + b`, `ab` and `a'` for `∨`,
   `∧` and `¬`, with arithmetic's binding order; the reader translates

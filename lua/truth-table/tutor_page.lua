@@ -150,19 +150,19 @@ function M.progress(course, place)
 end
 
 -- The pane for one step (`place` is its lesson and step): the lesson's
--- title and aim, the step's instructions, what the scratch pane should hold
--- afterwards, and any remark on that result. The spans come back with rows
--- into these lines. Nil and a message, naming the field, for a step whose
--- markers are wrong.
+-- title, its aim on the lesson's first step, the step's instructions, what
+-- the scratch pane should hold afterwards, and any remark on that result,
+-- closed by a rule; the first lesson's steps also name the keys that move.
+-- The winbar carries the lesson and step, so the header repeats nothing it
+-- says. The spans come back with rows into these lines. Nil and a message,
+-- naming the field, for a step whose markers are wrong.
 function M.render(course, place)
     local lesson = course[place.lesson]
     local step = lesson.steps[place.step]
-    local out = {
-        ("# %d. %s"):format(place.lesson, lesson.title),
-        "",
-        "**Aim:** " .. lesson.aim,
-        "",
-    }
+    local out = { ("## %d. %s"):format(place.lesson, lesson.title), "" }
+    if place.step == 1 then
+        append(out, { "**Aim:** " .. lesson.aim, "" })
+    end
     local found = {}
     local function body(field)
         local lines, marked = M.body(step[field])
@@ -197,7 +197,10 @@ function M.render(course, place)
             return nil, err
         end
     end
-    append(out, { "", "---", "", "`]]` next step, `[[` previous step" })
+    append(out, { "", "---" })
+    if place.lesson == 1 then
+        append(out, { "", "`]]` next step, `[[` previous step" })
+    end
     return out, found
 end
 
