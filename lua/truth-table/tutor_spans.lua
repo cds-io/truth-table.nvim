@@ -8,12 +8,14 @@
 local M = {}
 
 -- Each colour's highlight group and the standard group it links to, so every
--- colorscheme has it.
+-- colorscheme has it. Yellow marks where the cursor goes, and is underlined
+-- as well, so the cue survives a theme where the colours are hard to tell
+-- apart: it takes its link's colour with the underline added.
 M.PALETTE = {
     { colour = "blue", group = "TruthTableTutorBlue", link = "DiagnosticInfo" },
     { colour = "red", group = "TruthTableTutorRed", link = "DiagnosticError" },
     { colour = "green", group = "TruthTableTutorGreen", link = "DiagnosticOk" },
-    { colour = "yellow", group = "TruthTableTutorYellow", link = "DiagnosticWarn" },
+    { colour = "yellow", group = "TruthTableTutorYellow", link = "DiagnosticWarn", underline = true },
 }
 
 -- Above vellum's marks: 100, and 100 + k for a mark inside a mark.

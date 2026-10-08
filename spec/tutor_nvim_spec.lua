@@ -493,7 +493,7 @@ return {
         assert.are.equal(tabs, tab_count())
     end)
 
-    it("defines the palette as default links, and leaves a group the reader set alone", function()
+    it("defines the palette as default links, the cursor's colour underlined, and leaves a group the reader set alone", function()
         vim.api.nvim_set_hl(0, red, { fg = "#ff0000" })
         finally(function()
             vim.cmd("highlight clear " .. red)
@@ -507,6 +507,11 @@ return {
             local hl = vim.api.nvim_get_hl(0, { name = entry.group })
             if entry.group == red then
                 assert.are.equal(0xff0000, hl.fg)
+            elseif entry.underline then
+                local linked = vim.api.nvim_get_hl(0, { name = entry.link, link = false })
+                assert.is_true(hl.underline, entry.group)
+                assert.are.equal(linked.fg, hl.fg, entry.group)
+                assert.is_true(hl.default, entry.group)
             else
                 assert.are.equal(entry.link, hl.link, entry.group)
                 assert.is_true(hl.default, entry.group)

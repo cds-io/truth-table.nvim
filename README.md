@@ -659,8 +659,9 @@ A ∨ [:red ¬(B] ∧ ¬C)       colours ¬(B: bytes, not a node of the expressi
 The colours are blue, red, green and yellow, as the groups
 `TruthTableTutorBlue`, `TruthTableTutorRed`, `TruthTableTutorGreen` and
 `TruthTableTutorYellow`, linked by default to `DiagnosticInfo`,
-`DiagnosticError`, `DiagnosticOk` and `DiagnosticWarn`; one you define before
-the tutor opens stands, as does one of the progress bar's three groups
+`DiagnosticError` and `DiagnosticOk`, and yellow, which marks where the
+cursor goes, in `DiagnosticWarn`'s colour with an underline; one you define
+before the tutor opens stands, as does one of the progress bar's three groups
 (`TruthTableTutorVisited`, `TruthTableTutorCurrent`, `TruthTableTutorAhead`).
 The markers come out before the text is shown, and the
 span is painted in both panes (in the scratch pane it moves with your edits).

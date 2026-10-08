@@ -139,7 +139,12 @@ end
 -- one the reader defines stands.
 local function palette()
     for _, entry in ipairs(spans.PALETTE) do
-        vim.api.nvim_set_hl(0, entry.group, { default = true, link = entry.link })
+        local attrs = { default = true, link = entry.link }
+        if entry.underline then
+            local linked = vim.api.nvim_get_hl(0, { name = entry.link, link = false })
+            attrs = { default = true, fg = linked.fg, ctermfg = linked.ctermfg, underline = true }
+        end
+        vim.api.nvim_set_hl(0, entry.group, attrs)
     end
     for _, entry in pairs(page.STATES) do
         vim.api.nvim_set_hl(0, entry.group, { default = true, link = entry.link })

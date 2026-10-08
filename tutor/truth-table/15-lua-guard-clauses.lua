@@ -4,7 +4,7 @@ return {
     steps = {
         {
             text = [=[
-## Working with Lua conditions
+The last five lessons work on Lua conditions.
 
 - **What carries across.** The logic laws apply across languages.
   Translating them back into code requires attention to the language's
@@ -16,7 +16,7 @@ return {
   its own, and so is getting back. Every example uses the five stages below,
   and every step says which stage it belongs to.
 
-### The five stages
+The five stages:
 
 1. **Name the checks.** Find the smallest tests the code makes and give
   each a letter.

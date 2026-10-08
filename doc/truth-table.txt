@@ -461,9 +461,10 @@ it; running a different rewrite command replaces it.
     expression. The colours are blue, red, green and yellow: the groups
     TruthTableTutorBlue, TruthTableTutorRed, TruthTableTutorGreen and
     TruthTableTutorYellow, linked by default to DiagnosticInfo,
-    DiagnosticError, DiagnosticOk and DiagnosticWarn; one you define before
-    the tutor opens, or in a ColorScheme autocommand, stands, as does one of
-    the progress bar's three groups. The markers
+    DiagnosticError and DiagnosticOk, and yellow, which marks where the
+    cursor goes, in DiagnosticWarn's colour with an underline; one you
+    define before the tutor opens, or in a ColorScheme autocommand, stands,
+    as does one of the progress bar's three groups. The markers
     come out before the text is shown, and the span is painted in both
     panes; in the scratch pane it moves with your edits. Inside a span,
     brackets pair up, so `[:blue result[1]]` ends at the second `]`. A span

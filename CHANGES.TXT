@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the yellow span, which marks where the cursor goes, is underlined
+  as well as coloured (TruthTableTutorYellow takes DiagnosticWarn's colour
+  with an underline; one you define yourself still stands). Lesson 9's
+  aside on `⊕` and `⇔` being associative moves to the reference, lesson
+  13's reduction paragraph to the step that uses it, lesson 7's second
+  step is shorter with the name sum of products in its note, and lesson
+  15 opens with a paragraph in place of two headings.
 - Tutor: every Lua lesson's first step asks the reader to name the checks
   in the scratch pane (the letters are given, in order of appearance), and
   the key opens the step after, as lesson 16 already did; the review count

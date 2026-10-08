@@ -24,6 +24,11 @@ De Morgan        ¬(a ∧ b) ≡ ¬a ∨ ¬b           ¬(a ∨ b) ≡ ¬a ∧ �
 double negation  ¬¬a ≡ a
 ```
 
+Commutativity and associativity hold for `⊕` and `⇔` as well, but a flat run
+of either misleads (`a ⇔ b ⇔ c` is true when `a` is true and the other two are
+false, which is far from "all three agree"), so the plugin keeps their
+grouping in view: `(a ⇔ b) ⇔ c`.
+
 A function that returns true or false, read from the top as one expression,
 and the condition each branch of an `if` runs under (the syntax is beside the
 point: `if c then return true end` in Lua reads the same way):

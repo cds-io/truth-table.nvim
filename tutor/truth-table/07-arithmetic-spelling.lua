@@ -52,14 +52,13 @@ a + a = a    aa = a
 ```
 
 Three read as ordinary arithmetic: `a + 0 = a`, `a1 = a` and `a0 = 0` hold
-for numbers as they stand. `aa = a` holds because `a` is only ever `0` or `1`,
-and each is its own square. The last two are where logic parts ways with
-arithmetic: `a + 1 = 1` and `a + a = a`, since there is no `2` to count up to.
-The spelling is why an `or` of `and` terms is called a *sum of products*, a
-name that returns in the lesson on Karnaugh maps.
+for numbers as they stand, and `aa = a` holds because `0` and `1` are their
+own squares. The last two are where logic parts ways with arithmetic:
+`a + 1 = 1` and `a + a = a`, since there is no `2` to count up to.
 
-A sum of products can carry a term it has no need of. Here is one from a
-digital design text, with its claimed shorter form:
+An `or` of `and` terms is a *sum of products* in this spelling, and one can
+carry a term it has no need of. Here is one from a digital design text, with
+its claimed shorter form:
 
 ```text
 ab + a'c + bc  =  ab + a'c
@@ -83,8 +82,8 @@ Translate both sides, give them to `:TruthTable` as two columns, and compare.
 The columns agree: `bc` adds nothing, because whenever `b` and `c` are both
 `1`, one of the other two terms already is (`ab` when `a` is `1`, `a'c` when it
 is `0`). Finding such a term by eye is the hard part; the lesson on Karnaugh
-maps reads it off the column instead. (The name, for looking it up:
-*consensus*.)
+maps reads it off the column instead, under the name sum of products. (The
+law's name, for looking it up: *consensus*.)
 ]],
             solution = {
                 { run = { "TruthTable a and b or not a and c or b and c | a and b or not a and c" } },

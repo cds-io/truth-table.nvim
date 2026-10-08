@@ -79,13 +79,8 @@ So, why go through stored columns? Because the plugin takes this law for
 granted. Type `(x or y) or z` or `x or (y or z)` and either is written back as
 `x ∨ y ∨ z`, a run with no parentheses, since the grouping changes nothing. The
 rewrite commands read such a run as one chain: `:TruthTableCommute` on `y`
-there gives `x ∨ z ∨ y`.
-
-`⊕` and `⇔` are associative as well, but a flat run of either misleads
-(`a ⇔ b ⇔ c` is true when `a` is true and the other two are false, which is far
-from "all three agree"), so the plugin keeps their grouping in view:
-`(a ⇔ b) ⇔ c`. Mixing connectives is another matter altogether: the lesson on
-connectives showed that `p ∨ (q ∧ r)` and `(p ∨ q) ∧ r` differ.
+there gives `x ∨ z ∨ y`. Mixing connectives is another matter altogether: the
+lesson on connectives showed that `p ∨ (q ∧ r)` and `(p ∨ q) ∧ r` differ.
 ]],
             solution = {
                 { on = "|  x  |  y  |  z  | x ∨ y | y ∨ z |", run = { "TruthTableExpand :h4 or z, x or :h5" } },
