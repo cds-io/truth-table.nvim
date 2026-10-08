@@ -5,19 +5,18 @@ return {
     steps = {
         {
             text = [[
-An expression can be a constant: the proposition that is true in every row (a
-tautology with no variables in it), or the one that is false in every row.
-Each has two spellings. `1` and `0` are the ones a table's cells use; `⊤` and
-`⊥` ("top" and "bottom") are the ones logic texts use. They mean the same
-thing, and the plugin reads both.
+An expression can be a constant: `1`, the proposition that is true in every
+row (a tautology with no variables in it), or `0`, the one that is false in
+every row. They are what a table's cells hold, and either can stand in an
+expression where a variable would.
 
 The laws of *Boolean algebra*, the rules for rewriting one expression into an
 equivalent one, start with what `or` does when it already knows one of its
-operands. Here they are in each spelling, the operand that drops out in red:
+operands. The operand that drops out is in red:
 
 ```logic
-[:red a] ∨ 1  ≡  1        [:red a] ∨ ⊤  ≡  ⊤
-a ∨ [:red 0]  ≡  a        a ∨ [:red ⊥]  ≡  a
+[:red a] ∨ 1  ≡  1
+a ∨ [:red 0]  ≡  a
 a ∨ [:red a]  ≡  a
 ```
 
@@ -26,21 +25,42 @@ side contributes nothing, so the result is the other side; and saying a thing
 twice says it once. (The names, for looking them up: *domination*, *identity*
 and *idempotence*.)
 
-The scratch pane holds the three left-hand sides twice, once per spelling.
-Build a table from each line (`:.TruthTable`, `<leader>ttn`, with the cursor
-on the line) and compare each computed column with its law.
+The scratch pane holds the three left-hand sides. Build a table from the line
+(`:.TruthTable`, `<leader>ttn`, with the cursor on it) and compare each
+computed column with its law.
 ]],
             template = [[
 a or 1 | a or 0 | a or a
-
-a or ⊤ | a or ⊥ | a or a
 ]],
             expect = [[
 |  a  | a ∨ 1 | a ∨ 0 | a ∨ a |
 |:---:|:-----:|:-----:|:-----:|
 |  0  |   1   |   0   |   0   |
 |  1  |   1   |   1   |   1   |
+]],
+            note = [[
+The column for `a ∨ 1` is all ones, and the other two repeat the `a` column.
 
+These laws look too obvious to need stating, and they are what a refactor
+leaves behind when a value becomes known: inside `if (isAdmin) { ... }`, the
+condition `isAdmin || hasGrant` is `1 ∨ hasGrant`, which is `1`, and the check
+can go.
+]],
+            solution = {
+                { on = "a or 1 | a or 0 | a or a", run = { ".TruthTable" } },
+            },
+        },
+        {
+            text = [[
+Logic texts spell the constants `⊤` and `⊥` ("top" and "bottom"), and the
+plugin reads that spelling too, along with the words `true` and `false`. The
+scratch pane holds the same three expressions in it. Build the table and
+compare it with the last one.
+]],
+            template = [[
+a or ⊤ | a or ⊥ | a or a
+]],
+            expect = [[
 |  a  | a ∨ ⊤ | a ∨ ⊥ | a ∨ a |
 |:---:|:-----:|:-----:|:-----:|
 |  0  |   1   |   0   |   0   |
@@ -48,21 +68,12 @@ a or ⊤ | a or ⊥ | a or a
 ]],
             note = [[
 The two tables agree cell for cell: the spelling changes the headings and
-nothing else. In both, the column for `a ∨ 1` is all ones, and the other two
-repeat the `a` column.
-
-These laws look too obvious to need stating, and they are what a refactor
-leaves behind when a value becomes known: inside `if (isAdmin) { ... }`, the
-condition `isAdmin || hasGrant` is `1 ∨ hasGrant`, which is `1`, and the check
-can go.
-
-A heading keeps the spelling you typed. The words `true` and `false` are read
-as well, and rendered as `⊤` and `⊥`, the way `and` is rendered as `∧`; in
-insert mode, `true@` and `false@` followed by a space give the symbols
-directly. From here on the course writes `1` and `0`, to match the cells.
+nothing else. A heading keeps the spelling you typed; `true` and `false` are
+rendered as `⊤` and `⊥`, the way `and` is rendered as `∧`, and in insert
+mode `true@` and `false@` followed by a space give the symbols directly. From
+here on the course writes `1` and `0`, to match the cells.
 ]],
             solution = {
-                { on = "a or 1 | a or 0 | a or a", run = { ".TruthTable" } },
                 { on = "a or ⊤ | a or ⊥ | a or a", run = { ".TruthTable" } },
             },
         },

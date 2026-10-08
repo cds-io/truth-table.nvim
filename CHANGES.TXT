@@ -1,6 +1,9 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: lesson 6 opens with the three `or` laws in the `1` and `0` spelling
+  alone; the `⊤` and `⊥` spelling, the words `true` and `false`, and the
+  abbreviations are a short second step, so the lesson has four steps.
 - Tutor: the course is in four parts (Tables, Rewriting, Code, Reference; a
   lesson file's `part` opens one), every step's header names the part and
   shows a bar with a cell per lesson, filled for the lessons moved past, and
