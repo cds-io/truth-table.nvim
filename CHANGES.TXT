@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: toggling a table's cells, dropping a column and dropping a row are
+  one step at the end of lesson 4, on the table that lesson builds; lesson 5
+  runs from equivalence through tautology and contradiction straight to the
+  refactor it exists to catch, in four steps.
 - Tutor: the lesson pane's header is the title as a second-level heading,
   with the aim on a lesson's first step only, and the footer is a rule; the
   keys that move are named under the first lesson's steps alone. The winbar
