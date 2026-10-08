@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: every Lua lesson's first step asks the reader to name the checks
+  in the scratch pane (the letters are given, in order of appearance), and
+  the key opens the step after, as lesson 16 already did; the review count
+  tables in lessons 15 and 19 lose the backticks they showed raw.
 - Tutor: a one-line expected result reads as a sentence ("You should see
   `¬p ∨ ¬q`."), and a longer one is a panel labelled "result", the fence's
   info string, in place of a "You should see:" line, a blank and a panel

@@ -3,7 +3,7 @@ return {
     aim = "Use mutually exclusive types to simplify branch conditions, then choose and justify a structure for the code.",
     steps = {
         {
-            text = [[
+            text = [=[
 **Stage 1 of 5: name the checks.**
 
 The last example is a textbook one: a function that writes a value out as Lua
@@ -37,7 +37,25 @@ Source: Roberto Ierusalimschy, *Programming in Lua* (first edition), section 12.
 
 It returns nothing, so there is no true or false to read off. The branches are
 still there, and each one runs under a condition, which is all the method
-needs. The function makes four tests:
+needs. The function makes four tests. Name them yourself in the scratch pane:
+`N`, `S`, `T` and `V`, in order of appearance, each with its test and what it
+means.
+
+There is no plugin command to run yet. `]]` reveals the key; `[[` brings you
+back to your work.
+]=],
+            template = [[
+N
+S
+T
+V
+]],
+        },
+        {
+            text = [[
+**Stage 2 of 5: translate.**
+
+Compare your names with this key:
 
 ```text
 N    type(value) == "number"    the value is a number
@@ -45,13 +63,6 @@ S    type(value) == "string"    the value is a string
 T    type(value) == "table"     the value is a table
 V    saved[value]               this table has been saved already
 ```
-
-There is nothing to run in this step.
-]],
-        },
-        {
-            text = [[
-**Stage 2 of 5: translate.**
 
 The rule for branches, from the lesson on `elseif`: a branch runs when its own
 test holds and every test before it failed. An `if` nested inside a branch
@@ -61,8 +72,7 @@ scalar, reuse a table's name, create a new table, and raise the error.
 
 Then find the condition shared by the two table actions: what must hold to
 reach the inner `if` at all? Give that expression to `:TruthTable` and compare
-your table with the one below. The naming key is in the previous step; this
-time you supply the branch expressions.
+your table with the one below. This time you supply the branch expressions.
 ]],
             expect = [[
 |  N  |  S  |  T  | ¬(N ∨ S) ∧ T |
@@ -262,7 +272,7 @@ What changed, by count:
                                    before    after
 lines                                  21       21
 deepest nesting                         4        2
-calls to `type` for a table             3        1
+calls to type for a table               3        1
 ways out of the function                1        3
 ```
 

@@ -3,7 +3,7 @@ return {
     aim = "Compare the truthiness and returned values of `c and x or y` with a ternary, then check what makes the idiom safe here.",
     steps = {
         {
-            text = [[
+            text = [=[
 **Stage 1 of 5: name the checks.**
 
 A *ternary* is an expression that picks one of two values: `c ? x : y` in
@@ -25,25 +25,35 @@ Source: [kickstart.nvim, lua/lsp.lua, lines 112 to 116](https://github.com/cds-a
 
 The last line is meant as "if `result` is a list then its first item, else
 `result`". The idiom has three parts, and this time the letters stand for the
-parts of a pattern:
-
-```text
-c    vim.islist(result)    the condition
-x    result[1]             the value wanted when the condition holds
-y    result                the value wanted when it fails
-```
+parts of a pattern: `c` is the condition, `x` the value wanted when it holds,
+and `y` the value wanted when it fails. Find the three in the last line and
+write them beside their letters in the scratch pane.
 
 `x` and `y` are values, where the checks so far were tests. What matters to
 `and` and `or` is whether a value counts as true: in Lua everything does,
 except `false` and `nil`. So `x` in the table to come means "`x` is neither
 `false` nor `nil`".
 
-There is nothing to run in this step.
+There is no plugin command to run yet. `]]` reveals the key; `[[` brings you
+back to your work.
+]=],
+            template = [[
+c
+x
+y
 ]],
         },
         {
             text = [[
 **Stages 2 and 3 of 5: translate, and compare.**
+
+Compare your parts with this key:
+
+```text
+c    vim.islist(result)    the condition
+x    result[1]             the value wanted when the condition holds
+y    result                the value wanted when it fails
+```
 
 Two things to translate, the idiom and what it is meant to be:
 

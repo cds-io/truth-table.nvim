@@ -61,7 +61,28 @@ end
 Source: [kickstart.nvim, lua/plugins/breadcrumbs.lua, lines 11 to 34](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/plugins/breadcrumbs.lua#L11-L34)
 
 The checks are the smallest tests the function makes, each of which is true
-or false on its own. Give each a letter.
+or false on its own. There are seven. Name them yourself in the scratch pane,
+in order of appearance: `R` for the range is done, and `B`, `A`, `S`, `L`,
+`E`, `G` wait for their test and what it means.
+
+There is no plugin command to run yet. `]]` reveals the key; `[[` brings you
+back to your work.
+]=],
+            template = [[
+R    range                      there is a range
+B
+A
+S
+L
+E
+G
+]],
+        },
+        {
+            text = [[
+**Stage 2 of 5: translate** (first of two steps).
+
+Compare your names with this key:
 
 ```text
 R    range                      there is a range
@@ -72,22 +93,6 @@ L    char < start.character     it is left of the start character
 E    line == stop.line          the cursor is on the stop line
 G    char > stop.character      it is right of the stop character
 ```
-
-With the letters in place, each guard's test is a small expression:
-
-```text
-guard 1    if not range                                         not R
-guard 2    if line < start.line or line > stop.line             B or A
-guard 3    if line == start.line and char < start.character     S and L
-guard 4    if line == stop.line and char > stop.character       E and G
-```
-
-There is nothing to run in this step. `]]` moves on to the guards themselves.
-]=],
-        },
-        {
-            text = [[
-**Stage 2 of 5: translate** (first of two steps).
 
 Now the guards, one at a time. The reading rule for a guard, in Lua:
 
@@ -340,8 +345,8 @@ What changed, by count:
 ```text
                         before    after
 lines                       17       10
-`if` statements              4        1
-`return` statements          5        2
+if statements                4        1
+return statements            5        2
 ```
 
 What the change buys:
