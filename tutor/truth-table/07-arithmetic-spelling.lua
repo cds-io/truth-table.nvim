@@ -4,10 +4,17 @@ return {
     steps = {
         {
             text = [[
-Engineering texts write Boolean algebra in the notation of arithmetic: `a + b`
-for `a ∨ b`, `ab` for `a ∧ b` (two letters side by side, the way `xy` means
-`x` times `y`), and a bar over `a` for `¬a`, written `a'` when a bar is hard
-to typeset, as it is here. The notation brings arithmetic's binding order with
+Engineering texts write Boolean algebra in the notation of arithmetic:
+
+| Logic   | Arithmetic | Name       |
+|:-------:|:----------:|:-----------|
+| `a ∨ b` | `a + b`    | sum        |
+| `a ∧ b` | `ab`       | product    |
+| `¬a`    | `a'`       | complement |
+
+The product is two letters side by side, the way `xy` means `x` times `y`.
+The complement is a bar over `a` in print, and `a'` where a bar is hard to
+typeset, as it is here. The notation brings arithmetic's binding order with
 it: a product groups before a sum, so `ab + c` is `(a ∧ b) ∨ c`, which is the
 plugin's order too (`and` before `or`, from the lesson on connectives).
 
