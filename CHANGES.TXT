@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: a one-line expected result reads as a sentence ("You should see
+  `¬p ∨ ¬q`."), and a longer one is a panel labelled "result", the fence's
+  info string, in place of a "You should see:" line, a blank and a panel
+  labelled "text". Four rows fewer per exercise.
 - Tutor: seven sentences that ended in a code span, where vellum's padding
   let the full stop or parenthesis wrap onto a row of its own at 80
   columns, end in a word instead (lessons 3, 10 and 12).

@@ -155,7 +155,8 @@ end
 
 -- The pane for one step (`place` is its lesson and step): the lesson's
 -- title, its aim on the lesson's first step, the step's instructions, what
--- the scratch pane should hold afterwards, and any remark on that result,
+-- the scratch pane should hold afterwards (inline when it is one line, else
+-- as a labelled panel), and any remark on that result,
 -- closed by a rule; the first lesson's steps also name the keys that move.
 -- The winbar carries the lesson and step, so the header repeats nothing it
 -- says. The spans come back with rows into these lines. Nil and a message,
@@ -185,14 +186,22 @@ function M.render(course, place)
         return nil, err
     end
     if step.expect then
-        append(out, { "", "You should see:", "", "```text" })
-        for _, line in ipairs(M.lines(step.expect)) do
+        local expected = M.lines(step.expect)
+        for _, line in ipairs(expected) do
             if line:find("%[:%w+") then
                 return nil, "expect: a colour span in the expected result: " .. line
             end
         end
-        append(out, M.lines(step.expect))
-        append(out, { "```" })
+        -- A one-line result reads as a sentence; a longer one is a panel
+        -- labelled "result" (vellum shows a fence's info string, first word
+        -- only, as the panel's label, and finds no language of that name).
+        if #expected == 1 then
+            append(out, { "", "You should see `" .. expected[1] .. "`." })
+        else
+            append(out, { "", "```result" })
+            append(out, expected)
+            append(out, { "```" })
+        end
     end
     if step.note then
         append(out, { "" })

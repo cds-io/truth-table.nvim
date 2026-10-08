@@ -110,14 +110,12 @@ describe("tutor_page.render", function()
         assert.are.same({ "## 2. Second", "", "Run it on the line." }, slice(lines, 1, 3))
     end)
 
-    it("shows the expectation fenced, between the instructions and the remark", function()
+    it("shows the expectation as a labelled panel, between the instructions and the remark", function()
         local lines = page.render(course, { lesson = 2, step = 2 })
         assert.are.same({
             "Run it on the line.",
             "",
-            "You should see:",
-            "",
-            "```text",
+            "```result",
             "|  p  |  q  |",
             "|:---:|:---:|",
             "```",
@@ -126,6 +124,12 @@ describe("tutor_page.render", function()
             "",
             "---",
         }, slice(lines, 3, #lines))
+    end)
+
+    it("shows a one-line expectation as a sentence", function()
+        local one = { { part = "P", title = "T", aim = "A.", steps = { { text = "Apply.\n", expect = "¬p ∨ ¬q\n" } } } }
+        local lines = page.render(one, { lesson = 1, step = 1 })
+        assert.are.same({ "Apply.", "", "You should see `¬p ∨ ¬q`.", "", "---" }, slice(lines, 5, 9))
     end)
 
     it("names the keys that move only in the first lesson", function()
@@ -232,10 +236,10 @@ describe("tutor_page.render with spans", function()
     it("offsets the rows past the header, and past the expectation for the note", function()
         local lines, spans = page.render(course, { lesson = 1, step = 1 })
         assert.are.equal("a ∨ b", lines[8])
-        assert.are.equal("a ∨ b", lines[20])
+        assert.are.equal("a ∨ b", lines[16])
         assert.are.same({
             { row = 8, col = 0, end_col = 1, group = blue },
-            { row = 20, col = 6, end_col = 7, group = red },
+            { row = 16, col = 6, end_col = 7, group = red },
         }, spans)
     end)
 

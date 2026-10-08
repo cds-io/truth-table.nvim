@@ -583,8 +583,7 @@ result off a table.                       │
 │
 ... then run `:.TruthTable` on the line.  │
 │
-You should see:                           │
-│
+```result                                 │
 |  p  |  q  | p ∧ q | p ∨ q | ¬p  |       │
 |:---:|:---:|:-----:|:-----:|:---:|       │
 ```
