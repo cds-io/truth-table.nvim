@@ -573,7 +573,7 @@ pane, on the right, holds that step's starting text, and is where you run the
 commands:
 
 ```text
-██░░░░░░░░░░░░░░░░░ lesson 3 of 19, step >│ p and q | p or q | not p
+██░░░░░░░░░░░░░░░░░░ lesson 3 of 20, step >│ p and q | p or q | not p
 # 3. Connectives: not, and, or            │
 │
 **Aim:** Combine propositions with        │

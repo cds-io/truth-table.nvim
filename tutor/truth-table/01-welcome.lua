@@ -46,11 +46,11 @@ The course in four parts:
 
 - Tables, lessons 1 to 5: propositions, connectives, and what makes two
   expressions equivalent.
-- Rewriting, lessons 6 to 12: the laws of Boolean algebra, derivations that
+- Rewriting, lessons 6 to 13: the laws of Boolean algebra, derivations that
   record each step, and Karnaugh maps.
-- Code, lessons 13 to 18: conditions taken out of JavaScript and Lua,
+- Code, lessons 14 to 19: conditions taken out of JavaScript and Lua,
   rewritten, and put back.
-- Reference, lesson 19: every law and command on one page.
+- Reference, lesson 20: every law and command on one page.
 
 The line above this pane says where you are, and stays put while the lesson
 scrolls: a bar with a cell per lesson (green for the lessons you have been

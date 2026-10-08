@@ -102,14 +102,8 @@ a and 1 | a and 0 | a and a
 |  1  |   1   |   0   |   1   |
 ]],
             note = [[
-Engineering texts write these laws in the notation of arithmetic: `a + b` for
-`a ∨ b`, `ab` for `a ∧ b`, and a bar over `a` for `¬a`. Three of the six laws
-then read as ordinary arithmetic (`a + 0 = a`, `a1 = a`, `a0 = 0`), and
-`aa = a` holds because `a` is only ever `0` or `1`. The last two are where
-logic parts ways with arithmetic: `a + 1 = 1` and `a + a = a`, since there is
-no `2` to count up to. The plugin reads and writes the logic symbols. The
-arithmetic spelling is why an `or` of `and` terms is called a *sum of
-products*, a name that returns in the lesson on Karnaugh maps.
+The column for `a ∧ 0` is all zeros, and the other two repeat the `a` column:
+the `or` table with `1` and `0` traded, which is duality at work.
 ]],
             solution = {
                 { on = "a and 1 | a and 0 | a and a", run = { ".TruthTable" } },

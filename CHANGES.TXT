@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the arithmetic spelling is a lesson of its own, lesson 7, between
+  constants and complements and De Morgan: `a + b`, `ab` and `a'` for `∨`,
+  `∧` and `¬`, with arithmetic's binding order; the reader translates
+  `a'b + ab'` and sees it is `xor`, then the six laws in that spelling (three
+  read as arithmetic, `a + 1 = 1` and `a + a = a` do not), the name sum of
+  products, and a sum of products with a redundant term (`ab + a'c + bc`),
+  checked against its shorter form. Lesson 6's `and` step keeps a short note
+  on duality. Lessons 7 to 19 are now 8 to 20.
 - Tutor: lesson 6 opens with the three `or` laws in the `1` and `0` spelling
   alone; the `⊤` and `⊥` spelling, the words `true` and `false`, and the
   abbreviations are a short second step, so the lesson has four steps.
