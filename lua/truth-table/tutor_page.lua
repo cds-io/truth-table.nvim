@@ -25,9 +25,13 @@ function M.lines(block)
 end
 
 -- Lesson files wrap their prose at a fixed width, and the pane is whatever
--- width the reader's window has. Each paragraph and each list item becomes
--- one line, for the window to wrap; fenced blocks, indented commands, table
--- rows and headings stay as written.
+-- width the reader's window has. Each paragraph and each list item (`- ` or
+-- `1. `) becomes one line, for the window to wrap; fenced blocks, indented
+-- commands, table rows and headings stay as written.
+local function item(line)
+    return line:match("^%- ") or line:match("^%d+%. ")
+end
+
 function M.reflow(lines)
     local out, fenced, open = {}, false, false
     for _, line in ipairs(lines) do
@@ -36,7 +40,7 @@ function M.reflow(lines)
             out[#out + 1], open = line, false
         elseif fenced or line == "" or line:match("^    ") or line:match("^[|#]") then
             out[#out + 1], open = line, false
-        elseif open and not line:match("^%- ") then
+        elseif open and not item(line) then
             out[#out] = out[#out] .. " " .. line:gsub("^%s+", "")
         else
             out[#out + 1], open = line, true

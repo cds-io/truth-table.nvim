@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: lesson 14's guard-clause step is two steps, translate (read the
+  function from the bottom, build its table) and simplify, and explains the
+  guard rule once, as the bottom-up reading with the guards' negations
+  coloured. Lesson prose may use numbered lists (`1. `): tutor_page.reflow
+  keeps each numbered item on a line of its own, as it does `- ` items, and
+  vellum numbers them; lessons 15 and 20 write their five stages that way.
 - Tutor: the welcome is three steps (the course and its two panes; commands
   and keys; moving around, the parts and the winbar), each under a screen,
   and the reader presses `]]` twice before any logic appears.

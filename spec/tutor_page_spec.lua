@@ -46,6 +46,13 @@ describe("tutor_page.reflow", function()
         )
     end)
 
+    it("starts a line per numbered item as well", function()
+        assert.are.same(
+            { "1. Name the checks: the smallest tests.", "2. Translate." },
+            page.reflow({ "1. Name the checks: the", "   smallest tests.", "2. Translate." })
+        )
+    end)
+
     it("leaves fenced blocks, indented commands, table rows and headings as written", function()
         local lines = {
             "Run:",

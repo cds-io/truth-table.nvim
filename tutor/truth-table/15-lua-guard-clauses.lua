@@ -18,14 +18,14 @@ return {
 
 ### The five stages
 
-- **1. Name the checks.** Find the smallest tests the code makes and give
+1. **Name the checks.** Find the smallest tests the code makes and give
   each a letter.
-- **2. Translate.** Write the code as an expression in those letters.
-- **3. Rewrite or compare.** Apply the laws, one step per line, or compare
+2. **Translate.** Write the code as an expression in those letters.
+3. **Rewrite or compare.** Apply the laws, one step per line, or compare
   expressions with a table. Use known input constraints when they matter.
-- **4. Back into Lua.** Put the tests back in place of the letters and write
+4. **Back into Lua.** Put the tests back in place of the letters and write
   the code.
-- **5. Review.** Before and after, side by side: what the change buys and
+5. **Review.** Before and after, side by side: what the change buys and
   what it costs.
 
 Press `]]` to begin the first example.
