@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: code shown in the lessons fits a 79-column pane without breaking
+  inside a word (vellum wraps a code panel character by character, 8
+  columns inside the pane): long Lua and JavaScript lines are wrapped at an
+  operator, the naming keys in lessons 16 and 18 are tighter, the reference's
+  law table is narrower, and each source is a link whose label names the
+  file and lines (the URL carries a 7-character commit). Derivations whose
+  input runs past 45 columns still push their `| by` column out; that is
+  the aligner, and lessons 12 to 15 keep theirs.
 - Tutor: lesson 14's guard-clause step is two steps, translate (read the
   function from the bottom, build its table) and simplify, and explains the
   guard rule once, as the bottom-up reading with the guards' negations

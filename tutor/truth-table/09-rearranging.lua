@@ -171,7 +171,8 @@ the wrong way: someone distributed a pull-request rule and left this.
 
 ```js
 function canMerge({ isRepoAdmin, ciPasses, hasBlockingReviews }) {
-  return (isRepoAdmin || ciPasses) && (isRepoAdmin || !hasBlockingReviews);
+  return (isRepoAdmin || ciPasses)
+    && (isRepoAdmin || !hasBlockingReviews);
 }
 ```
 

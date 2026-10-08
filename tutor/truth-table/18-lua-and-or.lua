@@ -13,14 +13,15 @@ callback receives the answer to a "go to
 definition" request, which can be one location or a list of them:
 
 ```lua
-if err or not result or (type(result) == 'table' and vim.tbl_isempty(result)) then
+if err or not result
+    or (type(result) == 'table' and vim.tbl_isempty(result)) then
   vim.notify('No definition under cursor', vim.log.levels.WARN)
   return
 end
 local loc = vim.islist(result) and result[1] or result
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/lua/lsp.lua#L112-L116
+Source: [kickstart.nvim, lua/lsp.lua, lines 112 to 116](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/lsp.lua#L112-L116)
 
 The last line is meant as "if `result` is a list then its first item, else
 `result`". The idiom has three parts, and this time the letters stand for the
@@ -102,7 +103,8 @@ where the condition holds and `x` is `false` or `nil`, even if the truthiness
 columns agree. Put the parts back in place of the letters:
 
 ```text
-c true, x false or nil      vim.islist(result) holds, and result[1] is false or nil
+c true, x false or nil    vim.islist(result) holds,
+                          and result[1] is false or nil
 ```
 
 Can that happen? There are two premises to check. The empty-table guard
@@ -133,7 +135,7 @@ config, the first operand protects the second:
 if not command_node or command_node:type() ~= 'command' then
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/lua/plugins/languages/zsh-utils.lua#L48
+Source: [kickstart.nvim, lua/plugins/languages/zsh-utils.lua, line 48](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/plugins/languages/zsh-utils.lua#L48)
 
 Commuting the two is sound as logic, and would call a method on `nil`. The
 laws are about truth values; which operand runs first is a second question,

@@ -13,13 +13,14 @@ something about the previous character rules it out:
 ```lua
 local prev = i > 1 and s:sub(i - 1, i - 1) or ''
 for _, rule in ipairs(bucket) do
-  if not (rule.needs_word_start and prev:match '[%w_]') and not (rule.not_after == prev) then
+  if not (rule.needs_word_start and prev:match '[%w_]')
+      and not (rule.not_after == prev) then
     -- try the rule at this position
   end
 end
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/ftplugin/tla.lua#L125-L127
+Source: [kickstart.nvim, ftplugin/tla.lua, lines 125 to 127](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/ftplugin/tla.lua#L125-L127)
 
 The `if` makes three tests. This time, name them yourself in the scratch
 pane: use `N`, `W` and `A`, in order of appearance, and write what each means.
@@ -37,10 +38,10 @@ you check your translation with a table; `[[` brings you back to your work.
 Compare your names with this key:
 
 ```text
-N    rule.needs_word_start     the rule applies only at the start of a word
-W    prev:match '[%w_]'        the previous character is a word character
-A    rule.not_after == prev    the previous character is the one this rule
-                               must not follow
+N    rule.needs_word_start    the rule applies only at a word start
+W    prev:match '[%w_]'       the character before is a word character
+A    rule.not_after == prev   the character before is the one the rule
+                              must not follow
 ```
 
 The scratch pane is empty. Give the expression you wrote in the previous
@@ -118,7 +119,8 @@ true when the previous character rules the rule out; call it `blocked`. With
 `∧` as `and`, `∨` as `or` and `¬` as `not`:
 
 ```lua
-local blocked = (rule.needs_word_start and prev:match '[%w_]') or rule.not_after == prev
+local blocked = (rule.needs_word_start and prev:match '[%w_]')
+  or rule.not_after == prev
 if not blocked then
   -- try the rule at this position
 end
@@ -129,10 +131,10 @@ There is nothing to run in this step.
             template = [[
 ¬((N ∧ W) ∨ A)
 
-N    rule.needs_word_start     the rule applies only at the start of a word
-W    prev:match '[%w_]'        the previous character is a word character
-A    rule.not_after == prev    the previous character is the one this rule
-                               must not follow
+N    rule.needs_word_start    the rule applies only at a word start
+W    prev:match '[%w_]'       the character before is a word character
+A    rule.not_after == prev   the character before is the one the rule
+                              must not follow
 ]],
         },
         {
@@ -146,9 +148,9 @@ What changed, by count:
 
 ```text
                         before    after
-lines                        1        2
+condition lines              2        3
 negations                    2        1
-longest line                91       88
+conditions with a name       0        1
 ```
 
 What the change buys:
@@ -179,7 +181,8 @@ argument that the two conditions agree.
 Before:
 
 ```lua
-if not (rule.needs_word_start and prev:match '[%w_]') and not (rule.not_after == prev) then
+if not (rule.needs_word_start and prev:match '[%w_]')
+    and not (rule.not_after == prev) then
   -- try the rule at this position
 end
 ```
@@ -187,7 +190,8 @@ end
 After:
 
 ```lua
-local blocked = (rule.needs_word_start and prev:match '[%w_]') or rule.not_after == prev
+local blocked = (rule.needs_word_start and prev:match '[%w_]')
+  or rule.not_after == prev
 if not blocked then
   -- try the rule at this position
 end

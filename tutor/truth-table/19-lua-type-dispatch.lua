@@ -223,7 +223,7 @@ function save(name, value, saved)
     error("cannot save a " .. kind)
   end
   if saved[value] then
-    io.write(saved[value], "\n")   -- already saved: use its previous name
+    io.write(saved[value], "\n")   -- already saved: use its name
     return
   end
   saved[value] = name
@@ -347,7 +347,7 @@ function save(name, value, saved)
     error("cannot save a " .. kind)
   end
   if saved[value] then
-    io.write(saved[value], "\n")   -- already saved: use its previous name
+    io.write(saved[value], "\n")   -- already saved: use its name
     return
   end
   saved[value] = name

@@ -22,7 +22,7 @@ else
 end
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/ftplugin/tla.lua#L160-L190
+Source: [kickstart.nvim, ftplugin/tla.lua, lines 160 to 190](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/ftplugin/tla.lua#L160-L190)
 
 `line:find` gives a position, or `nil` when there is nothing to find. The two
 tests of the `if` are built from three checks:

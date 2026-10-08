@@ -58,7 +58,7 @@ local function range_contains_pos(range, line, char)
 end
 ```
 
-Source: https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2f997a430fc6156eb97865f630961a2f6b/lua/plugins/breadcrumbs.lua#L11-L34
+Source: [kickstart.nvim, lua/plugins/breadcrumbs.lua, lines 11 to 34](https://github.com/cds-amal/kickstart.nvim/blob/2cbd7d2/lua/plugins/breadcrumbs.lua#L11-L34)
 
 The checks are the smallest tests the function makes, each of which is true
 or false on its own. Give each a letter.
@@ -131,10 +131,10 @@ Work upward from there. Each earlier guard puts its own `¬c ∧` in front of
 everything below it, in green:
 
 ```logic
-guard 4, then return true     ¬(E ∧ G) ∧ 1
-guard 3 in front of that      [:green ¬(S ∧ L) ∧] (¬(E ∧ G) ∧ 1)
-guard 2 in front of that      [:green ¬(B ∨ A) ∧] (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1))
-guard 1 in front of that      [:green ¬¬R ∧] (¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1)))
+guard 4, then true   ¬(E ∧ G) ∧ 1
+guard 3 in front     [:green ¬(S ∧ L) ∧] (¬(E ∧ G) ∧ 1)
+guard 2 in front     [:green ¬(B ∨ A) ∧] (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1))
+guard 1 in front     [:green ¬¬R ∧] (¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E ∧ G) ∧ 1)))
 ```
 
 Guard 1 tests `not range`, so its `c` is `¬R`, and negating that gives `¬¬R`.
