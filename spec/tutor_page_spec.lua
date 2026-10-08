@@ -236,29 +236,44 @@ describe("tutor_page.render with spans", function()
 end)
 
 -- A lesson's part is the one the last lesson at or before it opened. The
--- bar has a cell per lesson, filled for the `done` lessons the reader has
--- moved past.
+-- bar has a cell per lesson, coloured by state: the lessons up to `furthest`
+-- visited, the one shown current, the rest ahead.
 describe("tutor_page.progress", function()
     local course = {
         { part = "Tables", title = "First", aim = "A.", steps = { { text = "Read.\n" } } },
         { title = "Between", aim = "B.", steps = { { text = "Read.\n" } } },
         { part = "Rewriting", title = "Third", aim = "C.", steps = { { text = "Read.\n" }, { text = "Read.\n" } } },
     }
+    local visited, current, ahead = "%#TruthTableTutorVisited#", "%#TruthTableTutorCurrent#", "%#TruthTableTutorAhead#"
 
-    it("is the bar, the lesson and step, and the part, in winbar format", function()
+    it("is the bar by state, the lesson and step, and the part, in winbar format", function()
         assert.are.equal(
-            "█░░ lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
-            page.progress(course, { lesson = 2, step = 1, done = 1 })
+            current .. "█" .. ahead .. "██%* lesson 1 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            page.progress(course, { lesson = 1, step = 1, furthest = 1 })
         )
         assert.are.equal(
-            "███ lesson 3 of 3, step 2 of 2 %<%=Part 2 of 2: Rewriting",
-            page.progress(course, { lesson = 3, step = 2, done = 3 })
+            visited .. "█" .. current .. "█" .. visited .. "█%* lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            page.progress(course, { lesson = 2, step = 1, furthest = 3 })
+        )
+        assert.are.equal(
+            visited .. "██" .. current .. "█%* lesson 3 of 3, step 2 of 2 %<%=Part 2 of 2: Rewriting",
+            page.progress(course, { lesson = 3, step = 2, furthest = 3 })
         )
     end)
 
     it("doubles a % in a part's name, which the winbar would otherwise read", function()
         local odd = { { part = "100% logic", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
-        assert.are.equal("░ lesson 1 of 1, step 1 of 1 %<%=Part 1 of 1: 100%% logic", page.progress(odd, { lesson = 1, step = 1, done = 0 }))
+        assert.are.equal(
+            current .. "█%* lesson 1 of 1, step 1 of 1 %<%=Part 1 of 1: 100%% logic",
+            page.progress(odd, { lesson = 1, step = 1, furthest = 1 })
+        )
+    end)
+
+    it("names a highlight group per state, with a default link", function()
+        for _, state in ipairs({ "visited", "current", "ahead" }) do
+            assert.are.equal("string", type(page.STATES[state].group), state)
+            assert.are.equal("string", type(page.STATES[state].link), state)
+        end
     end)
 end)
 

@@ -96,21 +96,11 @@ local function expected_marks(marked)
     return marks
 end
 
--- The lessons the reader has moved past, for a reader who has been no
--- further than this step: the ones before its lesson, or every lesson from
--- the course's last step.
-local function done_at(lesson, step)
-    if lesson == #course and step == #course[#course].steps then
-        return #course
-    end
-    return lesson - 1
-end
-
 -- The reader is at this lesson and step: the lesson pane shows it, on the
--- left, with `done` lessons moved past (by default, what reaching this step
--- alone makes) in its winbar, and the cursor is in the scratch pane, which
--- has no winbar.
-local function at(lesson, step, done)
+-- left, with the lessons up to `furthest` (this one, unless the reader has
+-- been further) visited in its winbar, and the cursor is in the scratch
+-- pane, which has no winbar.
+local function at(lesson, step, furthest)
     local label = ("lesson %d step %d"):format(lesson, step)
     local lesson_win, lesson_buf = pane("lesson")
     local scratch_win, scratch_buf = pane("scratch")
@@ -128,7 +118,7 @@ local function at(lesson, step, done)
     assert.are.equal(scratch_win, vim.api.nvim_get_current_win(), label .. ": current window")
     local markdown, marked = page.render(course, { lesson = lesson, step = step })
     assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
-    local place = { lesson = lesson, step = step, done = done or done_at(lesson, step) }
+    local place = { lesson = lesson, step = step, furthest = furthest or lesson }
     assert.are.equal(page.progress(course, place), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
     assert.are.equal("", vim.wo[scratch_win].winbar, label .. ": scratch winbar")
     assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
@@ -505,7 +495,9 @@ return {
             assert.are.equal("DiagnosticError", vim.api.nvim_get_hl(0, { name = red }).link)
         end)
         vim.cmd("TruthTableTutor!")
-        for _, entry in ipairs(spans.PALETTE) do
+        local groups = vim.list_extend(vim.deepcopy(spans.PALETTE), vim.tbl_values(page.STATES))
+        assert.are.equal(#spans.PALETTE + 3, #groups)
+        for _, entry in ipairs(groups) do
             local hl = vim.api.nvim_get_hl(0, { name = entry.group })
             if entry.group == red then
                 assert.are.equal(0xff0000, hl.fg)
@@ -584,7 +576,7 @@ describe("working through the course", function()
         for _ = 1, #course[#course].steps do
             vim.cmd("TruthTableTutorNext")
         end
-        at(#course, #course[#course].steps, #course)
+        at(#course, #course[#course].steps)
         assert.are.equal(1, #warnings, vim.inspect(warnings))
         assert.is_truthy(warnings[1]:find("last step", 1, true), warnings[1])
     end)
@@ -624,7 +616,7 @@ describe("the reader's place", function()
         vim.cmd("TruthTableTutorPrev")
         vim.cmd("TruthTableTutorPrev")
         assert.are.same({ at = { lesson = 5, step = #course[5].steps }, furthest = { lesson = 6, step = 2 } }, saved())
-        at(5, #course[5].steps, 5)
+        at(5, #course[5].steps, 6)
     end)
 
     it("is where the reader left off, after a restart", function()
@@ -634,29 +626,29 @@ describe("the reader's place", function()
         vim.cmd("TruthTableTutorPrev")
         restart()
         vim.cmd("TruthTableTutor")
-        at(5, #course[5].steps, 5)
+        at(5, #course[5].steps, 6)
         assert.are.same(starting_text(5, #course[5].steps), text("scratch"))
         vim.cmd("TruthTableTutorNext")
-        at(6, 1, 5)
+        at(6, 1)
     end)
 
-    it("is the first step, with nothing done, after ! and after a restart from that", function()
+    it("is the first step, with nothing visited, after ! and after a restart from that", function()
         vim.cmd("TruthTableTutor 6")
         restart()
         vim.cmd("TruthTableTutor!")
-        at(1, 1, 0)
+        at(1, 1)
         restart()
         vim.cmd("TruthTableTutor")
-        at(1, 1, 0)
+        at(1, 1)
     end)
 
     it("is the first step when there is no file, or one that cannot be read", function()
         vim.cmd("TruthTableTutor")
-        at(1, 1, 0)
+        at(1, 1)
         restart()
         vim.fn.writefile({ "{ not json" }, tutor.state_file)
         vim.cmd("TruthTableTutor")
-        at(1, 1, 0)
+        at(1, 1)
         assert.are.same({}, warnings)
     end)
 

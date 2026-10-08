@@ -624,9 +624,12 @@ and your work is still there when you return to a step. Running
 
 The course is in four parts (tables, rewriting, code, and a reference). The
 lesson pane's winbar, the line above its text, which stays while the lesson
-scrolls, shows a bar with a cell per lesson, filled for the lessons you have
-moved past, then the lesson and step, then the part (the part goes first when
-the pane is too narrow for all three). Your place, with the furthest step
+scrolls, shows a bar with a cell per lesson, coloured by state (green for the
+lessons you have been to, yellow for the one shown, grey for those ahead, as
+the groups `TruthTableTutorVisited`, `TruthTableTutorCurrent` and
+`TruthTableTutorAhead`, linked by default to `DiagnosticOk`, `DiagnosticWarn`
+and `NonText`), then the lesson and step, then the part (the part goes first
+when the pane is too narrow for all three). Your place, with the furthest step
 you have reached, is saved on every move to `truth-table/tutor.json` under
 `stdpath("state")` (`~/.local/state/nvim` on Linux and macOS), so
 `:TruthTableTutor` in a new Neovim opens where you stopped. The scratch
@@ -657,7 +660,9 @@ The colours are blue, red, green and yellow, as the groups
 `TruthTableTutorBlue`, `TruthTableTutorRed`, `TruthTableTutorGreen` and
 `TruthTableTutorYellow`, linked by default to `DiagnosticInfo`,
 `DiagnosticError`, `DiagnosticOk` and `DiagnosticWarn`; one you define before
-the tutor opens stands. The markers come out before the text is shown, and the
+the tutor opens stands, as does one of the progress bar's three groups
+(`TruthTableTutorVisited`, `TruthTableTutorCurrent`, `TruthTableTutorAhead`).
+The markers come out before the text is shown, and the
 span is painted in both panes (in the scratch pane it moves with your edits).
 Brackets inside a span pair up, so `[:blue result[1]]` ends at the second `]`.
 A span inside a span, one outside a logic block or in `expect`, a colour not in

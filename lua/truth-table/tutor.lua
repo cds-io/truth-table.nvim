@@ -130,19 +130,18 @@ local function load(fresh)
     return { course = course, steps = steps, index = index, at = at, furthest = furthest, scratch = {} }
 end
 
--- The lessons the reader has moved past: those before the furthest step's
--- lesson, or every lesson once the furthest step is the course's last.
-local function done()
-    if session.furthest == #session.steps then
-        return #session.course
-    end
-    return session.steps[session.furthest].lesson - 1
+-- The last lesson the reader has been to.
+local function visited()
+    return session.steps[session.furthest].lesson
 end
 
--- The colour spans' highlight groups, as defaults: one the reader defines
--- stands.
+-- The colour spans' and the progress bar's highlight groups, as defaults:
+-- one the reader defines stands.
 local function palette()
     for _, entry in ipairs(spans.PALETTE) do
+        vim.api.nvim_set_hl(0, entry.group, { default = true, link = entry.link })
+    end
+    for _, entry in pairs(page.STATES) do
         vim.api.nvim_set_hl(0, entry.group, { default = true, link = entry.link })
     end
 end
@@ -257,7 +256,7 @@ local function draw(win)
     for name, value in pairs(pane.options) do
         vim.api.nvim_set_option_value(name, value, { win = win, scope = "local" })
     end
-    local progress = page.progress(session.course, { lesson = at.lesson, step = at.step, done = done() })
+    local progress = page.progress(session.course, { lesson = at.lesson, step = at.step, furthest = visited() })
     vim.api.nvim_set_option_value("winbar", progress, { win = win, scope = "local" })
     vim.api.nvim_win_call(win, function()
         vim.fn.winrestview(view)

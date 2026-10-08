@@ -53,9 +53,9 @@ The course in four parts:
 - Reference, lesson 19: every law and command on one page.
 
 The line above this pane says where you are, and stays put while the lesson
-scrolls: a bar with a cell per lesson, filled for the lessons you have moved
-past, then the lesson and step, then the part. Your place outlives Neovim:
-`:TruthTableTutor` tomorrow opens
+scrolls: a bar with a cell per lesson (green for the lessons you have been
+to, yellow for this one, grey for those ahead), then the lesson and step,
+then the part. Your place outlives Neovim: `:TruthTableTutor` tomorrow opens
 where you stopped today. The scratch panes last as long as Neovim does, so
 finish an exercise before you quit, or do it again.
 

@@ -418,10 +418,13 @@ it; running a different rewrite command replaces it.
     reset and the lesson files are read again.
 
     The course is in four parts. The lesson pane's 'winbar', which stays
-    while the lesson scrolls, shows a bar with a cell per lesson, filled for
-    the lessons you have moved past, then the lesson and step, then the part
-    (the first to go when the pane is too narrow for all three). Your place,
-    with the furthest step you have reached, is saved on
+    while the lesson scrolls, shows a bar with a cell per lesson, coloured
+    by state (green for the lessons you have been to, yellow for the one
+    shown, grey for those ahead: the groups TruthTableTutorVisited,
+    TruthTableTutorCurrent and TruthTableTutorAhead, linked by default to
+    DiagnosticOk, DiagnosticWarn and NonText), then the lesson and step,
+    then the part (the first to go when the pane is too narrow for all
+    three). Your place, with the furthest step you have reached, is saved on
     every move to truth-table/tutor.json in the state directory (|stdpath()|
     with "state"), so the command in a new Neovim opens where you stopped;
     the scratch buffers live as long as their Neovim does. [!] saves the
@@ -458,7 +461,8 @@ it; running a different rewrite command replaces it.
     TruthTableTutorBlue, TruthTableTutorRed, TruthTableTutorGreen and
     TruthTableTutorYellow, linked by default to DiagnosticInfo,
     DiagnosticError, DiagnosticOk and DiagnosticWarn; one you define before
-    the tutor opens, or in a ColorScheme autocommand, stands. The markers
+    the tutor opens, or in a ColorScheme autocommand, stands, as does one of
+    the progress bar's three groups. The markers
     come out before the text is shown, and the span is painted in both
     panes; in the scratch pane it moves with your edits. Inside a span,
     brackets pair up, so `[:blue result[1]]` ends at the second `]`. A span

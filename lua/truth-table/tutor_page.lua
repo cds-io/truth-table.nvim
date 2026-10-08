@@ -113,16 +113,39 @@ local function part_of(course, lesson_index)
     return number, count, name
 end
 
+-- The progress bar's cells by state, each a highlight group with its default
+-- link: the lessons the reader has visited, the one shown, and those ahead.
+M.STATES = {
+    visited = { group = "TruthTableTutorVisited", link = "DiagnosticOk" },
+    current = { group = "TruthTableTutorCurrent", link = "DiagnosticWarn" },
+    ahead = { group = "TruthTableTutorAhead", link = "NonText" },
+}
+
 -- The lesson pane's winbar for one step: a bar with a cell per lesson,
--- filled for the `done` lessons the reader has moved past, the lesson and
--- step, and the part, set to the right and the first to go when the pane
--- is too narrow for all of it. In the winbar's own format, so a `%` in a
--- part's name is doubled.
+-- coloured by state (visited means reached: `furthest` is the last lesson
+-- the reader has been to), the lesson and step, and the part, set to the
+-- right and the first to go when the pane is too narrow for all of it. In
+-- the winbar's own format, so a `%` in a part's name is doubled.
 function M.progress(course, place)
     local number, count, name = part_of(course, place.lesson)
-    local bar = ("█"):rep(place.done) .. ("░"):rep(#course - place.done)
-    return ("%s lesson %d of %d, step %d of %d %%<%%=Part %d of %d: %s"):format(
-        bar, place.lesson, #course, place.step, #course[place.lesson].steps, number, count, (name:gsub("%%", "%%%%"))
+    local cells, state = {}, nil
+    for index = 1, #course do
+        local now = index == place.lesson and "current" or index <= place.furthest and "visited" or "ahead"
+        if now ~= state then
+            state = now
+            cells[#cells + 1] = "%#" .. M.STATES[state].group .. "#"
+        end
+        cells[#cells + 1] = "█"
+    end
+    return ("%s%%* lesson %d of %d, step %d of %d %%<%%=Part %d of %d: %s"):format(
+        table.concat(cells),
+        place.lesson,
+        #course,
+        place.step,
+        #course[place.lesson].steps,
+        number,
+        count,
+        (name:gsub("%%", "%%%%"))
     )
 end
 
