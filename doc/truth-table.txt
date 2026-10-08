@@ -417,6 +417,10 @@ it; running a different rewrite command replaces it.
     lesson's first step. With [!] the course starts over: every scratch is
     reset and the lesson files are read again.
 
+    Every key a lesson names starts with `<leader>tt`; with which-key.nvim
+    installed, pressing that much and pausing lists the rest, each with what
+    it does. The first lesson says how to read a key like `<leader>ttn`.
+
     With vellum.nvim installed, the lesson pane shows the step rendered:
     prose wrapped to the pane's width (100 columns at most), code in shaded
     panels, in your colorscheme's colours, with no line numbers or sign

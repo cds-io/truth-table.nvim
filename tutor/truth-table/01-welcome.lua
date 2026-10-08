@@ -1,6 +1,6 @@
 return {
     title = "Finding your way around",
-    aim = "Learn the tutor's two panes and how to move from step to step.",
+    aim = "Learn the tutor's two panes, how its keys are written, and how to move from step to step.",
     steps = {
         {
             text = [=[
@@ -21,6 +21,17 @@ The tutor has two panes:
   yours to edit: `u` undoes back to the starting text, and every step keeps
   its own scratch, so your work is still there when you come back to it.
 
+Commands and keys:
+
+A command is given as `:Command`, with its default key after it in
+parentheses: `:.TruthTable` (`<leader>ttn`). The key is a sequence: press your
+leader key, let it go, then `t`, `t`, `n`. `<leader>` is Neovim's name for the
+key you set aside as the prefix of your own mappings: `\` out of the box,
+Space in LazyVim and most other distributions. `:echo get(g:, "mapleader", '\')`
+prints yours. Every key in this course starts with `<leader>tt`, so with
+which-key installed you can press that much and pause: the popup lists the
+rest, each with what it does.
+
 Moving around:
 
 - `:TruthTableTutorNext` (`]]` in either pane) goes to the next step, and
@@ -29,10 +40,6 @@ Moving around:
 - `:TruthTableTutor` brings you back to your place from anywhere, with your
   work intact. `:TruthTableTutor!` starts the course over with every scratch
   reset.
-
-Commands are given as `:Command`, with the default key in parentheses. The
-keys all start with `<leader>tt` (`<leader>` is `\` unless you have set
-`mapleader`).
 
 Press `]]` to begin.
 ]=],

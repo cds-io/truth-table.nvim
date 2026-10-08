@@ -622,6 +622,12 @@ and your work is still there when you return to a step. Running
 `:TruthTableTutor` again brings you back to your place from anywhere;
 `:TruthTableTutor!` starts the course over.
 
+Every key a lesson names starts with `<leader>tt`. With
+[which-key.nvim](https://github.com/folke/which-key.nvim) installed, pressing
+that much and pausing lists the rest, each with what it does, which is worth
+having while the keys are new; the first lesson says how to read a key like
+`<leader>ttn` and how to find your leader.
+
 The course is data: one Lua table per lesson in `tutor/truth-table/`, read in
 file-name order. A lesson is a `title`, an `aim`, and a list of `steps`, each
 with its `text`, the scratch pane's `template`, the `expect`ed result, a `note`

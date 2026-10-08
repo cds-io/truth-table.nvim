@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the welcome lesson says how to read a key like `<leader>ttn` (press
+  the leader, then `t`, `t`, `n`), what `<leader>` is and how to find yours,
+  and that with which-key installed `<leader>tt` and a pause lists the rest.
+  The README's Tutorial section and the help entry say the same.
 - While a rewrite preview is pending, <Space> applies it in place and <CR>
   writes it as a ≡ step. The keys are buffer-local and transient: they appear
   when a preview locks, act from anywhere in the buffer, and go when the
