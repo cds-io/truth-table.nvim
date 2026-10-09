@@ -196,7 +196,7 @@ lists or blockquotes are not supported.
     aligner is its own listener.
 
                                                             *:TruthTableVerify*
-:TruthTableVerify
+:TruthTableVerify[!]
     Judge every ≡ step of the derivation under the cursor against the side
     before it, over every assignment of the variables either side mentions.
     When every step holds, say so with the count. Otherwise show the first
@@ -204,7 +204,10 @@ lists or blockquotes are not supported.
     that opens it overlaid with ≢ (the text is not changed), and the
     breaking assignment notified as `step 2: a=0, b=1 gives 0 ≢ 1`. The
     marks go on the next edit. The `| by` justification is not read; a side
-    with a column reference (:h2) is refused.
+    with a column reference (:h2) is refused. With !, the proof goes in
+    below the derivation as well: a truth table over the chain's variables
+    with one column per side, the columns identical exactly when the sides
+    are equivalent, and a failing side's cell lit at the breaking row.
 
                                                            *:TruthTableFactor*
 :TruthTableFactor
@@ -605,6 +608,7 @@ Examples: >
     <leader>ttz   |:TruthTableSimplify|
     <leader>ttl   |:TruthTableRewrites|  (list)
     <leader>ttv   |:TruthTableVerify|  (verify)
+    <leader>ttV   |:TruthTableVerify| with !  (the proof table too)
   Apply ~
     <leader>tta   |:TruthTableApply|
     <leader>ttA   |:TruthTableApplyStep|

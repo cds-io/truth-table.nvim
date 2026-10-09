@@ -4,6 +4,7 @@
 vim.opt.rtp:append(vim.fn.getcwd())
 require("truth-table").setup()
 
+local markdown = require("truth-table.markdown")
 local NAMESPACE = "truth-table.verdict"
 
 local function marks()
@@ -25,6 +26,10 @@ local function shown()
         end
     end
     return lit, overlays
+end
+
+local function lines()
+    return vim.api.nvim_buf_get_lines(0, 0, -1, false)
 end
 
 local function set(content, row, col)
@@ -130,5 +135,72 @@ describe(":TruthTableVerify", function()
         end
         assert.is_truthy(found)
         assert.are.equal("Rewrite: verify the derivation", found.desc)
+    end)
+end)
+
+describe(":TruthTableVerify!", function()
+    it("inserts the proof table below a derivation whose steps hold: one column per side, all equal", function()
+        set({ "(a ∧ b) ∨ (¬a ∧ b)", "≡ b ∧ (a ∨ ¬a)", "≡ b" })
+        vim.cmd("TruthTableVerify!")
+        local got = lines()
+        assert.are.same({ "(a ∧ b) ∨ (¬a ∧ b)", "≡ b ∧ (a ∨ ¬a)", "≡ b", "" }, vim.list_slice(got, 1, 4))
+        local tbl = assert(markdown.parse_table_lines(vim.list_slice(got, 5)))
+        assert.are.same({ "a", "b", "(a ∧ b) ∨ (¬a ∧ b)", "b ∧ (a ∨ ¬a)" }, tbl.headers)
+        assert.are.equal(4, #tbl.rows)
+        for _, row in ipairs(tbl.rows) do
+            assert.are.equal(row[2], row[3])
+            assert.are.equal(row[2], row[4])
+        end
+        assert.are.equal("every step holds (2 steps)", notified)
+        assert.are.equal(0, #marks())
+    end)
+
+    it("lights the failing conclusion's cell at the breaking row, beside the derivation's own marks", function()
+        set({ "a ∨ b", "≡ a ∨ (b ∧ a)", "≡ a" })
+        vim.cmd("TruthTableVerify!")
+        local got = lines()
+        local tbl = assert(markdown.parse_table_lines(vim.list_slice(got, 5)))
+        assert.are.same({ "a", "b", "a ∨ b", "a ∨ (b ∧ a)" }, tbl.headers)
+        local lit = shown()
+        assert.are.same({
+            { row = 2, text = "a ∨ (b ∧ a)", group = "TruthTableConsumed" },
+            { row = 8, text = "0", group = "TruthTableConsumed" },
+        }, lit)
+        assert.are.same({ 0, 1, 1, 0 }, tbl.rows[2])
+        assert.are.equal("step 1: a=0, b=1 gives 1 ≢ 0", notified)
+    end)
+
+    it("lights the variable's own column when the failing conclusion is a bare variable", function()
+        set({ "a ∧ b", "≡ b ∧ a", "≡ b" })
+        vim.cmd("TruthTableVerify!")
+        local got = lines()
+        local tbl = assert(markdown.parse_table_lines(vim.list_slice(got, 5)))
+        assert.are.same({ "a", "b", "a ∧ b", "b ∧ a" }, tbl.headers)
+        local lit = shown()
+        assert.are.same({ row = 8, text = "1", group = "TruthTableConsumed" }, lit[2])
+        assert.are.equal("step 2: a=0, b=1 gives 0 ≢ 1", notified)
+    end)
+
+    it("keeps the block's indentation, inserts below the whole block, and leaves what follows", function()
+        set({ "  a ∧ b", "  ≡ b ∧ a", "after" }, 1)
+        vim.cmd("TruthTableVerify!")
+        local got = lines()
+        assert.are.equal("  ≡ b ∧ a", got[2])
+        assert.are.equal("", got[3])
+        assert.is_truthy(got[4]:find("^  |", 1, false))
+        assert.are.equal("after", got[#got])
+        assert.is_truthy(got[#got - 1]:find("^  |", 1, false))
+    end)
+
+    it("keeps the marks it painted after inserting, and clears them on the next edit", function()
+        set({ "a ∨ b", "≡ a" })
+        vim.cmd("TruthTableVerify!")
+        vim.wait(50)
+        assert.are.equal(3, #marks())
+        vim.api.nvim_buf_set_lines(0, 0, 1, false, { "b ∨ a" })
+        vim.wait(100, function()
+            return #marks() == 0
+        end)
+        assert.are.equal(0, #marks())
     end)
 end)
