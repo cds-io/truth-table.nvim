@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableEquiv[!] {exprs}, and :[range]TruthTableEquiv[!] over the
+  selected lines, judges two or more expressions as a chain, each against
+  the one before it: "equivalent (N expressions)", or the first pair that
+  differs with the assignment; ! inserts the proof table below the line or
+  the selection with the differing cell lit. The verdict and the proof
+  are the derivation check's.
 - :TruthTableVerify! (<leader>ttV) inserts the proof below the derivation
   as well: a truth table over the chain's variables with one column per
   side, the columns identical exactly when the sides are equivalent, and a

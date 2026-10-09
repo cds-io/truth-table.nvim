@@ -143,6 +143,8 @@ Start with small expressions.
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
 | `:TruthTableVerify[!]` | Verify every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported (`!`: insert the proof table below as well) |
+| `:TruthTableEquiv[!] {exprs}` | Are these expressions, separated by `\|` or `,`, all equivalent? Name the first pair that differs and the assignment (`!`: insert the proof table below) |
+| `:[range]TruthTableEquiv[!]` | Same, reading the expressions from the selected lines, one per line |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -462,6 +464,15 @@ are equivalent exactly when their columns are identical, row for row; when a
 step fails, the failing side's cell at the breaking row is lit, the same row
 the notification names. A side that is a bare variable names the column that
 is already there.
+
+The same question about expressions that are not a derivation yet is
+`:TruthTableEquiv`: `:TruthTableEquiv a ∧ b | b ∧ a` says `equivalent (2
+expressions)`, and `:TruthTableEquiv a ∨ b, a` says `expressions 1 and 2
+differ at a=0, b=1: 1 ≢ 0`. Three or more are judged each against the one
+before it, which is what "all equivalent" means (a nested `⇔` is not: it is
+true whenever an even number of its arguments are false). With a range and no
+argument the selected lines are the expressions, one per line, and `!`
+inserts the proof table below the line or the selection.
 
 ```text
 a ∨ b

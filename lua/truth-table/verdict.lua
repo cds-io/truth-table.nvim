@@ -2,9 +2,11 @@
 -- conclusion lit in the consumed group, its ≡ overlaid with ≢, and the
 -- breaking assignment notified. With the proof, a truth table over the
 -- chain's variables with one column per side goes in below the block, and
--- a failing conclusion's cell is lit at the breaking row. The derivation's
--- text is not touched; the marks go on the next change to the buffer, or
--- when the check runs again. check.lua judges; this paints.
+-- a failing conclusion's cell is lit at the breaking row. The same verdict
+-- and proof serve a list of expressions given as an argument or as
+-- selected lines (equiv). The derivation's text is not touched; the marks
+-- go on the next change to the buffer, or when the check runs again.
+-- check.lua judges; this paints.
 local check = require("truth-table.check")
 local core = require("truth-table.core")
 local derivation = require("truth-table.derivation")
@@ -112,6 +114,50 @@ local function show_proof(buf, last, indent, verdict)
     local first, final = markdown.heading_cell(lines[3 + row], column)
     local cell = write.lit({ row = at, col = first - 1 }, { { 0, final - first + 1 } }, write.CONSUMED_GROUP)
     remember(buf, marks.paint(buf, namespace, cell))
+end
+
+-- Judge `exprs`, two or more expression texts, as a chain, each against
+-- the one before it, and notify the verdict: equivalent, or the first pair
+-- that differs with the assignment. With `with_proof`, the table goes in
+-- below row `below` (from one) of `buf`, at `indent`, its differing cell
+-- lit. The expressions are an argument or plain lines, so nothing else is
+-- marked.
+function M.equiv(buf, exprs, below, indent, with_proof)
+    if buf == 0 then
+        buf = vim.api.nvim_get_current_buf()
+    end
+    if #exprs < 2 then
+        vim.notify("Give two or more expressions to compare", vim.log.levels.WARN)
+        return
+    end
+    vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
+    shown[buf] = nil
+    local verdict, err = check.check(exprs)
+    if not verdict then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+    end
+    watch(buf)
+    if with_proof then
+        local refused = show_proof(buf, below, indent, verdict)
+        if refused then
+            vim.notify(refused, vim.log.levels.WARN)
+        end
+    end
+    if verdict.ok then
+        vim.notify("equivalent (" .. #exprs .. " expressions)", vim.log.levels.INFO)
+        return
+    end
+    local parts = {}
+    for i, bound in ipairs(verdict.assignment) do
+        parts[i] = bound.name .. "=" .. bound.value
+    end
+    local values = verdict.premise .. " " .. SYMBOLS.NOT_EQUIV.unicode .. " " .. verdict.conclusion
+    local where = #parts > 0 and (" at " .. table.concat(parts, ", ")) or ""
+    vim.notify(
+        "expressions " .. verdict.step .. " and " .. (verdict.step + 1) .. " differ" .. where .. ": " .. values,
+        vim.log.levels.WARN
+    )
 end
 
 -- Judge the derivation holding `row` (from one) in `buf` and show the

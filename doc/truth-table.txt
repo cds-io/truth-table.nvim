@@ -209,6 +209,18 @@ lists or blockquotes are not supported.
     with one column per side, the columns identical exactly when the sides
     are equivalent, and a failing side's cell lit at the breaking row.
 
+                                                             *:TruthTableEquiv*
+:TruthTableEquiv[!] {exprs}
+:[range]TruthTableEquiv[!]
+    Are these expressions all equivalent? The expressions are the argument,
+    separated by | or , as :TruthTable reads them, or with a range and no
+    argument the selected lines, one per line. Each is judged against the
+    one before it over every assignment of their variables: `equivalent (2
+    expressions)`, or `expressions 1 and 2 differ at a=0, b=1: 1 ≢ 0` for
+    the first pair that differs. With !, the proof table goes in below the
+    line or the selection, its differing cell lit. Two or more expressions
+    are needed; a column reference is refused.
+
                                                            *:TruthTableFactor*
 :TruthTableFactor
     Toggle a preview that pulls the operand under the cursor out of every term
