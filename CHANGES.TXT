@@ -1,6 +1,9 @@
 truth-table.nvim changes
 ========================
 
+- rewrite.lua: `sites(ast)` lists where a collapsing law can apply and
+  makes its own list, as trees.operands and predicate.variables do; the
+  recursion is an inner `visit`.
 - predicate.lua: a token carries the bytes it was read from, as `span`, so
   `tokenize` answers the tokens or nil and the reason, and `parse_predicate`
   places every error by a byte, taking the byte after the source as an

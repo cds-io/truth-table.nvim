@@ -646,20 +646,25 @@ local CHAIN_LAWS = {
 }
 
 -- Where a collapsing law can apply: every ¬, and the root of every ∧ or ∨
--- chain, innermost first.
-local function sites(node, parent_op, out)
-    if node.type == "paren" then
-        return sites(node.expr, parent_op, out)
-    elseif node.type == "not" then
-        sites(node.operand, nil, out)
-        out[#out + 1] = node
-    elseif node.left then
-        sites(node.left, node.type, out)
-        sites(node.right, node.type, out)
-        if DUAL[node.type] and parent_op ~= node.type then
+-- chain, innermost first. The nodes are the tree's own, so a caller can
+-- match them by identity.
+local function sites(ast)
+    local out = {}
+    local function visit(node, parent_op)
+        if node.type == "paren" then
+            visit(node.expr, parent_op)
+        elseif node.type == "not" then
+            visit(node.operand, nil)
             out[#out + 1] = node
+        elseif node.left then
+            visit(node.left, node.type)
+            visit(node.right, node.type)
+            if DUAL[node.type] and parent_op ~= node.type then
+                out[#out + 1] = node
+            end
         end
     end
+    visit(ast, nil)
     return out
 end
 
@@ -745,7 +750,7 @@ local function simplify(ast, byte)
         return true
     end
 
-    local all = sites(ast, nil, {})
+    local all = sites(ast)
     local passes = {
         { within = around, focus = on_path },
         { within = inside },
@@ -801,7 +806,7 @@ function M.moves(ast)
         end
     end
 
-    for _, site in ipairs(sites(ast, nil, {})) do
+    for _, site in ipairs(sites(ast)) do
         for _, collapsed in ipairs(collapses(site)) do
             add(draft_collapse(ast, site, collapsed))
         end
