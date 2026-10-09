@@ -259,7 +259,8 @@ uses bits.
 
 Put the cursor on an expression-only line, or anywhere in a truth-table column,
 and run `:TruthTableDeMorgan`. Virtual text shows the rewritten expression; run
-it again to dismiss the preview, even after moving the cursor. `:TruthTableApply` replaces the expression or
+it again at the same place to dismiss the preview, or after moving the cursor
+to preview there instead. `:TruthTableApply` replaces the expression or
 selected header (`:TruthTableDeMorganApply` is an alias). Indentation is preserved. Table separator and data lines remain
 unchanged, and a heading collision is rejected.
 

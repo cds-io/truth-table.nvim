@@ -165,8 +165,9 @@ lists or blockquotes are not supported.
     is declined.
     The virtual text appears at the end of the expression line or header row,
     identifying the selected table column. One preview is kept per buffer. Run
-    again to dismiss, even after moving the cursor. Apply acts on the saved
-    target in the current buffer. Buffer edits invalidate the preview.
+    again at the same place to dismiss, or after moving the cursor to preview
+    there instead. Apply acts on the saved target in the current buffer.
+    Buffer edits invalidate the preview.
     Both ends of the rewrite are lit. While the preview is pending, the
     terms the law takes are lit on the line in TruthTableConsumed (a
     default link to DiagnosticWarn): the operands a commute moves, each
@@ -381,8 +382,10 @@ group; the side is named so that a step says which command wrote it),
 line everything from the first | on is a remark: a rewrite reads the
 expression before it, and a cursor in the remark means the line's last side.
 
-One preview is pending per buffer. Running its own command again dismisses
-it; running a different rewrite command replaces it.
+One preview is pending per buffer. A rewrite command resolves its preview
+at the cursor first: the same preview as the pending one (the same text on
+the same line) dismisses it, and any other replaces it. A command that finds
+nothing at the cursor says so and leaves the pending preview as it was.
 
                                                            *:TruthTableToggle*
 :TruthTableToggle

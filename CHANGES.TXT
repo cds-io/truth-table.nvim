@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- A rewrite command resolves its preview at the cursor first: the same
+  preview as the pending one (the same text on the same line) dismisses
+  it, and any other replaces it, so the same key after moving the cursor
+  previews at the new place in one press and :TruthTableCommute! after
+  :TruthTableCommute shows the other swap. A command that finds nothing at
+  the cursor leaves the pending preview as it was.
 - De Morgan reads a run of one operator as a flat list, whatever its
   parentheses: ¬(A ∧ B ∧ C) expands to ¬A ∨ ¬B ∨ ¬C in one step, and
   ¬A ∨ ¬B ∨ ¬C contracts to ¬(A ∧ B ∧ C) from any of its operands. In a
