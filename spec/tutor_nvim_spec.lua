@@ -221,6 +221,21 @@ describe("the course", function()
         end
     end)
 
+    -- The reference is the last lesson, and it names every user command the
+    -- plugin registers, so a command added without its line fails here.
+    it("names every user command in the reference", function()
+        local text = {}
+        for _, step in ipairs(course[#course].steps) do
+            text[#text + 1] = step.text
+        end
+        text = table.concat(text, "\n")
+        for name in pairs(vim.api.nvim_get_commands({})) do
+            if name:find("^TruthTable") then
+                assert.is_truthy(text:find(":" .. name, 1, true), name .. " is not in the reference")
+            end
+        end
+    end)
+
     -- A law is `left ≡ right` on a line of a fenced block in a step's text; a
     -- line may hold several, two or more spaces apart (the reference lists each
     -- law beside its dual, after its name). The ≡ signs on a line say how many

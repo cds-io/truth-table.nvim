@@ -2,12 +2,15 @@
 :TruthTableAlign	truth-table.txt	/*:TruthTableAlign*
 :TruthTableApply	truth-table.txt	/*:TruthTableApply*
 :TruthTableApplyStep	truth-table.txt	/*:TruthTableApplyStep*
+:TruthTableCNF	truth-table.txt	/*:TruthTableCNF*
 :TruthTableCommute	truth-table.txt	/*:TruthTableCommute*
+:TruthTableDNF	truth-table.txt	/*:TruthTableDNF*
 :TruthTableDeMorgan	truth-table.txt	/*:TruthTableDeMorgan*
 :TruthTableDeMorganApply	truth-table.txt	/*:TruthTableDeMorganApply*
 :TruthTableDistribute	truth-table.txt	/*:TruthTableDistribute*
 :TruthTableDropColumn	truth-table.txt	/*:TruthTableDropColumn*
 :TruthTableDropRow	truth-table.txt	/*:TruthTableDropRow*
+:TruthTableEquiv	truth-table.txt	/*:TruthTableEquiv*
 :TruthTableExpand	truth-table.txt	/*:TruthTableExpand*
 :TruthTableFactor	truth-table.txt	/*:TruthTableFactor*
 :TruthTableKarnaugh	truth-table.txt	/*:TruthTableKarnaugh*
@@ -17,6 +20,8 @@
 :TruthTableTutor	truth-table.txt	/*:TruthTableTutor*
 :TruthTableTutorNext	truth-table.txt	/*:TruthTableTutorNext*
 :TruthTableTutorPrev	truth-table.txt	/*:TruthTableTutorPrev*
+:TruthTableUnfold	truth-table.txt	/*:TruthTableUnfold*
+:TruthTableVerify	truth-table.txt	/*:TruthTableVerify*
 :TruthTableXor	truth-table.txt	/*:TruthTableXor*
 TruthTableRewrite	truth-table.txt	/*TruthTableRewrite*
 truth-table-abbreviations	truth-table.txt	/*truth-table-abbreviations*
