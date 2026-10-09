@@ -2,11 +2,8 @@
 local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local model = require("truth-table.table_model")
+local trim = require("truth-table.text").trim
 local M = {}
-
-local function trim(s)
-    return (s:gsub("^%s+", ""):gsub("%s+$", ""))
-end
 
 -- Pure default: count UTF-8 codepoints (each as one column) by counting bytes
 -- that are not continuation bytes. The Neovim layer overrides this with
@@ -98,13 +95,22 @@ local function scan(line, on_pipe, on_character)
     end
 end
 
+-- The byte of every unescaped pipe in `line`.
+local function pipes(line)
+    local found = {}
+    scan(line, function(pos)
+        found[#found + 1] = pos
+    end, function() end)
+    return found
+end
+
 function M.column_index(line, byte_column)
     local count = 0
-    scan(line, function(pos)
+    for _, pos in ipairs(pipes(line)) do
         if pos <= byte_column + 1 then
             count = count + 1
         end
-    end, function() end)
+    end
     return math.max(1, count)
 end
 
@@ -223,18 +229,15 @@ end
 -- One-based, inclusive bytes of a heading cell's content, surrounding blanks
 -- excluded. Nil for a blank cell or a column the line does not have.
 function M.heading_cell(line, index)
-    local pipes = {}
-    scan(line, function(pos)
-        pipes[#pipes + 1] = pos
-    end, function() end)
-    if not pipes[index + 1] then
+    local at = pipes(line)
+    if not at[index + 1] then
         return nil
     end
-    local lead, content = line:sub(pipes[index] + 1, pipes[index + 1] - 1):match("^(%s*)(.-)%s*$")
+    local lead, content = line:sub(at[index] + 1, at[index + 1] - 1):match("^(%s*)(.-)%s*$")
     if content == "" then
         return nil
     end
-    local first = pipes[index] + 1 + #lead
+    local first = at[index] + 1 + #lead
     return first, first + #content - 1
 end
 
@@ -254,11 +257,8 @@ function M.replace_heading(line, index, heading)
     headers[index] = heading
     local valid, validation_err = model.headings(headers)
     return result.map(valid, validation_err, function()
-        local pipes = {}
-        scan(line, function(pos)
-            pipes[#pipes + 1] = pos
-        end, function() end)
-        return line:sub(1, pipes[index]) .. " " .. M.escape_heading(heading) .. " " .. line:sub(pipes[index + 1])
+        local at = pipes(line)
+        return line:sub(1, at[index]) .. " " .. M.escape_heading(heading) .. " " .. line:sub(at[index + 1])
     end)
 end
 

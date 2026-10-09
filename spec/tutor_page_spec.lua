@@ -271,15 +271,15 @@ describe("tutor_page.progress", function()
     it("is the bar by state, the lesson and step, and the part, in winbar format", function()
         assert.are.equal(
             current .. "█" .. ahead .. "██%* lesson 1 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
-            page.progress(course, { lesson = 1, step = 1, furthest = 1 })
+            page.progress(course, { lesson = 1, step = 1 }, 1)
         )
         assert.are.equal(
             visited .. "█" .. current .. "█" .. visited .. "█%* lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
-            page.progress(course, { lesson = 2, step = 1, furthest = 3 })
+            page.progress(course, { lesson = 2, step = 1 }, 3)
         )
         assert.are.equal(
             visited .. "██" .. current .. "█%* lesson 3 of 3, step 2 of 2 %<%=Part 2 of 2: Rewriting",
-            page.progress(course, { lesson = 3, step = 2, furthest = 3 })
+            page.progress(course, { lesson = 3, step = 2 }, 3)
         )
     end)
 
@@ -287,7 +287,7 @@ describe("tutor_page.progress", function()
         local odd = { { part = "100% logic", title = "T", aim = "A.", steps = { { text = "Read.\n" } } } }
         assert.are.equal(
             current .. "█%* lesson 1 of 1, step 1 of 1 %<%=Part 1 of 1: 100%% logic",
-            page.progress(odd, { lesson = 1, step = 1, furthest = 1 })
+            page.progress(odd, { lesson = 1, step = 1 }, 1)
         )
     end)
 

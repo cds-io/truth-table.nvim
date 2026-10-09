@@ -18,6 +18,11 @@ local function body(line)
     return bar and line:sub(1, bar - 1) or line, bar
 end
 
+-- The sides without the blanks that pad them out to the bar.
+local function trimmed(sides)
+    return (sides:gsub("%s+$", ""))
+end
+
 -- A justification as it is written after a step, and beside a preview.
 function M.justification(law)
     return BAR .. " by " .. law
@@ -97,7 +102,7 @@ function M.step(line, rewritten, display_width)
     local step = prefix .. rewritten.text
     if rewritten.law then
         local width = display_width(step)
-        local above = bar and display_width(sides) or display_width((sides:gsub("%s+$", ""))) + GAP
+        local above = bar and display_width(sides) or display_width(trimmed(sides)) + GAP
         local column = math.max(width + GAP, above)
         step = step .. string.rep(" ", column - width) .. M.justification(rewritten.law)
     end
@@ -135,15 +140,15 @@ end
 function M.aligned(block, display_width)
     local widest = 0
     for _, line in ipairs(block) do
-        widest = math.max(widest, display_width((body(line):gsub("%s+$", ""))))
+        widest = math.max(widest, display_width(trimmed(body(line))))
     end
     local column = widest + GAP
     local out = {}
     for i, line in ipairs(block) do
         local sides, bar = body(line)
         if bar then
-            local trimmed = sides:gsub("%s+$", "")
-            out[i] = trimmed .. string.rep(" ", column - display_width(trimmed)) .. line:sub(bar)
+            local kept = trimmed(sides)
+            out[i] = kept .. string.rep(" ", column - display_width(kept)) .. line:sub(bar)
         else
             out[i] = line
         end

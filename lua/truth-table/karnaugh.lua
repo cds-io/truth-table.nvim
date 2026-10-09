@@ -318,15 +318,21 @@ local function minimal_cover(primes, minterms)
     return sort_terms(cover)
 end
 
-local function term_ast(term, inputs)
+-- Whether each input heading is a bare identifier, which a term then names
+-- as the variable; any other heading refers to its stored column through
+-- :hN.
+local function variables(inputs)
+    return fp.map(inputs, function(heading)
+        local parsed = predicate.parse_expression(heading)
+        return parsed ~= nil and parsed.type == "var" and parsed.name == heading
+    end)
+end
+
+local function term_ast(term, inputs, variable)
     local literals = {}
     for i = 1, #term do
         local ch = term:sub(i, i)
-        -- Only a bare identifier can safely be rendered as a variable.
-        -- Other headings refer to stored column values through :hN.
-        local parsed = predicate.parse_expression(inputs[i])
-        local input = parsed and parsed.type == "var" and parsed.name == inputs[i]
-            and { type = "var", name = inputs[i] } or { type = "reference", index = i }
+        local input = variable[i] and { type = "var", name = inputs[i] } or { type = "reference", index = i }
         if ch == "1" then
             literals[#literals + 1] = input
         elseif ch == "0" then
@@ -343,8 +349,9 @@ local function cover_ast(cover, inputs)
     if #cover == 0 then
         return { type = "literal", value = 0 }
     end
+    local variable = variables(inputs)
     return trees.fold("or", fp.map(cover, function(term)
-        return term_ast(term, inputs)
+        return term_ast(term, inputs, variable)
     end))
 end
 

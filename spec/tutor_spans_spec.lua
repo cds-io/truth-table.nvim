@@ -106,14 +106,14 @@ describe("tutor_spans.place", function()
             { row = 2, col = 0, end_col = 1, group = blue },
             { row = 2, col = 6, end_col = 7, group = blue },
             { row = 3, col = 0, end_col = 1, group = blue },
-        }, markdown, lines, blocks)
+        }, { markdown = markdown, lines = lines, blocks = blocks })
         assert.are.same({ mark(2, 4, 5), mark(2, 10, 11), mark(3, 4, 5) }, found)
     end)
 
     it("does not take a longer line that merely contains the clean one", function()
         local page = { "```logic", "a", "a ∨ b", "```" }
         local rendered = { "", "  logic", "    a ∨ b    ", "    a        ", "  " }
-        local found = spans.place({ { row = 2, col = 0, end_col = 1, group = blue } }, page, rendered, blocks)
+        local found = spans.place({ { row = 2, col = 0, end_col = 1, group = blue } }, { markdown = page, lines = rendered, blocks = blocks })
         assert.are.same({ mark(3, 4, 5) }, found)
     end)
 
@@ -123,14 +123,14 @@ describe("tutor_spans.place", function()
         local found = spans.place({
             { row = 2, col = 0, end_col = 1, group = blue },
             { row = 3, col = 0, end_col = 1, group = blue },
-        }, page, rendered, blocks)
+        }, { markdown = page, lines = rendered, blocks = blocks })
         assert.are.same({ mark(2, 4, 5), mark(3, 4, 5) }, found)
     end)
 
     it("keeps a line's leading spaces, and finds the line by all of them", function()
         local page = { "```logic", "a", "  ∧ b", "```" }
         local rendered = { "", "  logic", "    a    ", "      ∧ b    ", "  " }
-        local found = spans.place({ { row = 3, col = 4, end_col = 5, group = blue } }, page, rendered, blocks)
+        local found = spans.place({ { row = 3, col = 4, end_col = 5, group = blue } }, { markdown = page, lines = rendered, blocks = blocks })
         assert.are.same({ mark(3, 8, 9) }, found)
     end)
 
@@ -140,7 +140,7 @@ describe("tutor_spans.place", function()
         local found = spans.place({
             { row = 2, col = 0, end_col = 1, group = blue },
             { row = 5, col = 11, end_col = 12, group = blue },
-        }, page, rendered, { { 0, 3, 1, 4 } })
+        }, { markdown = page, lines = rendered, blocks = { { 0, 3, 1, 4 } } })
         assert.are.same({}, found)
     end)
 
@@ -149,12 +149,12 @@ describe("tutor_spans.place", function()
         local rendered = { "", "  logic", "    a    ", "  ", "", "  text", "    a    ", "  " }
         local found = spans.place(
             { { row = 6, col = 0, end_col = 1, group = blue } },
-            page, rendered, { { 0, 3, 1, 3 }, { 4, 3, 5, 3 } }
+            { markdown = page, lines = rendered, blocks = { { 0, 3, 1, 3 }, { 4, 3, 5, 3 } } }
         )
         assert.are.same({ mark(6, 4, 5) }, found)
     end)
 
     it("marks nothing for no spans", function()
-        assert.are.same({}, spans.place({}, markdown, lines, blocks))
+        assert.are.same({}, spans.place({}, { markdown = markdown, lines = lines, blocks = blocks }))
     end)
 end)

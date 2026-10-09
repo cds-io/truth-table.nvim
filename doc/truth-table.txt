@@ -734,6 +734,7 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - fp.lua is map, filter and reduce over lists, which plain Lua 5.1 lacks;
   map and filter return fresh arrays; reduce returns the final accumulator.
   Each takes its function last.
+- text.lua is trim, the one string helper the pure modules share.
 - rewrite.lua finds the chain operand under a cursor byte and factors,
   distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, applies
   De Morgan at the nearest match, and applies the nearest collapsing law,
@@ -741,6 +742,9 @@ All pure modules support Lua 5.1 and have no vim dependency:
   all of them give from every place in a tree: each rewrite is written
   against an operand's path from the root, which a cursor byte or a walk of
   the tree supplies.
+- marks.lua is the highlight mark, { row, col, end_col, group, priority },
+  with paint and read over lists of it: a written rewrite's lit terms, a
+  pending preview's, and the tutor's colour spans are all this record.
 - derivation.lua splits a line into sides at ≡, sets its `| by` justification
   apart, replaces one side, and builds an aligned, justified step line.
 - preview.lua resolves the expression under the cursor (a side of a line, or

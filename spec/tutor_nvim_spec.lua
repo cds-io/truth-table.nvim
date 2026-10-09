@@ -118,8 +118,8 @@ local function at(lesson, step, furthest)
     assert.are.equal(scratch_win, vim.api.nvim_get_current_win(), label .. ": current window")
     local markdown, marked = page.render(course, { lesson = lesson, step = step })
     assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
-    local place = { lesson = lesson, step = step, furthest = furthest or lesson }
-    assert.are.equal(page.progress(course, place), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
+    local place = { lesson = lesson, step = step }
+    assert.are.equal(page.progress(course, place, furthest or lesson), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
     assert.are.equal("", vim.wo[scratch_win].winbar, label .. ": scratch winbar")
     assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
     assert.are.equal("nofile", vim.bo[lesson_buf].buftype, label .. ": lesson buftype")

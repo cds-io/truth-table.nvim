@@ -1,7 +1,8 @@
 -- Writes a rewrite's text and marks as one patch, and keeps the marks in
 -- step with Neovim's undo tree: each undo sequence number has the marks that
 -- went with it, so undo and redo restore them with the text, branches
--- included.
+-- included. The marks are truth-table.marks records.
+local marks = require("truth-table.marks")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.changed")
 local histories = {}
@@ -13,25 +14,12 @@ local function sequence(buf)
 end
 
 local function annotations(buf)
-    local out = {}
-    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })) do
-        local detail = mark[4]
-        out[#out + 1] = {
-            row = mark[2], column = mark[3], end_row = detail.end_row,
-            end_column = detail.end_col, group = detail.hl_group, priority = detail.priority,
-        }
-    end
-    return out
+    return marks.read(buf, namespace)
 end
 
 local function restore(buf, state)
     vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
-    for _, mark in ipairs(state) do
-        vim.api.nvim_buf_set_extmark(buf, namespace, mark.row, mark.column, {
-            end_row = mark.end_row, end_col = mark.end_column,
-            hl_group = mark.group, priority = mark.priority,
-        })
-    end
+    marks.paint(buf, namespace, state)
 end
 
 local function synchronize(buf, history)
@@ -90,8 +78,7 @@ function M.prepare(buf, write)
         if inserted or mark.row ~= row then
             local shift = inserted and mark.row > row and 1 or 0
             after[#after + 1] = {
-                row = mark.row + shift, column = mark.column,
-                end_row = mark.end_row + shift, end_column = mark.end_column,
+                row = mark.row + shift, col = mark.col, end_col = mark.end_col,
                 group = mark.group, priority = mark.priority,
             }
         end

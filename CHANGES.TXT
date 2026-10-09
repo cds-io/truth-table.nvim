@@ -1,6 +1,23 @@
 truth-table.nvim changes
 ========================
 
+- marks.lua: a highlight mark is one record, { row, col, end_col, group,
+  priority }, painted and read back through `paint` and `read`; edit.lua's
+  undo-tracked marks, preview.lua's lit terms and the tutor's colour spans
+  are lists of it. preview.lua lights an expression's ranges through
+  `lit(at, ranges, group)`, with the priority per group and the pending
+  preview's above both.
+- text.lua: `trim`, shared by core, predicate and markdown. markdown.lua
+  finds a line's pipes once, in `pipes`; derivation.lua trims the sides
+  once, in `trimmed`; karnaugh.lua parses each input heading once per
+  cover; the tutor passes its place record, { lesson, step }, through to
+  tutor_page.render and tutor_page.progress, which takes `furthest` as its
+  own argument.
+- trees.lua: `renderer(selected, regions, positions)` is the renderer over
+  one traversal's context, and `render(node, offset)` what it returns;
+  tutor_vellum.lua passes vellum's renderer and theme as one toolkit and
+  its rendering as one page, { markdown, lines, blocks }, which
+  tutor_spans.place and `anchored` read.
 - table_model.lua: `ENCODINGS` spells the cells of each encoding, the one
   place they are spelled: `parse` reads them, render_rows and the Karnaugh
   map write them. `parse(headers, rows)` is the one validator, run by the

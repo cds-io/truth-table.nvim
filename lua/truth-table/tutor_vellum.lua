@@ -16,60 +16,66 @@ local MEASURE = 100
 -- and whether the reader has been told that vellum failed.
 local themed, warned = false, false
 
+-- vellum's renderer and theme, as one record, when it is installed.
 local function vellum()
     local found, render = pcall(require, "vellum.render")
     local found_theme, theme = pcall(require, "vellum.theme")
     if found and found_theme then
-        return render, theme
+        return { render = render, theme = theme }
     end
 end
 
 -- One of vellum's block anchors: four numbers placing the block's source rows
--- in `markdown` and its rendered rows in `lines`.
-local function anchored(block, markdown, lines)
+-- in `page.markdown` and its rendered rows in `page.lines`.
+local function anchored(block, page)
     for i = 1, 4 do
         if type(block[i]) ~= "number" then
             return false
         end
     end
-    return block[1] >= 0 and block[1] + block[2] <= #markdown and block[3] >= 0 and block[3] + block[4] <= #lines
+    return block[1] >= 0 and block[1] + block[2] <= #page.markdown
+        and block[3] >= 0 and block[3] + block[4] <= #page.lines
 end
 
-local function compose(render, theme, markdown, width, marked)
+-- `markdown` through vellum, `toolkit`, at `width`, with the lesson's spans `marked`:
+-- the lines and the marks of render() below, or an error for anything that
+-- comes back in a shape not expected.
+local function compose(toolkit, markdown, width, marked)
     if not themed then
-        theme.apply()
+        toolkit.theme.apply()
         -- Rendered blocks are cached with the groups they were given.
-        render.reset()
+        toolkit.render.reset()
         themed = true
     end
     -- The renderer parses a buffer; this one is never shown.
     local source = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(source, 0, -1, false, markdown)
-    local ok, lines, rows, margin, blocks = pcall(render.render, source, width, MEASURE)
+    local ok, lines, rows, margin, blocks = pcall(toolkit.render.render, source, width, MEASURE)
     vim.api.nvim_buf_delete(source, { force = true })
     assert(ok, lines)
 
     -- vellum counts a span's columns from the text's left edge, and indents
     -- every line by `margin` to centre the text.
-    local marks = {}
+    local found = {}
     for row, line in ipairs(lines) do
         assert(type(line) == "string", "a line that is not text")
         for _, span in ipairs(rows[row] or {}) do
             local from, to, group = span[1] + margin, span[2] + margin, span[3]
             assert(from >= 0 and from <= to and to <= #line and type(group) == "string", "a span outside its line")
-            marks[#marks + 1] = { row = row - 1, col = from, end_col = to, group = group, priority = span[4] }
+            found[#found + 1] = { row = row - 1, col = from, end_col = to, group = group, priority = span[4] }
         end
     end
     assert(type(blocks) == "table", "no block anchors")
+    local page = { markdown = markdown, lines = lines, blocks = blocks }
     for _, block in ipairs(blocks) do
-        assert(anchored(block, markdown, lines), "a block anchor outside the page")
+        assert(anchored(block, page), "a block anchor outside the page")
     end
-    for _, mark in ipairs(spans.place(marked or {}, markdown, lines, blocks)) do
+    for _, mark in ipairs(spans.place(marked or {}, page)) do
         local line = lines[mark.row + 1]
         assert(mark.col >= 0 and mark.col <= mark.end_col and mark.end_col <= #line, "a colour span outside its line")
-        marks[#marks + 1] = mark
+        found[#found + 1] = mark
     end
-    return lines, marks
+    return lines, found
 end
 
 -- `markdown` (a list of lines) for a pane `width` columns wide, with the
@@ -78,11 +84,11 @@ end
 -- them, rows and byte columns counted from zero. Nil when vellum is not
 -- installed, and nil with one warning when it is and cannot do this.
 function M.render(markdown, width, marked)
-    local render, theme = vellum()
-    if not render then
+    local found = vellum()
+    if not found then
         return
     end
-    local ok, lines, marks = pcall(compose, render, theme, markdown, width, marked)
+    local ok, lines, marks = pcall(compose, found, markdown, width, marked)
     if ok then
         return lines, marks
     end
