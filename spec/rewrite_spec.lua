@@ -269,6 +269,65 @@ describe("rewrite.xor", function()
     end)
 end)
 
+describe("rewrite.unfold", function()
+    -- The rewritten text and the law, with the cursor on `needle`.
+    local function unfold(source, needle, occurrence)
+        local ast = assert(predicate.parse_located(source))
+        local tx, err = rewrite.unfold(ast, needle and byte_of(source, needle, occurrence))
+        if not tx then
+            return nil, err
+        end
+        return trees.heading(tx.value), tx.change.law
+    end
+
+    it("replaces each connective by its definition, naming it", function()
+        assert.are.same({ "¬a ∨ b", "definition of →" }, { unfold("a → b", "→") })
+        assert.are.same({ "(a ∧ b) ∨ (¬a ∧ ¬b)", "definition of ⇔" }, { unfold("a ⇔ b", "⇔") })
+        assert.are.same({ "(a ∧ ¬b) ∨ (¬a ∧ b)", "definition of ⊕" }, { unfold("a ⊕ b", "⊕") })
+    end)
+
+    it("negates a compound operand whole", function()
+        assert.are.equal("¬(p ∧ q) ∨ r", (unfold("(p ∧ q) → r", "→")))
+        assert.are.equal("((p ∨ q) ∧ ¬r) ∨ (¬(p ∨ q) ∧ r)", (unfold("(p ∨ q) ⊕ r", "⊕")))
+    end)
+
+    it("takes the nearest connective enclosing the cursor, one pair at a time", function()
+        assert.are.equal("((a ∧ ¬b) ∨ (¬a ∧ b)) ⊕ c", (unfold("a ⊕ b ⊕ c", "a")))
+        assert.are.equal("((a ⊕ b) ∧ ¬c) ∨ (¬(a ⊕ b) ∧ c)", (unfold("a ⊕ b ⊕ c", "c")))
+        assert.are.equal("R ∧ (¬T ∨ E)", (unfold("R ∧ (T → E)", "T")))
+        assert.are.equal("(a ∧ ¬(b → c)) ∨ (¬a ∧ (b → c))", (unfold("a ⊕ (b → c)", "⊕")))
+        assert.are.equal("a ⊕ (¬b ∨ c)", (unfold("a ⊕ (b → c)", "b")))
+    end)
+
+    it("leaves the rest of the expression as it was", function()
+        assert.are.equal("((¬a ∨ b) ∧ c) ∨ d", (unfold("(a → b) ∧ c ∨ d", "a")))
+    end)
+
+    it("takes the outermost connective when there is no cursor or it is outside", function()
+        local source = "(a → b) ∧ (c ⊕ d)"
+        local ast = assert(predicate.parse_located(source))
+        assert.are.equal("(¬a ∨ b) ∧ (c ⊕ d)", trees.heading(assert(rewrite.unfold(ast, nil).value)))
+        assert.are.equal("(¬a ∨ b) ∧ (c ⊕ d)", trees.heading(assert(rewrite.unfold(ast, #source + 5).value)))
+        assert.are.equal("(¬a ∨ b) ∧ (c ⊕ d)", (unfold(source, "∧")))
+    end)
+
+    it("is the inverse of the xor rewrite, both ways round", function()
+        for _, case in ipairs({ { "a ⊕ b", "a" }, { "a ⇔ b", "a" }, { "R ∧ (T ⊕ E)", "T" } }) do
+            assert.are.equal(case[1], run("xor", assert(unfold(case[1], case[2])), "¬"))
+        end
+        -- Back from ⊕, the terms come in the definition's order.
+        assert.are.equal("(T ∧ ¬E) ∨ (¬T ∧ E)", (unfold(assert(run("xor", "(T ∧ ¬E) ∨ (¬T ∧ E)", "¬T")), "⊕")))
+    end)
+
+    it("refuses an expression with nothing to unfold", function()
+        for _, source in ipairs({ "a ∧ b", "¬(a ∨ b)", "a" }) do
+            local out, err = unfold(source, "a")
+            assert.is_nil(out, source)
+            assert.are.equal("No →, ⊕ or ⇔ under the cursor or in the expression", err)
+        end
+    end)
+end)
+
 describe("rewrite.de_morgan", function()
     it("contracts the nearest enclosing pair of negations", function()
         assert.are.equal("R ∧ (T ∨ E) ∧ ¬(T ∧ E)", run("de_morgan", "R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)", "¬T"))
@@ -470,7 +529,7 @@ describe("rewrite.moves", function()
 
     it("has nothing for an expression no law applies to", function()
         assert.are.same({}, moves("A"))
-        assert.are.same({}, moves("A → B"))
+        assert.are.same({}, moves("¬A"))
     end)
 
     it("lists the collapsing laws Simplify passes over for a nearer one", function()
@@ -563,6 +622,19 @@ describe("rewrite.moves", function()
         }, found)
     end)
 
+    it("unfolds every →, ⊕ and ⇔, the outermost first, after De Morgan", function()
+        assert.are.same({
+            { "definition of →", "¬(a ⊕ b) ∨ c" },
+            { "definition of ⊕", "((a ∧ ¬b) ∨ (¬a ∧ b)) → c" },
+            { "commutativity", "(b ⊕ a) → c" },
+        }, moves("(a ⊕ b) → c"))
+        assert.are.same({
+            { "De Morgan", "¬A ∨ ¬(B → C)" },
+            { "definition of →", "¬(A ∧ (¬B ∨ C))" },
+            { "commutativity", "¬((B → C) ∧ A)" },
+        }, moves("¬(A ∧ (B → C))"))
+    end)
+
     it("lists De Morgan over a whole chain once, and each run of a longer chain", function()
         local function de_morgans(source)
             local found = {}
@@ -621,6 +693,7 @@ describe("rewrite soundness", function()
         "A ∧ A ∨ A ∧ B ∨ ¬(A ∧ A) ∧ C ∨ B ∧ A",
         "¬(A ∨ ¬A) ∨ (B → B ∧ (C ∨ ¬C)) ∨ (A ⊕ (B ∨ B))",
         "(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C ∧ D) ∨ (A ∨ B) ∧ (¬A ∨ C) ∧ (B ∨ C)",
+        "(A → B) ⊕ (C ⇔ (D → ¬A)) ∨ ¬(B ⇔ C)",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,
@@ -630,6 +703,7 @@ describe("rewrite soundness", function()
         xor = function(ast, byte) return rewrite.xor(ast, byte) end,
         de_morgan = function(ast, byte) return rewrite.de_morgan(ast, byte) end,
         simplify = function(ast, byte) return rewrite.simplify(ast, byte) end,
+        unfold = function(ast, byte) return rewrite.unfold(ast, byte) end,
     }
 
     -- Every input a tree reads: variable names and :hN indices. eval_ast looks
@@ -867,6 +941,7 @@ describe("the terms a rewrite consumed", function()
         assert.are.same({ "Q" }, (consumed("(Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)", rewrite.simplify, "(Q ∧ Q")))
         assert.are.same({ "(a ∧ b)" }, (consumed("a ∨ (a ∧ b)", rewrite.simplify, "a")))
         assert.are.same({ "(b ∧ c)" }, (consumed("(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c)", rewrite.simplify, "(b")))
+        assert.are.same({ "(T → E)" }, (consumed("R ∧ (T → E)", rewrite.unfold, "→")))
         assert.are.same({ "¬¬a" }, (consumed("¬¬a ∧ b", rewrite.simplify, "¬¬a")))
     end)
 

@@ -521,6 +521,66 @@ end
 M.de_morgan = operation(de_morgan)
 
 -- ---------------------------------------------------------------------------
+-- Unfold: a connective replaced by its definition in ∧, ∨ and ¬, the xor
+-- rewrite read the other way.
+-- ---------------------------------------------------------------------------
+
+local UNFOLDS = {
+    implies = function(a, b)
+        return trees.binary("or", trees.negation(a), b)
+    end,
+    iff = function(a, b)
+        return trees.binary("or", trees.binary("and", a, b), trees.binary("and", trees.negation(a), trees.negation(b)))
+    end,
+    xor = function(a, b)
+        return trees.binary("or", trees.binary("and", a, trees.negation(b)), trees.binary("and", trees.negation(a), b))
+    end,
+}
+
+-- The draft unfolding path[index] of `ast`, or nil when it is no →, ⊕ or ⇔.
+-- A connective in parentheses is taken with them, so the consumed term is
+-- the parenthesised one: the node whose parent is a parenthesis waits for
+-- that parent's turn.
+local function unfold_at(ast, path, index)
+    local node = path[index]
+    local make = UNFOLDS[unparen(node).type]
+    if not make or (path[index - 1] and path[index - 1].type == "paren") then
+        return nil
+    end
+    local inner = unparen(node)
+    local rewritten = make(inner.left, inner.right)
+    return {
+        tree = substitute(ast, node, rewritten),
+        law = "definition of " .. operators.SYMBOLS[inner.type],
+        consumed = { node },
+        produced = { rewritten },
+    }
+end
+
+-- Unfold the nearest →, ⊕ or ⇔ enclosing the cursor (the node itself when
+-- the cursor is on its symbol), or without a cursor inside the expression
+-- the outermost one. A chain of ⊕ is nested pairs in the tree, so one step
+-- unfolds one pair.
+local function unfold(ast, byte)
+    local path = byte and path_to(ast, byte) or {}
+    for index = #path, 1, -1 do
+        local draft = unfold_at(ast, path, index)
+        if draft then
+            return { draft }
+        end
+    end
+    for _, whole in ipairs(paths(ast)) do
+        local draft = unfold_at(ast, whole, #whole)
+        if draft then
+            return { draft }
+        end
+    end
+    return {}, "No →, ⊕ or ⇔ under the cursor or in the expression"
+end
+
+M.unfold = operation(unfold)
+
+-- ---------------------------------------------------------------------------
 -- Simplify: the laws that shrink an expression. Each takes the operands of
 -- one ∧ or ∨ chain and the position of one of them, the focus, and returns
 -- the operands that remain, one list per way the law applies to the focus.
@@ -909,8 +969,9 @@ local OPERAND_REWRITES = {
 
 -- Every rewrite the expression allows, as { law, rewritten, text }: one
 -- entry per distinct result, `rewritten` its { value, change }. The laws that shrink
--- the expression come first, then De Morgan, ⊕ and ⇔ recognition, factoring,
--- distributing and, the most numerous, the swaps. The shrinking laws go
+-- the expression come first, then De Morgan, the unfolding of →, ⊕ and ⇔, the
+-- recognition of ⊕ and ⇔, factoring, distributing and, the most numerous,
+-- the swaps. The shrinking laws go
 -- innermost site first, as simplify tries them, and the rest outermost
 -- first; all of them left to right. A result reached twice keeps its first
 -- law, and one that reads the same as the expression is left out.
@@ -947,6 +1008,13 @@ function M.moves(ast)
         end
         if is_operand(path, #path) then
             operand_paths[#operand_paths + 1] = path
+        end
+    end
+
+    for _, path in ipairs(everywhere) do
+        local draft = unfold_at(ast, path, #path)
+        if draft then
+            add(draft)
         end
     end
 

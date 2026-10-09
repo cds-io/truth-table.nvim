@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableUnfold (<leader>ttu) previews a connective replaced by its
+  definition in ∧, ∨ and ¬: a → b ⇒ ¬a ∨ b, a ⇔ b ⇒ (a ∧ b) ∨ (¬a ∧ ¬b),
+  a ⊕ b ⇒ (a ∧ ¬b) ∨ (¬a ∧ b), the nearest such connective enclosing the
+  cursor or the outermost one without a cursor, named "definition of" the
+  connective as the xor rewrite names it. Unfold's refusal points at
+  :TruthTableXor when that applies at the cursor, and Xor's at Unfold.
+  :TruthTableRewrites lists an unfold for every →, ⊕ and ⇔, after De
+  Morgan. The tutor's exclusive-or lesson unfolds ⊕ as a step.
 - fp gains find (the first item a test accepts, and its index), any, all,
   set (each item's key to true) and unique (the first item of each key, in
   order); set and unique refuse a nil key, naming the item. The loops that

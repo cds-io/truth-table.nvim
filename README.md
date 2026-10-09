@@ -137,6 +137,7 @@ Start with small expressions.
 | `:TruthTableFactor` | Toggle a preview that factors the operand under the cursor out of the terms sharing it |
 | `:TruthTableDistribute` | Toggle a preview that distributes the operand under the cursor into the group beside it |
 | `:TruthTableXor` | Toggle a preview that recognises an exclusive or (or an equivalence) spelled out as the two terms under the cursor |
+| `:TruthTableUnfold` | Toggle a preview that replaces the `→`, `⊕` or `⇔` nearest the cursor by its definition in `∧`, `∨` and `¬` |
 | `:TruthTableCommute[!]` | Toggle a preview that swaps the operand under the cursor with the next one (`!`: the previous one) |
 | `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction, consensus) |
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
@@ -305,6 +306,7 @@ applies:
 | `:TruthTableDistribute` | an operand beside a parenthesised group | `¬C ∧ (A ∨ G)` ⇒ `(¬C ∧ A) ∨ (¬C ∧ G)` |
 | `:TruthTableCommute` | any operand | `S ∨ (¬C ∧ (A ∨ G))` ⇒ `(¬C ∧ (A ∨ G)) ∨ S` |
 | `:TruthTableXor` | either of two complementary terms | `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))` ⇒ `R ∧ (T ⊕ E)` |
+| `:TruthTableUnfold` | the connective, or inside the pair it joins | `R ∧ (T → E)` ⇒ `R ∧ (¬T ∨ E)`, `a ⇔ b` ⇒ `(a ∧ b) ∨ (¬a ∧ ¬b)`, `a ⊕ b` ⇒ `(a ∧ ¬b) ∨ (¬a ∧ b)` |
 | `:TruthTableSimplify` | anywhere; the nearest match wins | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B` |
 
 So, which operand does the cursor pick? A run of one operator out of `∧`, `∨`,
@@ -421,7 +423,8 @@ above to this one. The laws are named as in the table above, plus
 moves a shared operand out of its terms and distributing moves one into a
 group: the one law, used from either side, with the side named so that a step
 says which command wrote it), `commutativity`,
-`De Morgan`, and `definition of ⊕` or `⇔`. The bar sits four columns clear of
+`De Morgan`, and `definition of →`, `⊕` or `⇔` (a definition read in either
+direction). The bar sits four columns clear of
 the wider of the two lines, or under the bar of the line above when that is
 further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
@@ -754,6 +757,7 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 | `<leader>tts` | Rewrite | toggle commute preview (swap with the next operand) |
 | `<leader>ttS` | Rewrite | toggle commute preview (swap with the previous operand) |
 | `<leader>tto` | Rewrite | toggle xor-recognition preview |
+| `<leader>ttu` | Rewrite | toggle unfold preview |
 | `<leader>ttz` | Rewrite | toggle simplify preview |
 | `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
 | `<leader>ttv` | Rewrite | verify the derivation under the cursor |

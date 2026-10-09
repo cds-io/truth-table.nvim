@@ -34,7 +34,15 @@ local REWRITES = {
         run = rewrite.distribute,
         opposite = { name = "factor", hint = "to pull it out of the terms that share it, use :TruthTableFactor" },
     },
-    xor = { run = rewrite.xor },
+    xor = {
+        run = rewrite.xor,
+        opposite = { name = "unfold", hint = "to replace a connective by its definition, use :TruthTableUnfold" },
+    },
+    unfold = {
+        whole = true,
+        run = rewrite.unfold,
+        opposite = { name = "xor", hint = "to recognise ⊕ or ⇔ in the terms, use :TruthTableXor" },
+    },
     commute = {
         run = function(ast, byte)
             return rewrite.commute(ast, byte, false)
