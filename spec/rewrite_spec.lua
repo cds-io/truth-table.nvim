@@ -293,6 +293,34 @@ describe("rewrite.de_morgan", function()
         assert.are.equal("¬A ∨ ¬B", trees.heading(assert(rewrite.de_morgan(ast, #source + 5).value)))
     end)
 
+    it("contracts a whole chain of negations from any of its operands", function()
+        for _, at in ipairs({ "¬A", "¬B", "¬C" }) do
+            assert.are.equal("¬(A ∧ B ∧ C)", run("de_morgan", "¬A ∨ ¬B ∨ ¬C", at))
+        end
+        assert.are.equal("¬(A ∨ B ∨ C)", run("de_morgan", "(¬A ∧ ¬B) ∧ ¬C", "¬C"))
+        local ast = assert(predicate.parse_located("not A or not B or not C"))
+        assert.are.equal("¬(A ∧ B ∧ C)", trees.heading(assert(rewrite.de_morgan(ast, nil).value)))
+    end)
+
+    it("expands a negated chain over every operand, from any of them", function()
+        for _, at in ipairs({ "A", "B", "C", "¬" }) do
+            assert.are.equal("¬A ∨ ¬B ∨ ¬C", run("de_morgan", "¬(A ∧ B ∧ C)", at))
+        end
+    end)
+
+    it("contracts the run of adjacent negations around the cursor inside a longer chain", function()
+        assert.are.equal("¬(A ∧ B) ∨ C ∨ ¬D", run("de_morgan", "¬A ∨ ¬B ∨ C ∨ ¬D", "¬B"))
+        assert.are.equal("¬A ∨ X ∨ ¬(B ∧ C ∧ D) ∨ E", run("de_morgan", "¬A ∨ X ∨ (¬B ∨ ¬C) ∨ ¬D ∨ E", "¬C"))
+    end)
+
+    it("declines a negation with no negated neighbour, and does not reorder to find one", function()
+        for _, case in ipairs({ { "¬A ∨ ¬B ∨ C ∨ ¬D", "¬D" }, { "¬A ∨ C ∨ ¬B", "¬A" }, { "¬A ∨ ¬B ∨ C", "C" } }) do
+            local out, err = run("de_morgan", case[1], case[2])
+            assert.is_nil(out, case[1])
+            assert.are.equal("No De Morgan rewrite applies under the cursor or to the whole expression", err)
+        end
+    end)
+
     it("refuses when nothing from the cursor up to the root matches", function()
         local out, err = run("de_morgan", "A ∨ ¬(B ∧ C)", "A")
         assert.is_nil(out)
@@ -517,6 +545,20 @@ describe("rewrite.moves", function()
         }, found)
     end)
 
+    it("lists De Morgan over a whole chain once, and each run of a longer chain", function()
+        local function de_morgans(source)
+            local found = {}
+            for _, move in ipairs(moves(source)) do
+                if move[1] == "De Morgan" then
+                    found[#found + 1] = move[2]
+                end
+            end
+            return found
+        end
+        assert.are.same({ "¬(A ∧ B) ∨ C ∨ ¬D ∨ ¬E", "¬A ∨ ¬B ∨ C ∨ ¬(D ∧ E)" }, de_morgans("¬A ∨ ¬B ∨ C ∨ ¬D ∨ ¬E"))
+        assert.are.same({ "¬(A ∧ B ∧ C)" }, de_morgans("¬A ∨ ¬B ∨ ¬C"))
+    end)
+
     it("recognises ⊕ spelled out as two terms", function()
         assert.are.same({ "definition of ⊕", "T ⊕ E" }, moves("(¬T ∧ E) ∨ (T ∧ ¬E)")[1])
     end)
@@ -709,6 +751,12 @@ describe("the region a rewrite changed", function()
         local region, text = lit("r ∧ ¬(s ∨ t)", rewrite.de_morgan, "¬")
         assert.are.equal("r ∧ ¬s ∧ ¬t", text)
         assert.are.equal("¬s ∧ ¬t", region)
+    end)
+
+    it("is the negation a run of a chain contracted into", function()
+        local region, text = lit("¬a ∨ ¬b ∨ c", rewrite.de_morgan, "¬a")
+        assert.are.equal("¬(a ∧ b) ∨ c", text)
+        assert.are.equal("¬(a ∧ b)", region)
     end)
 
     it("is the whole expression when De Morgan rewrites the whole expression", function()

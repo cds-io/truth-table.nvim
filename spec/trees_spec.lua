@@ -268,6 +268,17 @@ describe("whole-expression De Morgan rewrites", function()
         end
     end)
 
+    it("reads a chain as one run: every operand negated, the operator flipped", function()
+        assert.are.equal('¬A ∨ ¬B ∨ ¬C', de_morgan_expression('not (A and B and C)'))
+        assert.are.equal('¬A ∨ ¬B ∨ ¬C', de_morgan_expression('not (A and (B and C))'))
+        assert.are.equal('¬(A ∧ B ∧ C)', de_morgan_expression('not A or not B or not C'))
+        assert.are.equal('¬(A ∧ B ∧ C)', de_morgan_expression('(not A or not B) or not C'))
+        assert.are.equal('¬(A ∨ B ∨ (C ∧ D))', de_morgan_expression('not A and not B and not (C and D)'))
+        local ast, err = de_morgan_expression('not A or not B or C')
+        assert.is_nil(ast)
+        assert.are.equal('No De Morgan rewrite applies to the whole expression', err)
+    end)
+
     it("treats root parentheses transparently and preserves necessary nested grouping", function()
         assert.are.equal('¬A ∨ ¬B', de_morgan_expression('(not (A and B))'))
         assert.are.equal('¬(A ∨ B) ∨ ¬C', de_morgan_expression('not ((A or B) and C)'))

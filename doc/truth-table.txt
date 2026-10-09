@@ -155,8 +155,14 @@ lists or blockquotes are not supported.
     the smallest group containing the cursor out to the whole expression, so
     in `R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)` a cursor on ¬T gives
     `R ∧ (T ∨ E) ∧ ¬(T ∧ E)`. From a data or separator row the whole heading
-    is the one candidate. Surrounding parentheses are transparent. Each step
-    is binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`.
+    is the one candidate. Surrounding parentheses are transparent. A run of
+    one operator is read as a flat list, whatever its parentheses:
+    `¬(A ∧ B ∧ C)` expands to `¬A ∨ ¬B ∨ ¬C` in one step, and
+    `¬A ∨ ¬B ∨ ¬C` contracts to `¬(A ∧ B ∧ C)` from any of its operands. In
+    a chain that is only partly negated, the operand under the cursor picks
+    the run of adjacent negations it sits in, two or more: `¬A ∨ ¬B ∨ C`
+    contracts to `¬(A ∧ B) ∨ C`, and a negation with no negated neighbour
+    is declined.
     The virtual text appears at the end of the expression line or header row,
     identifying the selected table column. One preview is kept per buffer. Run
     again to dismiss, even after moving the cursor. Apply acts on the saved

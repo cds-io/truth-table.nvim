@@ -300,23 +300,34 @@ end
 
 -- Root-only De Morgan rewrite, returning an independent tree. No automatic
 -- double-negation simplification: that is a separate refactoring operation.
+-- The other operator of a De Morgan pair.
+local DUAL = { ["and"] = "or", ["or"] = "and" }
+
+-- De Morgan over the whole of `node`, in either direction, reading a run of
+-- one operator as a flat list whatever its parentheses: ¬ over an ∧ or ∨
+-- chain negates every operand and flips the operator; a chain whose
+-- operands are all negations becomes one negation of the dual chain. The
+-- result is in canonical form.
 function M.de_morgan(node)
     local root = M.unparen(node)
     local rewritten
     if root.type == "not" then
         local operand = M.unparen(root.operand)
-        if operand.type == "and" or operand.type == "or" then
-            rewritten = M.binary(
-                operand.type == "and" and "or" or "and",
-                M.negation(operand.left), M.negation(operand.right)
-            )
+        if DUAL[operand.type] then
+            rewritten = M.fold(DUAL[operand.type], fp.map(M.operands(operand, operand.type), M.negation))
         end
-    elseif root.type == "and" or root.type == "or" then
-        local left, right = M.unparen(root.left), M.unparen(root.right)
-        if left.type == "not" and right.type == "not" then
-            rewritten = M.negation(M.binary(
-                root.type == "and" and "or" or "and", left.operand, right.operand
-            ))
+    elseif DUAL[root.type] then
+        local inner = {}
+        for _, item in ipairs(M.operands(root, root.type)) do
+            local negation = M.unparen(item)
+            if negation.type ~= "not" then
+                inner = nil
+                break
+            end
+            inner[#inner + 1] = negation.operand
+        end
+        if inner then
+            rewritten = M.negation(M.fold(DUAL[root.type], inner))
         end
     end
     if not rewritten then

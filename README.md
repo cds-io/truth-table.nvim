@@ -268,6 +268,8 @@ unchanged, and a heading collision is rejected.
 ¬(A ∨ B)  ⇒  ¬A ∧ ¬B
 ¬A ∨ ¬B   ⇒  ¬(A ∧ B)
 ¬A ∧ ¬B   ⇒  ¬(A ∨ B)
+¬(A ∧ B ∧ C)   ⇒  ¬A ∨ ¬B ∨ ¬C
+¬A ∨ ¬B ∨ ¬C   ⇒  ¬(A ∧ B ∧ C)
 ```
 
 Which match is rewritten? The nearest one around the cursor: the candidates run
@@ -275,9 +277,14 @@ from the smallest group containing the cursor out to the whole expression, so in
 `R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)` a cursor on `¬T` gives `R ∧ (T ∨ E) ∧ ¬(T ∧ E)`, and
 in `¬(¬A ∨ ¬B)` the cursor chooses between the inner pair and the outer negation.
 From a table's data rows there is no cursor in the heading, so the whole heading
-is the one candidate. Surrounding parentheses are transparent. Each step is
-binary: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`. The preview
-is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
+is the one candidate. Surrounding parentheses are transparent. A run of one
+operator is read as a flat list, whatever its parentheses: `¬(A ∧ B ∧ C)`
+expands to `¬A ∨ ¬B ∨ ¬C` in one step, and `¬A ∨ ¬B ∨ ¬C` contracts to
+`¬(A ∧ B ∧ C)` from any of its operands. In a chain that is only partly
+negated, the operand under the cursor picks the run of adjacent negations it
+sits in, two or more: `¬A ∨ ¬B ∨ C` contracts to `¬(A ∧ B) ∨ C`, and a
+negation with no negated neighbour is declined (Commute moves one beside it).
+The preview is per buffer and becomes invalid after any buffer edit. Applying a table rewrite
 renames its label: update explicit references to the old heading yourself. Stored
 column values remain unchanged. Output is in canonical form;
 double negations are retained (`:TruthTableSimplify` removes one on request).

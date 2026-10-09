@@ -1,6 +1,14 @@
 truth-table.nvim changes
 ========================
 
+- De Morgan reads a run of one operator as a flat list, whatever its
+  parentheses: ¬(A ∧ B ∧ C) expands to ¬A ∨ ¬B ∨ ¬C in one step, and
+  ¬A ∨ ¬B ∨ ¬C contracts to ¬(A ∧ B ∧ C) from any of its operands. In a
+  chain that is only partly negated, the operand under the cursor picks the
+  run of adjacent negations it sits in, two or more (¬A ∨ ¬B ∨ C contracts
+  to ¬(A ∧ B) ∨ C), and a negation with no negated neighbour is declined.
+  The menu lists one De Morgan per negation, per all-negated chain and per
+  run. Tutor lesson 10 takes its De Morgan in one step.
 - :TruthTableVerify (<leader>ttv) judges every ≡ step of the derivation
   under the cursor against the side before it, over every assignment of
   their variables; the first step that fails has its right-hand side lit
