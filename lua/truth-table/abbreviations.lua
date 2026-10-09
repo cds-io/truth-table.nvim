@@ -4,6 +4,7 @@
 -- character, which means the plain word never expands on its own and prose
 -- like "and then" stays untouched.
 
+local fp = require("truth-table.fp")
 local SYMBOLS = require("truth-table.symbols")
 
 local M = {}
@@ -53,11 +54,10 @@ end
 
 local function global_abbreviation(lhs)
     -- maparg can return a buffer-local shadow instead of the global entry.
-    for _, mapping in ipairs(vim.fn.maplist(true)) do
-        if mapping.buffer == 0 and mapping.lhs == lhs and mapping.mode == "i" then
-            return mapping
-        end
-    end
+    local found = fp.find(vim.fn.maplist(true), function(mapping)
+        return mapping.buffer == 0 and mapping.lhs == lhs and mapping.mode == "i"
+    end)
+    return found
 end
 
 function M.register(option)

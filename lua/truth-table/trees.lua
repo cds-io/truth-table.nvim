@@ -270,10 +270,7 @@ end
 function M.rendered(node, produced)
     local tree, mapped = M.canonical(node, produced)
     assert(tree, mapped)
-    local selected = {}
-    for _, item in ipairs(mapped) do
-        selected[item] = true
-    end
+    local selected = fp.set(mapped)
     local regions = {}
     local text = renderer(selected, regions)(tree, 0)
     table.sort(regions, function(a, b)

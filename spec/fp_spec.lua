@@ -83,6 +83,119 @@ describe("fp.reduce", function()
     end)
 end)
 
+describe("fp.find", function()
+    it("gives the first item the test accepts, and its index", function()
+        assert.are.same({ "b", 2 }, { fp.find({ "a", "b", "c" }, function(item) return item ~= "a" end) })
+    end)
+
+    it("passes the item's index", function()
+        assert.are.same({ "c", 3 }, { fp.find({ "a", "b", "c" }, function(_, index) return index == 3 end) })
+    end)
+
+    it("gives nil when nothing passes, or nothing was given", function()
+        assert.is_nil(fp.find({ 1, 2 }, function() return false end))
+        assert.is_nil(fp.find({}, function() error("called") end))
+    end)
+
+    it("stops at the first match", function()
+        local asked = 0
+        fp.find({ 1, 2, 3 }, function(n)
+            asked = asked + 1
+            return n == 2
+        end)
+        assert.are.equal(2, asked)
+    end)
+end)
+
+describe("fp.any", function()
+    it("is true when some item passes, and stops there", function()
+        local asked = 0
+        assert.is_true(fp.any({ 1, 2, 3 }, function(n)
+            asked = asked + 1
+            return n == 2
+        end))
+        assert.are.equal(2, asked)
+    end)
+
+    it("is false when no item passes, and for an empty list", function()
+        assert.is_false(fp.any({ 1, 2 }, function() return false end))
+        assert.is_false(fp.any({}, function() error("called") end))
+    end)
+
+    it("passes the item's index", function()
+        assert.is_true(fp.any({ "a", "b" }, function(_, index) return index == 2 end))
+    end)
+end)
+
+describe("fp.all", function()
+    it("is true when every item passes, and for an empty list", function()
+        assert.is_true(fp.all({ 2, 4 }, function(n) return n % 2 == 0 end))
+        assert.is_true(fp.all({}, function() error("called") end))
+    end)
+
+    it("is false at the first item that fails, and stops there", function()
+        local asked = 0
+        assert.is_false(fp.all({ 2, 3, 4 }, function(n)
+            asked = asked + 1
+            return n % 2 == 0
+        end))
+        assert.are.equal(2, asked)
+    end)
+
+    it("passes the item's index", function()
+        assert.is_true(fp.all({ "a", "b" }, function(item, index) return item == ("ab"):sub(index, index) end))
+    end)
+end)
+
+describe("fp.set", function()
+    it("marks each item true, keyed by itself", function()
+        assert.are.same({ a = true, b = true }, fp.set({ "a", "b", "a" }))
+    end)
+
+    it("keys by the function when given one, passing the index", function()
+        assert.are.same({ A = true, B = true }, fp.set({ "a", "b" }, function(item) return item:upper() end))
+        assert.are.same({ [1] = true, [2] = true }, fp.set({ "a", "b" }, function(_, index) return index end))
+    end)
+
+    it("is empty for an empty list, and leaves the list alone", function()
+        local list = { "a" }
+        assert.are.same({}, fp.set({}, function() error("called") end))
+        fp.set(list)
+        assert.are.same({ "a" }, list)
+    end)
+
+    it("refuses a nil key, naming the item", function()
+        local ok, err = pcall(fp.set, { "a", "b" }, function(item) return item ~= "b" and item or nil end)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("fp.set: the key function returned nil for item 2", 1, true), err)
+    end)
+end)
+
+describe("fp.unique", function()
+    it("keeps the first of each item, in order", function()
+        assert.are.same({ "b", "a", "c" }, fp.unique({ "b", "a", "b", "c", "a" }))
+    end)
+
+    it("keeps the first of each key when given a key function, passing the index", function()
+        assert.are.same({ "Ab", "cd" }, fp.unique({ "Ab", "aB", "cd" }, function(item) return item:lower() end))
+        assert.are.same({ 1, 2 }, fp.unique({ 1, 2, 3, 4 }, function(_, index) return index % 2 end))
+    end)
+
+    it("gives an empty list for an empty list, and a new list otherwise", function()
+        assert.are.same({}, fp.unique({}, function() error("called") end))
+        local list = { "a", "a" }
+        local kept = fp.unique(list)
+        assert.are_not.equal(list, kept)
+        assert.are.same({ "a", "a" }, list)
+    end)
+
+    it("refuses a nil key, naming the item", function()
+        local ok, err = pcall(fp.unique, { "a", "b" }, function(item) return item ~= "b" and item or nil end)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("fp.unique: the key function returned nil for item 2", 1, true), err)
+    end)
+end)
+
 describe("fp", function()
     it("chains: the evens, times ten, summed", function()
         local evens = fp.filter({ 1, 2, 3, 4 }, function(n) return n % 2 == 0 end)

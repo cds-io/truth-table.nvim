@@ -1,6 +1,15 @@
 truth-table.nvim changes
 ========================
 
+- fp gains find (the first item a test accepts, and its index), any, all,
+  set (each item's key to true) and unique (the first item of each key, in
+  order); set and unique refuse a nil key, naming the item. The loops that
+  wrote these out by hand use them: rewrite's chain lookup, consumed
+  ranges, De Morgan run, gone and replacement terms, within, domination,
+  absorption, consensus and cursor path; trees' selected nodes; Karnaugh's
+  chosen primes and axis label; the table model's appended columns; the
+  verdict's column and breaking row; the tutor's window and the
+  abbreviation lookup.
 - :TruthTableSimplify applies the consensus law: in an ∨ chain, a term
   goes when two others split on an operand, one holding it and the other
   its complement, and the term holds everything else of both, as in

@@ -292,10 +292,7 @@ local function minimal_cover(primes, minterms)
             end
         end
     end
-    local chosen = {}
-    for _, prime in ipairs(cover) do
-        chosen[prime] = true
-    end
+    local chosen = fp.set(cover)
     local uncovered = fp.filter(minterms, function(pattern)
         return not covered[pattern]
     end)
@@ -417,12 +414,10 @@ function M.derive(tbl, column)
 end
 
 local function axis_label(names)
-    for _, name in ipairs(names) do
-        if #name > 1 then
-            return table.concat(names, " ")
-        end
-    end
-    return table.concat(names)
+    local long = fp.any(names, function(name)
+        return #name > 1
+    end)
+    return table.concat(names, long and " " or "")
 end
 
 -- Textbook layout: the last two inputs run across the columns (one input for

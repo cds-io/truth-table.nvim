@@ -9,6 +9,7 @@ local page = require("truth-table.tutor_page")
 local styled = require("truth-table.tutor_vellum")
 local spans = require("truth-table.tutor_spans")
 local marks = require("truth-table.marks")
+local fp = require("truth-table.fp")
 
 local M = {}
 
@@ -195,11 +196,10 @@ local function dress(buf, filetype)
 end
 
 local function window(role)
-    for _, win in ipairs(vim.api.nvim_list_wins()) do
-        if vim.w[win][ROLE] == role then
-            return win
-        end
-    end
+    local found = fp.find(vim.api.nvim_list_wins(), function(win)
+        return vim.w[win][ROLE] == role
+    end)
+    return found
 end
 
 -- Both panes, side by side. A pane the reader closed opens again beside the

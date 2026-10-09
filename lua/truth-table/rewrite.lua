@@ -146,10 +146,11 @@ local function chain_at(path, index)
         slot = slot - 1
     end
     local members = operands(path[top], op)
-    for position, member in ipairs(members) do
-        if member == path[index] then
-            return { op = op, top = top, slot = slot, operands = members, index = position }
-        end
+    local member, position = fp.find(members, function(candidate)
+        return candidate == path[index]
+    end)
+    if member then
+        return { op = op, top = top, slot = slot, operands = members, index = position }
     end
 end
 
@@ -159,11 +160,11 @@ end
 -- the canonical form by identity, outside the tree.
 local function completed(ast, draft)
     local text, output, value, mapped = trees.rendered(draft.tree, draft.produced)
-    local positions, input = ast.span and {} or trees.positions(ast), {}
-    for _, node in ipairs(draft.consumed) do
+    local positions = ast.span and {} or trees.positions(ast)
+    local input = fp.map(draft.consumed, function(node)
         local span = node.span or positions[node]
-        input[#input + 1] = { span.start_byte - 1, span.end_byte }
-    end
+        return { span.start_byte - 1, span.end_byte }
+    end)
     return {
         value = value,
         change = {
@@ -405,10 +406,8 @@ end
 -- negation. Without a focus the run is every operand, when all are negated.
 local function run_around(items, focus)
     if not focus then
-        for _, item in ipairs(items) do
-            if not negated(item) then
-                return nil
-            end
+        if not fp.all(items, negated) then
+            return nil
         end
         return 1, #items
     end
@@ -447,12 +446,10 @@ local function de_morgan_at(ast, node, focus)
         local rewritten = trees.de_morgan(node)
         return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
     end
-    local run, kept = {}, {}
-    for index, item in ipairs(items) do
-        if index >= first and index <= last then
-            run[#run + 1] = item
-        end
-    end
+    local run = fp.filter(items, function(_, index)
+        return index >= first and index <= last
+    end)
+    local kept = {}
     local contracted = trees.de_morgan(fold(inner.type, run))
     for index, item in ipairs(items) do
         if index == first then
@@ -552,16 +549,10 @@ local function gone(site, new)
     if site.type ~= "and" and site.type ~= "or" then
         return { site }
     end
-    local kept = {}
-    for _, item in ipairs(operands(new, site.type)) do
-        kept[item] = true
-    end
-    local out = {}
-    for _, item in ipairs(operands(site, site.type)) do
-        if not kept[item] then
-            out[#out + 1] = item
-        end
-    end
+    local kept = fp.set(operands(new, site.type))
+    local out = fp.filter(operands(site, site.type), function(item)
+        return not kept[item]
+    end)
     return #out > 0 and out or { site }
 end
 
@@ -570,15 +561,10 @@ end
 -- that only removes terms produced what remains at the site.
 local function replacement_terms(site, new)
     if not DUAL[site.type] then return { new } end
-    local original, introduced = {}, {}
-    for _, item in ipairs(operands(site, site.type)) do
-        original[item] = true
-    end
-    for _, item in ipairs(operands(new, site.type)) do
-        if not original[item] then
-            introduced[#introduced + 1] = item
-        end
-    end
+    local original = fp.set(operands(site, site.type))
+    local introduced = fp.filter(operands(new, site.type), function(item)
+        return not original[item]
+    end)
     return #introduced > 0 and introduced or { new }
 end
 
@@ -591,16 +577,10 @@ end
 -- chain of ∧ terms, `large` is true only where `small` already is (dually
 -- for ∧ over ∨), which is what lets `small` absorb it.
 local function within(small, large, op)
-    local theirs = {}
-    for _, factor in ipairs(factors(large, op)) do
-        theirs[shape(factor)] = true
-    end
-    for _, factor in ipairs(factors(small, op)) do
-        if not theirs[shape(factor)] then
-            return false
-        end
-    end
-    return true
+    local theirs = fp.set(factors(large, op), shape)
+    return fp.all(factors(small, op), function(factor)
+        return theirs[shape(factor)]
+    end)
 end
 
 -- `term` without its factor that is the complement of `operand`, or nil when
@@ -675,12 +655,10 @@ local CHAIN_LAWS = {
     end },
     -- A ∨ 1 is 1, and A ∧ 0 is 0. The constant stays as it was typed.
     { name = "domination", apply = function(items, _, op)
-        for _, item in ipairs(items) do
-            if constant(item) == DOMINATOR[op] then
-                return { { item } }
-            end
-        end
-        return {}
+        local item = fp.find(items, function(candidate)
+            return constant(candidate) == DOMINATOR[op]
+        end)
+        return item and { { item } } or {}
     end },
     -- A ∨ 0 and A ∧ 1 are A.
     { name = "identity", apply = function(items, at, op)
@@ -706,21 +684,16 @@ local CHAIN_LAWS = {
         local function absorbs(small, large)
             return within(small, large, DUAL[op]) and not within(large, small, DUAL[op])
         end
-        local kept = {}
-        for other, item in ipairs(items) do
-            if other == at or not absorbs(items[at], item) then
-                kept[#kept + 1] = item
-            end
-        end
+        local kept = fp.filter(items, function(item, other)
+            return other == at or not absorbs(items[at], item)
+        end)
         if #kept < #items then
             return { kept }
         end
-        for other, item in ipairs(items) do
-            if other ~= at and absorbs(item, items[at]) then
-                return { without(items, at) }
-            end
-        end
-        return {}
+        local absorbed = fp.any(items, function(item, other)
+            return other ~= at and absorbs(item, items[at])
+        end)
+        return absorbed and { without(items, at) } or {}
     end },
     -- A ∨ ¬A ∧ B is A ∨ B: every term holding the focus's complement loses
     -- it, or the focus loses the complement of another operand.
@@ -779,12 +752,13 @@ local CHAIN_LAWS = {
             for q = p + 1, #items do
                 local left, right = factors(items[p], dual), factors(items[q], dual)
                 if p ~= at and q ~= at and #left + #right > 2 then
-                    for i, x in ipairs(left) do
-                        for j, y in ipairs(right) do
-                            if complement(x, y) and covered(left, i) and covered(right, j) then
-                                return { without(items, at) }
-                            end
-                        end
+                    local split = fp.any(left, function(x, i)
+                        return fp.any(right, function(y, j)
+                            return complement(x, y) and covered(left, i) and covered(right, j)
+                        end)
+                    end)
+                    if split then
+                        return { without(items, at) }
                     end
                 end
             end
@@ -882,10 +856,7 @@ end
 local function simplify(ast, byte)
     local positions = ast.span and {} or trees.positions(ast)
     local path = byte and path_to(ast, byte) or {}
-    local on_path, target = {}, path[#path]
-    for _, node in ipairs(path) do
-        on_path[node] = true
-    end
+    local on_path, target = fp.set(path), path[#path]
     local function around(site)
         return on_path[site]
     end
