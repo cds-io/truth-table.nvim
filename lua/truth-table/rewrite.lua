@@ -763,6 +763,34 @@ local CHAIN_LAWS = {
         end
         return found
     end },
+    -- A ∧ B ∨ ¬A ∧ C ∨ B ∧ C is A ∧ B ∨ ¬A ∧ C: the focus goes when two
+    -- other terms split on an operand, one holding it and the other its
+    -- complement, and the focus holds every other factor of both, of which
+    -- there is at least one (a pair with none is complement's). Dually for
+    -- an ∧ chain of ∨ terms.
+    { name = "consensus", apply = function(items, at, op)
+        local dual = DUAL[op]
+        -- Does the focus hold every factor of `these` but the one at `split`?
+        -- A lone factor leaves nothing to hold.
+        local function covered(these, split)
+            return #these == 1 or within(fold(dual, without(these, split)), items[at], dual)
+        end
+        for p = 1, #items do
+            for q = p + 1, #items do
+                local left, right = factors(items[p], dual), factors(items[q], dual)
+                if p ~= at and q ~= at and #left + #right > 2 then
+                    for i, x in ipairs(left) do
+                        for j, y in ipairs(right) do
+                            if complement(x, y) and covered(left, i) and covered(right, j) then
+                                return { without(items, at) }
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return {}
+    end },
 }
 
 -- Where a collapsing law can apply: every ¬, and the root of every ∧ or ∨
@@ -846,8 +874,8 @@ local function collapse(node, on_path)
 end
 
 -- Apply one collapsing law (complement, domination, identity, idempotence,
--- absorption, reduction, or the removal of a negated constant or a double
--- negation) and say which. The nearest match wins: a law involving the
+-- absorption, reduction, consensus, or the removal of a negated constant or
+-- a double negation) and say which. The nearest match wins: a law involving the
 -- operand under the cursor, then one inside whatever the cursor selects,
 -- then one in a chain around the cursor, then one anywhere. Without a cursor
 -- in the expression only the last applies. ⊕, ⇔ and → are left as they are.

@@ -401,6 +401,16 @@ describe("rewrite.simplify", function()
         })
     end)
 
+    it("drops a term that two others, split on one operand, already cover", function()
+        check({
+            { "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c)", "(b", "(a ∧ b) ∨ (¬a ∧ c)", "consensus" },
+            { "(a ∨ b) ∧ (¬a ∨ c) ∧ (b ∨ c)", "(b", "(a ∨ b) ∧ (¬a ∨ c)", "consensus" },
+            { "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c ∧ d)", "(b", "(a ∧ b) ∨ (¬a ∧ c)", "consensus" },
+            { "(b ∧ c) ∨ (a ∧ b) ∨ (¬a ∧ c)", "(b", "(a ∧ b) ∨ (¬a ∧ c)", "consensus" },
+            { "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c)", "a", "(a ∧ b) ∨ (¬a ∧ c)", "consensus" },
+        })
+    end)
+
     it("removes negations of constants and double negations", function()
         check({
             { "¬1", "1", "0", "negation" },
@@ -431,7 +441,8 @@ describe("rewrite.simplify", function()
     end)
 
     it("refuses when no collapsing law applies", function()
-        for _, source in ipairs({ "a", "a ∨ b", "a ∧ (b ∨ c)", "a ⊕ a", "a → a", "(a ∧ b) ∨ (¬a ∧ c)" }) do
+        for _, source in ipairs({ "a", "a ∨ b", "a ∧ (b ∨ c)", "a ⊕ a", "a → a", "(a ∧ b) ∨ (¬a ∧ c)",
+            "(a ∧ b) ∨ (a ∧ c) ∨ (b ∧ c)", "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ d)" }) do
             local text, err = simplify(source, "a")
             assert.is_nil(text, source)
             assert.are.equal("No simplification applies to this expression", err)
@@ -507,6 +518,13 @@ describe("rewrite.moves", function()
         assert.are.same({
             "B ∨ C ∨ (¬A ∧ B)", "B ∨ (¬A ∧ B) ∨ C",
         }, results("(A ∧ B) ∨ (¬A ∧ B) ∨ C ∨ (¬A ∧ B)", "reduction"))
+    end)
+
+    it("lists the consensus term's removal once, whichever pair covers it", function()
+        assert.are.same({ "(A ∧ B) ∨ (¬A ∧ C)" }, results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C)", "consensus"))
+        assert.are.same({ "(A ∧ B) ∨ (¬A ∧ C) ∨ (A ∧ D)" }, results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C) ∨ (A ∧ D)", "consensus"))
+        -- A pair with nothing besides the split operand is complement's.
+        assert.are.same({}, results("A ∨ ¬A ∨ B", "consensus"))
     end)
 
     it("recognises each complementary partner, without changing the input", function()
@@ -602,6 +620,7 @@ describe("rewrite soundness", function()
         "(A ∨ B) ∧ (¬A ∨ B) ∧ (A ∨ ¬A ∨ C) ∧ ¬¬B ∧ ¬0",
         "A ∧ A ∨ A ∧ B ∨ ¬(A ∧ A) ∧ C ∨ B ∧ A",
         "¬(A ∨ ¬A) ∨ (B → B ∧ (C ∨ ¬C)) ∨ (A ⊕ (B ∨ B))",
+        "(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C ∧ D) ∨ (A ∨ B) ∧ (¬A ∨ C) ∧ (B ∨ C)",
     }
     local rewrites = {
         factor = function(ast, byte) return rewrite.factor(ast, byte) end,
@@ -847,6 +866,7 @@ describe("the terms a rewrite consumed", function()
         assert.are.same({ "1" }, (consumed("b ∧ 1", rewrite.simplify, "1")))
         assert.are.same({ "Q" }, (consumed("(Q ∧ ¬C) ∨ (Q ∧ Q ∧ ¬L)", rewrite.simplify, "(Q ∧ Q")))
         assert.are.same({ "(a ∧ b)" }, (consumed("a ∨ (a ∧ b)", rewrite.simplify, "a")))
+        assert.are.same({ "(b ∧ c)" }, (consumed("(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c)", rewrite.simplify, "(b")))
         assert.are.same({ "¬¬a" }, (consumed("¬¬a ∧ b", rewrite.simplify, "¬¬a")))
     end)
 
