@@ -1,6 +1,6 @@
 return {
     title = "Absorption and reduction",
-    aim = "Shrink an expression with the absorption and reduction laws, by derivation and in one move.",
+    aim = "Shrink an expression with the absorption, reduction and consensus laws, by derivation and in one move.",
     steps = {
         {
             text = [[
@@ -186,6 +186,40 @@ To see the three steps behind it, undo (`u`) and take the long way: factor
 ]],
             solution = {
                 { on = "(a or b) and (not a or b)", at = "b", run = { "TruthTableSimplify", "TruthTableApplyStep" } },
+            },
+        },
+        {
+            text = [[
+The last shrinking law, *consensus*, takes three terms. When two of them split
+on an operand, one holding `a` and the other `¬a`, what is left of the two
+together (`b` from the first, `c` from the second) makes a term the first two
+already cover, so the red one goes:
+
+```logic
+(a ∧ b) ∨ (¬a ∧ c) ∨ [:red (b ∧ c)]  ≡  (a ∧ b) ∨ (¬a ∧ c)
+```
+
+In words: when `b` and `c` are both true, `a` is true or it is not, and either
+way one of the first two terms holds already. The lesson on the arithmetic
+spelling met this one as `ab + a'c + bc = ab + a'c` and checked it by table.
+With the cursor on the red term, preview `:TruthTableSimplify` and apply it
+as a step.
+]],
+            template = [[
+(a and b) or (not a and c) or [:red (b and c)]
+]],
+            expect = [[
+(a and b) or (not a and c) or (b and c)
+≡ (a ∧ b) ∨ (¬a ∧ c)                       | by consensus
+]],
+            note = [[
+The dual holds too, with `∧` and `∨` traded: `(a ∨ b) ∧ (¬a ∨ c) ∧ (b ∨ c)`
+is `(a ∨ b) ∧ (¬a ∨ c)`, and Simplify finds it the same way. A term carrying
+more than the consensus, `b ∧ c ∧ d` here, goes as well, since whatever makes
+it true makes `b ∧ c` true.
+]],
+            solution = {
+                { on = "(a and b) or (not a and c) or (b and c)", at = "(b", run = { "TruthTableSimplify", "TruthTableApplyStep" } },
             },
         },
     },

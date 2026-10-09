@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableSimplify applies the consensus law: in an ∨ chain, a term
+  goes when two others split on an operand, one holding it and the other
+  its complement, and the term holds everything else of both, as in
+  (A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C) ⇒ (A ∧ B) ∨ (¬A ∧ C); dually in an ∧
+  chain. :TruthTableRewrites lists it, and the tutor's lesson on
+  absorption and reduction takes it as a step.
 - :TruthTableEquiv[!] {exprs}, and :[range]TruthTableEquiv[!] over the
   selected lines, judges two or more expressions as a chain, each against
   the one before it: "equivalent (N expressions)", or the first pair that

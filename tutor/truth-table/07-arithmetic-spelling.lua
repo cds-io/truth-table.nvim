@@ -89,9 +89,10 @@ Translate both sides, give them to `:TruthTable` as two columns, and compare.
             note = [[
 The columns agree: `bc` adds nothing, because whenever `b` and `c` are both
 `1`, one of the other two terms already is (`ab` when `a` is `1`, `a'c` when it
-is `0`). Finding such a term by eye is the hard part; the lesson on Karnaugh
-maps reads it off the column instead, under the name sum of products. (The
-law's name, for looking it up: *consensus*.)
+is `0`). Finding such a term by eye is the hard part. The law is *consensus*:
+the lesson on absorption and reduction drops the term in one move, and the
+lesson on Karnaugh maps reads the short form off the column instead, under
+the name sum of products.
 ]],
             solution = {
                 { run = { "TruthTable a and b or not a and c or b and c | a and b or not a and c" } },

@@ -138,7 +138,7 @@ Start with small expressions.
 | `:TruthTableDistribute` | Toggle a preview that distributes the operand under the cursor into the group beside it |
 | `:TruthTableXor` | Toggle a preview that recognises an exclusive or (or an equivalence) spelled out as the two terms under the cursor |
 | `:TruthTableCommute[!]` | Toggle a preview that swaps the operand under the cursor with the next one (`!`: the previous one) |
-| `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction) |
+| `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction, consensus) |
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
@@ -343,6 +343,7 @@ right-hand side is smaller than its left) and the preview says which.
 | idempotence | `A ∨ A` ⇒ `A`, `(A ∧ B) ∨ (B ∧ A)` ⇒ `A ∧ B` |
 | absorption | `A ∨ (A ∧ B)` ⇒ `A`, `A ∨ (¬A ∧ B)` ⇒ `A ∨ B`, and the duals |
 | reduction | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B`, `(A ∨ B) ∧ (¬A ∨ B)` ⇒ `B` |
+| consensus | `(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C)` ⇒ `(A ∧ B) ∨ (¬A ∧ C)`, and the dual |
 | negation | `¬1` ⇒ `0`, `¬⊥` ⇒ `⊤` |
 | double negation | `¬¬A` ⇒ `A` |
 
