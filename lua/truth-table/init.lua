@@ -88,7 +88,28 @@ local function cmd_expand(opts)
     end)
 end
 
-local function cmd_drop_row()
+-- The edit . runs again. Neovim replays only what it recorded as a
+-- change, and a command run by name records nothing; an operator does.
+-- So a repeatable command names itself here, sets 'operatorfunc' to the
+-- dispatcher and runs g@ over one character: the edit runs at the cursor
+-- now, and . reaches the dispatcher, which runs it again where the cursor
+-- is then. The character is never read; the row and column come from the
+-- cursor, as they do when the command is run by name.
+local repeated
+
+function M.operator()
+    repeated()
+end
+
+local function repeatable(fn)
+    return function()
+        repeated = fn
+        vim.go.operatorfunc = "v:lua.require'truth-table'.operator"
+        vim.cmd("normal! g@l")
+    end
+end
+
+local cmd_drop_row = repeatable(function()
     with_table(function(tbl, start_line)
         local cur_row = vim.api.nvim_win_get_cursor(0)[1]
         if cur_row <= start_line + 1 then
@@ -98,14 +119,14 @@ local function cmd_drop_row()
         local row_idx = cur_row - start_line - 1
         return core.drop_row(tbl, row_idx)
     end)
-end
+end)
 
-local function cmd_drop_column()
+local cmd_drop_column = repeatable(function()
     with_table(function(tbl)
         local col_idx = math.min(get_cursor_column_index(), #tbl.headers)
         return core.drop_column(tbl, col_idx)
     end)
-end
+end)
 
 local function cmd_toggle()
     with_table(function(tbl)

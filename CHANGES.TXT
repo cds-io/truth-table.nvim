@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableDropRow and :TruthTableDropColumn repeat with `.`: the dot
+  runs the same drop on the row or column then under the cursor, so a run
+  of rows goes with <leader>Tr and a few dots. Each command sets
+  'operatorfunc' to the plugin's dispatcher and runs g@ over one character,
+  which Neovim records as the change; the character itself is never read.
+  The popup path and the command line get the same repeat, since the
+  mapping, the popup and `.` all reach the command.
 - Keymaps: one prefix per family, every key one deep and tagged with the
   context it serves. The table commands live under <leader>T (n
   everywhere, e/t/k/r/c inside a table) and the rewrite workflow under

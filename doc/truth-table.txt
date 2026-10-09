@@ -651,7 +651,7 @@ nothing at the cursor says so and leaves the pending preview as it was.
                                                           *:TruthTableDropRow*
 :TruthTableDropRow
     Drop the data row under the cursor. Refuses to drop the heading or
-    separator row. >
+    separator row. `.` runs it again, on the row then under the cursor. >
 
         :TruthTableDropRow
         |  p  |  q  | p ∧ q |
@@ -671,8 +671,9 @@ nothing at the cursor says so and leaves the pending preview as it was.
                                                        *:TruthTableDropColumn*
 :TruthTableDropColumn
     Drop the column under the cursor, respecting escaped pipes in headings.
-    Refuses to drop the only remaining column. The cursor anywhere in the
-    column, on any row: >
+    Refuses to drop the only remaining column. `.` runs it again, on the
+    column then under the cursor. The cursor anywhere in the column, on any
+    row: >
 
         :TruthTableDropColumn
         |  p  |  q  |  r  | (p ∨ q) ∧ r | p → q |

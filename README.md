@@ -149,8 +149,8 @@ Start with small expressions.
 | `:TruthTableEquiv[!] {exprs}` | Are these expressions, separated by `\|` or `,`, all equivalent? Name the first pair that differs and the assignment (`!`: insert the proof table below) |
 | `:[range]TruthTableEquiv[!]` | Same, reading the expressions from the selected lines, one per line |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
-| `:TruthTableDropRow` | Drop the row under the cursor |
-| `:TruthTableDropColumn` | Drop the column under the cursor |
+| `:TruthTableDropRow` | Drop the row under the cursor (`.` runs it again, on the row then under the cursor) |
+| `:TruthTableDropColumn` | Drop the column under the cursor (`.` runs it again, on the column then under the cursor) |
 | `:TruthTableKarnaugh` | Insert, below the table, a Karnaugh map and a simplified sum-of-products formula for the column under the cursor |
 | `:TruthTableTutor[!] [lesson]` | Open the tutorial at your place: a lesson pane beside a scratch pane, in a new tab (`!` starts over, a number jumps to that lesson) |
 | `:TruthTableTutorNext` | Go to the tutorial's next step (`]]` inside the tutor) |
@@ -768,8 +768,8 @@ with at least one `≡` step, or a pending rewrite preview.
 | `<leader>Tn` (visual) | anywhere | run `:TruthTable` on the selected lines |
 | `<leader>Te` | table | prefill `:TruthTableExpand ` |
 | `<leader>Tt` | table | toggle `0/1 ↔ F/T` |
-| `<leader>Tr` | table | drop row |
-| `<leader>Tc` | table | drop column |
+| `<leader>Tr` | table | drop row (`.` repeats) |
+| `<leader>Tc` | table | drop column (`.` repeats) |
 | `<leader>Tk` | table | Karnaugh map and formula for the column |
 | `<leader>ld` | expression | toggle De Morgan preview |
 | `<leader>lf` | expression | toggle factor preview (the operand moves out of its terms) |
