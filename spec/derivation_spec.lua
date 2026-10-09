@@ -37,6 +37,42 @@ describe("derivation.working_side", function()
     end)
 end)
 
+describe("derivation.sides", function()
+    it("lists every side in order with its bytes, and the ≡ that opens it", function()
+        local line = "F ≡ A ∨ B ≡ B ∨ A"
+        local sides = derivation.sides(line)
+        assert.are.equal(3, #sides)
+        assert.are.same({ text = "F", first = 1, last = 1 }, sides[1])
+        assert.are.equal("A ∨ B", line:sub(sides[2].first, sides[2].last))
+        assert.are.equal("≡", line:sub(sides[2].separator, sides[2].separator + 2))
+        assert.are.equal("B ∨ A", line:sub(sides[3].first, sides[3].last))
+        assert.are.equal((line:find("≡", sides[2].separator + 1, true)), sides[3].separator)
+    end)
+
+    it("starts a step line at its leading ≡", function()
+        local line = "    ≡ S ∨ T    | by commutativity"
+        local sides = derivation.sides(line)
+        assert.are.equal(1, #sides)
+        assert.are.same({ text = "S ∨ T", first = 9, last = 15, separator = 5 }, sides[1])
+    end)
+
+    it("leaves blank sides out", function()
+        assert.are.same({}, derivation.sides(""))
+        assert.are.same({}, derivation.sides("   "))
+        assert.are.equal(1, #derivation.sides("F ≡ "))
+        assert.are.equal(2, #derivation.sides("F ≡ A ≡ "))
+        assert.are.equal(2, #derivation.sides("F ≡   ≡ G"))
+    end)
+
+    it("agrees with working_side for a byte in each side", function()
+        local line = "F ≡ A ∨ B ≡ B ∨ A"
+        for _, side in ipairs(derivation.sides(line)) do
+            local chosen = assert(derivation.working_side(line, side.first))
+            assert.are.same({ text = side.text, first = side.first, last = side.last }, chosen)
+        end
+    end)
+end)
+
 describe("a justification", function()
     it("ends the sides: no side reaches into it, and a cursor in it selects the last side", function()
         local line = "≡ b ∧ 1        | by complement"

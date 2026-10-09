@@ -40,6 +40,32 @@ local function separators(line)
     end
 end
 
+-- Side k of a line's body `content`, cut at `cuts`: { text, first, last,
+-- separator }, the expression with surrounding blanks trimmed, the one-based
+-- bytes it occupies and the byte of the ≡ that opens it (nil for the first
+-- side). A blank side is nil.
+local function side_at(content, cuts, k)
+    local from = k == 1 and 1 or cuts[k - 1] + #SEPARATOR
+    local piece = content:sub(from, cuts[k] and cuts[k] - 1 or #content)
+    local lead, text = piece:match("^(%s*)(.-)%s*$")
+    if text == "" then
+        return nil
+    end
+    local first = from + #lead
+    return { text = text, first = first, last = first + #text - 1, separator = cuts[k - 1] }
+end
+
+-- Every side of a line in order; blank sides are left out.
+function M.sides(line)
+    local content = body(line)
+    local cuts = separators(content)
+    local out = {}
+    for k = 1, #cuts + 1 do
+        out[#out + 1] = side_at(content, cuts, k)
+    end
+    return out
+end
+
 -- The side the cursor byte selects: { text, first, last }, the expression
 -- with surrounding blanks trimmed and the one-based bytes it occupies. The
 -- separator itself, or a blank side (the padding before a leading ≡), selects
@@ -48,14 +74,11 @@ function M.working_side(line, byte)
     line = body(line)
     local cuts = separators(line)
     local function side(k)
-        local from = k == 1 and 1 or cuts[k - 1] + #SEPARATOR
-        local content = line:sub(from, cuts[k] and cuts[k] - 1 or #line)
-        local lead, text = content:match("^(%s*)(.-)%s*$")
-        if text == "" then
-            return nil
+        local found = side_at(line, cuts, k)
+        if found then
+            found.separator = nil
         end
-        local first = from + #lead
-        return { text = text, first = first, last = first + #text - 1 }
+        return found
     end
 
     local selected = 1
