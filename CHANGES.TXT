@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- Tutor: the reference lists the derivation commands (:TruthTableAlign,
+  :TruthTableVerify[!] with its keys, :TruthTableEquiv[!]) and names
+  :TruthTableDeMorganApply as the alias of :TruthTableApply; the tutor spec
+  requires every registered command to appear in it.
 - :TruthTableDNF and :TruthTableCNF preview the whole expression in
   disjunctive or conjunctive normal form, in one step named "disjunctive
   normal form" or "conjunctive normal form": →, ⊕ and ⇔ unfolded, every

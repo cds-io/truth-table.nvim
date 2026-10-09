@@ -84,11 +84,24 @@ Rewrites, each a preview at the cursor that names its law:
   form, in one step.
 - `:TruthTableSimplify` (`<leader>ttz`): apply the nearest shrinking law:
   complement, identity, domination, idempotence, absorption or reduction.
-- `:TruthTableApply` (`<leader>tta`): replace the expression with the preview.
+- `:TruthTableApply` (`<leader>tta`): replace the expression with the preview
+  (`:TruthTableDeMorganApply` is an alias).
 - `:TruthTableApplyStep` (`<leader>ttA`): add the preview below as a `≡` step
   with its `| by` justification.
 - `:TruthTableRewrites` (`<leader>ttl`): list every rewrite of the expression,
   wherever it applies, and add the one you pick as a `≡` step.
+
+Derivations, the `≡` steps the rewrites write and you write by hand:
+
+- `:TruthTableAlign`: put the `| by` bars of the derivation under the cursor in
+  one column.
+- `:TruthTableVerify[!]` (`<leader>ttv`, `<leader>ttV`): judge every step
+  against the side before it; the first that fails is lit, its `≡` shown as
+  `≢`, and the breaking assignment named. With `!`, the proof table goes in
+  below.
+- `:TruthTableEquiv[!] {expressions}`: are these all equivalent? Name the
+  first pair that differs; with a range, the selected lines are the
+  expressions; with `!`, the proof table goes in below.
 
 The tutor:
 
