@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableVerify (<leader>ttv) judges every ≡ step of the derivation
+  under the cursor against the side before it, over every assignment of
+  their variables; the first step that fails has its right-hand side lit
+  and its ≡ overlaid with ≢ until the next edit, and the breaking
+  assignment is notified. check.lua is the pure verdict, verdict.lua the
+  marks; derivation.sides lists a line's sides with the ≡ that opens each;
+  symbols.lua has NOT_EQUIV (≢, typed nequiv@).
 - trees.lua: every node comes from a constructor (`var`, `reference`,
   `column`, `literal`, `paren`, `negation`, `binary`); the parser, binding,
   the rewrites and the Karnaugh formula call them, so the node types a

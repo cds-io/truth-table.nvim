@@ -4,10 +4,10 @@
 -- Everything that spells a symbol reads it from here: predicate.lua renders
 -- headings with `unicode`, and abbreviations.lua turns `ascii .. trigger` into
 -- `unicode`. Changing a rendering means changing one line, and typed headings
--- always match generated ones. The last five are not predicate operators:
+-- always match generated ones. The last six are not predicate operators:
 -- predicate.lua reads TOP and BOTTOM, by word or by symbol, as the constants
--- 1 and 0, and the other three are here for the abbreviations and for anything
--- that later wants them.
+-- 1 and 0, and the other four are here for the abbreviations and for the
+-- derivation check, which shows a failed step's ≡ as ≢.
 
 return {
     NOT = { ascii = "not", unicode = "¬" },
@@ -21,4 +21,5 @@ return {
     TOP = { ascii = "true", unicode = "⊤" },
     BOTTOM = { ascii = "false", unicode = "⊥" },
     EQUIV = { ascii = "equiv", unicode = "≡" },
+    NOT_EQUIV = { ascii = "nequiv", unicode = "≢" },
 }

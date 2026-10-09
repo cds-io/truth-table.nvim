@@ -142,6 +142,7 @@ Start with small expressions.
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
+| `:TruthTableVerify` | Verify every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -425,6 +426,27 @@ in-place apply re-renders the whole side in canonical form, as De Morgan does. A
 formula line written by an earlier version, `F = …`, reads as one
 biconditional; change its `=` to `≡` before stepping from it.
 
+### Verifying a derivation
+
+Steps written by hand sit beside the ones the rewrites wrote, and nothing
+tells them apart. `:TruthTableVerify` (`<leader>ttv`) reads the derivation
+under the cursor and judges every `≡` step against the side before it, over
+every assignment of the variables either side mentions (a step that drops a
+variable is still judged over it). Every step holds, and it says so with the
+count. One does not, and the first such step is shown: its right-hand side is
+lit the way a rewrite lights what it consumed, the `≡` that opens it reads
+`≢` (an overlay; the text keeps its `≡`), and the notification names the
+step and an assignment that breaks it:
+
+```text
+step 2: a=0, b=1 gives 0 ≢ 1
+```
+
+The marks go on the next edit, or when the check runs again. The
+justification after the bar is your note and is not read: the check judges
+the equivalence, not the law. A side that holds a column reference (`:h2`)
+is refused, since a reference has a meaning inside a table only.
+
 ### Every rewrite at once
 
 Each command above starts from a law: you choose De Morgan, or factoring, put
@@ -694,6 +716,7 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 | `<leader>tto` | Rewrite | toggle xor-recognition preview |
 | `<leader>ttz` | Rewrite | toggle simplify preview |
 | `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
+| `<leader>ttv` | Rewrite | verify the derivation under the cursor |
 | `<leader>tta` | Apply | apply the preview in place |
 | `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
 | `<Space>` | Apply | while a preview is pending, apply it in place |
@@ -748,11 +771,12 @@ built-in keys:
 | `true`                     | `⊤`                   | Truth / top            |
 | `false`                    | `⊥`                   | Falsity / bottom       |
 | `equiv`                    | `≡`                   | Derivation separator   |
+| `nequiv`                   | `≢`                   | Failed step, shown by the derivation check |
 
 The built-in symbol table supplies both default abbreviations and generated
 headings. Custom abbreviation settings affect inserted text only.
 The predicate language reads `⊤` and `⊥` (and the words `true` and `false`) as
-the constants `1` and `0`. The quantifiers and `≡` are typing aids, outside the
+the constants `1` and `0`. The quantifiers, `≡` and `≢` are typing aids, outside the
 predicate language.
 
 ## Customization
@@ -924,6 +948,11 @@ and of a pending preview, and the tutor's colour spans, are all this record.
 - `derivation.lua` splits a line into sides at `≡`, sets its `| by`
 justification apart, replaces one side, and builds an aligned, justified step
 line.
+- `check.lua` judges a derivation: each side against the side before it over
+every assignment of their variables, the first step that fails as a record
+(the step, the row and bytes of its conclusion, the assignment, the two
+values). `verdict.lua` shows that record in the buffer: the conclusion lit,
+its `≡` overlaid with `≢`, cleared on the next edit.
 - `source.lua` resolves the expression under the cursor as a source: one side
 of a derivation line, or a heading read from anywhere in its column, with the
 ways to write a rewrite back (in place, or as a step below).
