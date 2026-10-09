@@ -341,7 +341,7 @@ local function recognise_pair(first, second, op)
     -- operands flips it. The dual starts from ⊕.
     local odd = negated % 2 == 1
     local kind = (odd == (op == "or")) and "xor" or "iff"
-    return { type = kind, left = a, right = b }
+    return trees.binary(kind, a, b)
 end
 
 -- Recognise an exclusive or (or an equivalence) spelled out as two terms:
@@ -547,7 +547,7 @@ local CHAIN_LAWS = {
         for other, item in ipairs(items) do
             if other ~= at and complement(items[at], item) then
                 local kept = without(items, math.max(at, other))
-                kept[math.min(at, other)] = { type = "literal", value = DOMINATOR[op] }
+                kept[math.min(at, other)] = trees.literal(DOMINATOR[op])
                 found[#found + 1] = kept
             end
         end
@@ -678,7 +678,7 @@ local function collapses(node, first, last)
             -- A constant typed as a symbol flips to the other symbol.
             local flipped = inner.value == 1 and SYMBOLS.BOTTOM or SYMBOLS.TOP
             local symbol = inner.symbol and flipped.unicode or nil
-            return { { new = { type = "literal", value = 1 - inner.value, symbol = symbol }, law = "negation" } }
+            return { { new = trees.literal(1 - inner.value, symbol), law = "negation" } }
         elseif inner.type == "not" then
             return { { new = inner.operand, law = "double negation" } }
         end

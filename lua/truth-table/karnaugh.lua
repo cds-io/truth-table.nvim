@@ -332,22 +332,22 @@ local function term_ast(term, inputs, variable)
     local literals = {}
     for i = 1, #term do
         local ch = term:sub(i, i)
-        local input = variable[i] and { type = "var", name = inputs[i] } or { type = "reference", index = i }
+        local input = variable[i] and trees.var(inputs[i]) or trees.reference(i)
         if ch == "1" then
             literals[#literals + 1] = input
         elseif ch == "0" then
-            literals[#literals + 1] = { type = "not", operand = input }
+            literals[#literals + 1] = trees.negation(input)
         end
     end
     if #literals == 0 then
-        return { type = "literal", value = 1 }
+        return trees.literal(1)
     end
     return trees.fold("and", literals)
 end
 
 local function cover_ast(cover, inputs)
     if #cover == 0 then
-        return { type = "literal", value = 0 }
+        return trees.literal(0)
     end
     local variable = variables(inputs)
     return trees.fold("or", fp.map(cover, function(term)

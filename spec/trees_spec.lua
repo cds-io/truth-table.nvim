@@ -37,6 +37,32 @@ describe("tree helpers", function()
     end)
 end)
 
+describe("node constructors", function()
+    local function parse(source) return assert(predicate.parse_expression(source)) end
+
+    it("build the nodes the parser builds", function()
+        local a, b = trees.var("a"), trees.var("b")
+        assert.are.same(parse("a and not b"), trees.binary("and", a, trees.negation(b)))
+        assert.are.same(parse("(a or :h2)"), trees.paren(trees.binary("or", a, trees.reference(2))))
+        assert.are.same(parse("1"), trees.literal(1))
+        assert.are.same(parse("⊤"), trees.literal(1, "⊤"))
+    end)
+
+    it("build the column nodes binding builds", function()
+        local bound = assert(predicate.bind_columns(parse("a and :h2"), { a = 1 }, { "a", "b" }))
+        assert.are.same(trees.binary("and", trees.column(1, nil, "a"), trees.column(2, "b")), bound)
+    end)
+
+    it("refuse a binary operator the operator table does not list", function()
+        assert.has_error(function()
+            trees.binary("nand", trees.var("a"), trees.var("b"))
+        end, "Unknown binary operator: nand")
+        assert.has_error(function()
+            trees.binary("not", trees.var("a"), trees.var("b"))
+        end, "Unknown binary operator: not")
+    end)
+end)
+
 describe("trees.transform", function()
     it("copies nested nodes and preserves left-to-right post-order", function()
         local ast = assert(predicate.parse_expression("not A and (B or 0)"))
@@ -66,8 +92,7 @@ describe("trees.transform", function()
 end)
 
 describe("operator-driven rendering", function()
-    local function variable(name) return { type = "var", name = name } end
-    local function binary(kind, left, right) return { type = kind, left = left, right = right } end
+    local variable, binary = trees.var, trees.binary
 
     it("preserves semantics for every pair of nested binary operators", function()
         local operators = { "and", "or", "xor", "implies", "iff" }

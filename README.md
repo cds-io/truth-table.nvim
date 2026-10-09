@@ -876,10 +876,12 @@ written over the copying traversal in `trees.lua`.
 - `operators.lua` is the one table of operators: each one's keyword, rendered
 symbol, further spellings, binding power and Boolean meaning, read by the
 parser, the evaluator and the renderer alike.
-- `trees.lua` works on the trees the parser makes: the helpers that take a
-chain apart and put one together (`unparen`, `operands`, `fold`), the copying
-`transform`, the canonical form of a tree and its text as a heading, and the
-whole-expression De Morgan rewrite.
+- `trees.lua` makes the nodes (the constructors `var`, `reference`, `column`,
+`literal`, `paren`, `negation` and `binary`, which the parser and the rewrites
+call; `binary` refuses an operator the table does not list) and works on the
+trees: the helpers that take a chain apart and put one together (`unparen`,
+`operands`, `fold`), the copying `transform`, the canonical form of a tree and
+its text as a heading, and the whole-expression De Morgan rewrite.
 - `table_model.lua` owns numeric Boolean cells and the spelling of each encoding
 (`ENCODINGS`, the one place a cell is spelled). `parse` is the one validator,
 run by the Markdown codec on the cells it reads; the edits after it (append,

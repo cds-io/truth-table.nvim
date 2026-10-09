@@ -721,9 +721,12 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - operators.lua is the one table of operators: keyword, rendered symbol,
   further spellings, binding power and Boolean meaning, read by the parser,
   the evaluator and the renderer alike.
-- trees.lua works on the trees the parser makes: unparen, operands and fold,
-  the copying transform, the canonical form of a tree and its text as a
-  heading, and the whole-expression De Morgan rewrite.
+- trees.lua makes the nodes (var, reference, column, literal, paren,
+  negation and binary, which the parser and the rewrites call; binary
+  refuses an operator the table does not list) and works on the trees:
+  unparen, operands and fold, the copying transform, the canonical form of
+  a tree and its text as a heading, and the whole-expression De Morgan
+  rewrite.
 - table_model.lua owns numeric Boolean cells, the spelling of each encoding,
   the one validator (parse) and the pure edits after it.
 - markdown.lua parses/renders tables and escapes pipes, backslashes, and
