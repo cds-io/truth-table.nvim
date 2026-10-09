@@ -4,7 +4,6 @@
 -- in is lit in the preview's text; a step written below keeps both, so a
 -- derivation reads from the part a law acted on to the part it produced.
 local predicate = require("truth-table.predicate")
-local trees = require("truth-table.trees")
 local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
 local rewrite = require("truth-table.rewrite")
@@ -246,7 +245,7 @@ end
 local function rendered(rewritten)
     local change = rewritten.change
     return {
-        text = trees.heading(rewritten.value), law = change.law,
+        text = change.text, law = change.law,
         produced = change.produced_ranges, consumed = change.consumed_ranges,
     }
 end

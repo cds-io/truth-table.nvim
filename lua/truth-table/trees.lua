@@ -21,6 +21,19 @@ function M.unparen(node)
     return node
 end
 
+-- A node's children, left to right: the one under a parenthesis or a
+-- negation, the two of a binary operator, none for a leaf.
+function M.children(node)
+    if node.type == "paren" then
+        return { node.expr }
+    elseif node.type == "not" then
+        return { node.operand }
+    elseif BINARY[node.type] then
+        return { node.left, node.right }
+    end
+    return {}
+end
+
 local function collect(node, op, out)
     local inner = M.unparen(node)
     if inner.type == op then
@@ -108,10 +121,8 @@ function M.canonical(node, selected)
     local origins, mapped = {}, {}
     local function select_nodes(tree)
         origins[tree] = true
-        for _, key in ipairs({ "expr", "operand", "left", "right" }) do
-            if tree[key] then
-                select_nodes(tree[key])
-            end
+        for _, child in ipairs(M.children(tree)) do
+            select_nodes(child)
         end
     end
     for _, tree in ipairs(selected or {}) do
@@ -151,10 +162,8 @@ function M.canonical(node, selected)
             produced[#produced + 1] = current
             return
         end
-        for _, key in ipairs({ "expr", "operand", "left", "right" }) do
-            if current[key] then
-                visit(current[key])
-            end
+        for _, child in ipairs(M.children(current)) do
+            visit(child)
         end
     end
     visit(tree)
