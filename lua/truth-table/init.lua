@@ -150,8 +150,8 @@ local function cmd_align()
     require("truth-table.align").derivation(0, vim.api.nvim_win_get_cursor(0)[1], false)
 end
 
-local function cmd_check()
-    require("truth-table.verdict").show(0, vim.api.nvim_win_get_cursor(0)[1])
+local function cmd_check(command)
+    require("truth-table.verdict").show(0, vim.api.nvim_win_get_cursor(0)[1], command.bang)
 end
 
 local function cmd_commute(command)
@@ -182,8 +182,8 @@ local COMMANDS = {
     { name = "TruthTableDropColumn", run = cmd_drop_column, desc = "Drop the current truth table column" },
     { name = "TruthTableToggle", run = cmd_toggle, desc = "Toggle truth table between 0/1 and F/T" },
     { name = "TruthTableAlign", run = cmd_align, desc = "Align the derivation's justification bars in one column" },
-    { name = "TruthTableVerify", run = cmd_check,
-        desc = "Verify every ≡ step of the derivation under the cursor, and show the first that fails" },
+    { name = "TruthTableVerify", run = cmd_check, bang = true,
+        desc = "Verify every ≡ step of the derivation under the cursor, and show the first that fails (! inserts the proof table below)" },
     { name = "TruthTableKarnaugh", run = cmd_karnaugh,
         desc = "Insert a Karnaugh map and minimal formula for the current column" },
     { name = "TruthTableDeMorgan", run = toggles("de_morgan"), desc = "Toggle a whole-expression De Morgan preview" },
@@ -234,6 +234,7 @@ local KEYMAPS = {
     { key = "z", command = "TruthTableSimplify", desc = "Rewrite: simplify at the cursor" },
     { key = "l", command = "TruthTableRewrites", desc = "Rewrite: list every rewrite and pick one" },
     { key = "v", command = "TruthTableVerify", desc = "Rewrite: verify the derivation" },
+    { key = "V", rhs = "<cmd>TruthTableVerify!<CR>", desc = "Rewrite: verify the derivation and show the proof table" },
     { key = "a", command = "TruthTableApply", desc = "Apply: in place" },
     { key = "A", command = "TruthTableApplyStep", desc = "Apply: as a ≡ step" },
 }

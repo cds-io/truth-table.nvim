@@ -142,7 +142,7 @@ Start with small expressions.
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
-| `:TruthTableVerify` | Verify every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported |
+| `:TruthTableVerify[!]` | Verify every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported (`!`: insert the proof table below as well) |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -455,6 +455,26 @@ justification after the bar is your note and is not read: the check judges
 the equivalence, not the law. A side that holds a column reference (`:h2`)
 is refused, since a reference has a meaning inside a table only.
 
+`:TruthTableVerify!` (`<leader>ttV`) shows the proof as well: a truth table
+over the variables the chain mentions, in the order they appear, with one
+column per side, inserted below the derivation at its indentation. The sides
+are equivalent exactly when their columns are identical, row for row; when a
+step fails, the failing side's cell at the breaking row is lit, the same row
+the notification names. A side that is a bare variable names the column that
+is already there.
+
+```text
+a ∨ b
+≡ a ∨ (b ∧ a)   | by absorption
+
+|  a  |  b  |  a ∨ b  |  a ∨ (b ∧ a)  |
+|:---:|:---:|:-------:|:-------------:|
+|  0  |  0  |    0    |       0       |
+|  0  |  1  |    1    |       0       |
+|  1  |  0  |    1    |       1       |
+|  1  |  1  |    1    |       1       |
+```
+
 ### Every rewrite at once
 
 Each command above starts from a law: you choose De Morgan, or factoring, put
@@ -725,6 +745,7 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 | `<leader>ttz` | Rewrite | toggle simplify preview |
 | `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
 | `<leader>ttv` | Rewrite | verify the derivation under the cursor |
+| `<leader>ttV` | Rewrite | verify the derivation and insert its proof table below |
 | `<leader>tta` | Apply | apply the preview in place |
 | `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
 | `<Space>` | Apply | while a preview is pending, apply it in place |

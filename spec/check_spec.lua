@@ -10,11 +10,11 @@ describe("check.check", function()
             "≡ b ∧ 1           | by complement",
             "≡ b               | by identity",
         }))
-        assert.are.same({ ok = true, steps = 3 }, verdict)
+        assert.are.same({ ok = true, steps = 3, texts = { "(a ∧ b) ∨ (¬a ∧ b)", "b ∧ (a ∨ ¬a)", "b ∧ 1", "b" }, variables = { "a", "b" } }, verdict)
     end)
 
     it("reads several sides on one line as several steps", function()
-        assert.are.same({ ok = true, steps = 3 }, assert(check.check({
+        assert.are.same({ ok = true, steps = 3, texts = { "a → b", "¬a ∨ b", "b ∨ ¬a", "¬(¬b ∧ a)" }, variables = { "a", "b" } }, assert(check.check({
             "a → b ≡ ¬a ∨ b ≡ b ∨ ¬a",
             "≡ ¬(¬b ∧ a)",
         })))
@@ -35,6 +35,15 @@ describe("check.check", function()
         local verdict = assert(check.check({ "a ∧ b", "≡ b ∧ a", "≡ b" }))
         assert.are.equal(2, verdict.step)
         assert.are.same({ { name = "a", value = 0 }, { name = "b", value = 1 } }, verdict.assignment)
+    end)
+
+    it("lists every side's text in canonical form, in chain order, on either verdict", function()
+        local holds = assert(check.check({ "a and b", "≡ b ∧ a", "≡ b and a" }))
+        assert.are.same({ "a ∧ b", "b ∧ a", "b ∧ a" }, holds.texts)
+        local fails = assert(check.check({ "a ∨ b", "≡ a" }))
+        assert.are.same({ "a ∨ b", "a" }, fails.texts)
+        assert.are.same({ "a", "b" }, fails.variables)
+        assert.are.same({ "a", "b" }, holds.variables)
     end)
 
     it("reports the first failing step with the assignment that breaks it", function()
@@ -88,7 +97,7 @@ describe("check.check", function()
     end)
 
     it("leaves a trailing blank side out", function()
-        assert.are.same({ ok = true, steps = 1 }, assert(check.check({ "a ∧ b ≡ b ∧ a ≡ " })))
+        assert.are.same({ ok = true, steps = 1, texts = { "a ∧ b", "b ∧ a" }, variables = { "a", "b" } }, assert(check.check({ "a ∧ b ≡ b ∧ a ≡ " })))
     end)
 
     it("ignores the justification", function()

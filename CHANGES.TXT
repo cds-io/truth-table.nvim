@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableVerify! (<leader>ttV) inserts the proof below the derivation
+  as well: a truth table over the chain's variables with one column per
+  side, the columns identical exactly when the sides are equivalent, and a
+  failing side's cell lit at the breaking row. The verdict's marks go by
+  id on the next edit, so marks painted after an insertion stay until the
+  edit after it.
 - A rewrite command resolves its preview at the cursor first: the same
   preview as the pending one (the same text on the same line) dismisses
   it, and any other replaces it, so the same key after moving the cursor

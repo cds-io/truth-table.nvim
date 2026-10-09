@@ -46,9 +46,9 @@ local function chain(lines)
     return sides
 end
 
--- Give each side its tree and the set of variables it mentions, and
--- answer the chain's variables in order of first appearance; or nil and
--- the reason a side cannot be judged.
+-- Give each side its tree, its text in canonical form and the set of
+-- variables it mentions, and answer the chain's variables in order of first
+-- appearance; or nil and the reason a side cannot be judged.
 local function parsed(sides)
     local order, seen = {}, {}
     for _, side in ipairs(sides) do
@@ -60,7 +60,7 @@ local function parsed(sides)
         if found then
             return nil, found .. " has no meaning outside a table"
         end
-        side.ast, side.mentions = ast, {}
+        side.ast, side.mentions, side.heading = ast, {}, trees.heading(ast)
         for _, name in ipairs(assert(predicate.variables(ast))) do
             side.mentions[name] = true
             if not seen[name] then
@@ -102,10 +102,12 @@ local function differ(premise, conclusion, names)
     end
 end
 
--- The verdict on the derivation `lines`, in order: { ok = true, steps = n }
--- when every step holds, or for the first step that fails { ok = false,
--- step, row, side = { first, last }, separator, assignment, premise,
--- conclusion }, with `row` the index into `lines` of the line holding the
+-- The verdict on the derivation `lines`, in order: { ok = true, steps = n,
+-- texts, variables } when every step holds, or for the first step that
+-- fails { ok = false, step, row, side = { first, last }, separator,
+-- assignment, premise, conclusion, texts, variables }, with `texts` every
+-- side's text in canonical form in chain order, `variables` the chain's
+-- variables in order of first appearance, `row` the index into `lines` of the line holding the
 -- conclusion, `side` and `separator` one-based bytes in it (a conclusion
 -- always follows a ≡ in a block derivation.block found, so `separator` is
 -- set there), `assignment` a list of { name, value } in the order the chain
@@ -121,6 +123,10 @@ function M.check(lines)
     if not order then
         return nil, err
     end
+    local texts = {}
+    for k, side in ipairs(sides) do
+        texts[k] = side.heading
+    end
     for k = 2, #sides do
         local premise, conclusion = sides[k - 1], sides[k]
         local names = names_of(order, premise, conclusion)
@@ -133,10 +139,11 @@ function M.check(lines)
                 ok = false, step = k - 1, row = conclusion.row,
                 side = { conclusion.first, conclusion.last }, separator = conclusion.separator,
                 assignment = found.assignment, premise = found.premise, conclusion = found.conclusion,
+                texts = texts, variables = order,
             }
         end
     end
-    return { ok = true, steps = #sides - 1 }
+    return { ok = true, steps = #sides - 1, texts = texts, variables = order }
 end
 
 -- A failing verdict as one line: the step, the assignment in order of
