@@ -11,7 +11,7 @@ ways the world can be, and a *truth table* lists them all, one per row, writing
 `1` for true and `0` for false.
 
 The line in the scratch pane is a list of variable names. With the cursor on
-it, run `:.TruthTable` (`<leader>ttn`). The table takes the line's place.
+it, run `:.TruthTable` (`<leader>Tn`). The table takes the line's place.
 ]],
             template = [[
 p q

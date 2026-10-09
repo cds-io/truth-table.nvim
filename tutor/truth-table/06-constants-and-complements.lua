@@ -26,7 +26,7 @@ twice says it once. (The names, for looking them up: *domination*, *identity*
 and *idempotence*.)
 
 The scratch pane holds the three left-hand sides. Build a table from the line
-(`:.TruthTable`, `<leader>ttn`, with the cursor on it) and compare each
+(`:.TruthTable`, `<leader>Tn`, with the cursor on it) and compare each
 computed column with its law.
 ]],
             template = [[

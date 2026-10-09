@@ -7,7 +7,7 @@ return {
 A *derivation* is a chain of equivalent expressions, each obtained from the one
 before by a law. It shows the reasoning as well as the result.
 
-`:TruthTableApplyStep` (`<leader>ttA`) applies a preview as a step: it
+`:TruthTableApplyStep` (`<leader>lA`) applies a preview as a step: it
 leaves the line as it is and writes the rewrite below it as `≡ ...`, followed
 by its *justification*, `| by` and the name of the law that takes you from the
 line above to this one. It then moves the cursor to the new line so the next
@@ -15,8 +15,8 @@ step can start from there.
 
 Simplify the expression in the scratch pane in two steps. First expand the
 negated group: put the cursor on the first `not`, in yellow, preview De
-Morgan (`<leader>ttd`), and apply it as a step (`<leader>ttA`). The cursor is now on
-`¬g` in the new line. Both terms contain `¬g`, so factor it out (`<leader>ttf`)
+Morgan (`<leader>ld`), and apply it as a step (`<leader>lA`). The cursor is now on
+`¬g` in the new line. Both terms contain `¬g`, so factor it out (`<leader>lf`)
 and apply that as a step too.
 ]],
             template = [[
@@ -63,8 +63,8 @@ function canSubmit({ hasTitle, hasEmail, isSaving }) {
 
 Three reasons to reject under one `not`. Turn them into a list of
 requirements, one law per line. De Morgan reads the whole `or` under the
-`not` at once: preview it (`<leader>ttd`) and apply it as a step
-(`<leader>ttA`). Two double negations are left: simplify (`<leader>ttz`) and
+`not` at once: preview it (`<leader>ld`) and apply it as a step
+(`<leader>lA`). Two double negations are left: simplify (`<leader>lz`) and
 apply as a step, twice. Each step leaves the cursor where the next command
 needs it.
 ]],

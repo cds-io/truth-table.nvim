@@ -17,7 +17,7 @@ The blue `a` stays; the red term goes.
 
 In words, for the first: `a ∧ b` can only be true when `a` is, so `or`-ing it
 onto `a` changes no row. Build the table from the line in the scratch pane
-(`:.TruthTable`, `<leader>ttn`) and compare both computed columns with the `a`
+(`:.TruthTable`, `<leader>Tn`) and compare both computed columns with the `a`
 column.
 ]],
             template = [[
@@ -50,11 +50,11 @@ a ∧ ([:red ¬a] ∨ b)  ≡  a ∧ b
 
 In words, for the first: "`a`, or failing that, `b`" is "`a` or `b`". A table
 would confirm it; a derivation shows why. Put the cursor on the first `a`, the
-yellow one, preview `:TruthTableDistribute` (`<leader>ttx`), and apply it as a
-step (`<leader>ttA`). The new line contains `a ∨ ¬a`, which the complement law
+yellow one, preview `:TruthTableDistribute` (`<leader>lx`), and apply it as a
+step (`<leader>lA`). The new line contains `a ∨ ¬a`, which the complement law
 turns into `1`, and the identity law then removes the `1`.
 
-`:TruthTableSimplify` (`<leader>ttz`), which removed the double negations in
+`:TruthTableSimplify` (`<leader>lz`), which removed the double negations in
 earlier lessons, covers every law that shrinks an expression: it finds the
 nearest place one of them applies, previews the result, and names the law it
 used. Run it on the new line and apply it as a step, then do the same once
@@ -105,7 +105,7 @@ on, then one anywhere on the line.
 The derivation was the long way round, taken once to see why the law holds.
 Simplify also knows absorption as a law in its own right. The scratch pane
 holds the same expression: put the cursor on the first `a`, in yellow, preview
-(`<leader>ttz`), and apply it as a step (`<leader>ttA`).
+(`<leader>lz`), and apply it as a step (`<leader>lA`).
 ]],
             template = [[
 [:yellow a] or (not a and b)
@@ -134,8 +134,8 @@ same partner. The red pair goes; the partner stays.
 
 In words, for the first: if `b` decides the outcome when `a` is true and also
 when `a` is false, then `a` has no say. Derive it: with the cursor on either
-`b`, in yellow, preview `:TruthTableFactor` (`<leader>ttf`) and apply it as a
-step (`<leader>ttA`). Then simplify twice (`<leader>ttz`), applying each as a step.
+`b`, in yellow, preview `:TruthTableFactor` (`<leader>lf`) and apply it as a
+step (`<leader>lA`). Then simplify twice (`<leader>lz`), applying each as a step.
 ]],
             template = [[
 (a and [:yellow b]) or (not a and [:yellow b])
@@ -171,7 +171,7 @@ Karnaugh maps, where every group of neighbouring cells is a reduction.
 The second reduction law is the dual of the first: the same three steps with
 `∧` and `∨` traded, and `0` in place of `1`. This time take it in one move.
 With the cursor anywhere in either term, both in yellow, preview
-`:TruthTableSimplify` (`<leader>ttz`) and apply it as a step.
+`:TruthTableSimplify` (`<leader>lz`) and apply it as a step.
 ]],
             template = [[
 [:yellow (a or b)] and [:yellow (not a or b)]

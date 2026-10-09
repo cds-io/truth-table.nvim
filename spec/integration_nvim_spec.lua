@@ -42,24 +42,36 @@ describe("the plugin entry point", function()
         end
     end)
 
-    it("maps the default keys to their commands", function()
+    it("maps the table family under <leader>T", function()
         for key, command in pairs({
-            t = "TruthTableToggle", f = "TruthTableFactor", x = "TruthTableDistribute", s = "TruthTableCommute",
-            S = "TruthTableCommute!", a = "TruthTableApply", A = "TruthTableApplyStep", d = "TruthTableDeMorgan",
-            o = "TruthTableXor", z = "TruthTableSimplify", l = "TruthTableRewrites",
+            t = "TruthTableToggle", k = "TruthTableKarnaugh", r = "TruthTableDropRow", c = "TruthTableDropColumn",
         }) do
-            assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>tt" .. key, "n"), key)
+            assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>T" .. key, "n"), key)
         end
     end)
 
-    -- A key-sorted popup still shows which keys belong together.
-    it("opens each key's description with its family", function()
-        for key, family in pairs({
-            n = "Table", e = "Table", k = "Table", d = "Rewrite", f = "Rewrite", z = "Rewrite", l = "Rewrite",
-            a = "Apply", A = "Apply",
+    it("maps the rewrite family under <leader>l", function()
+        for key, command in pairs({
+            d = "TruthTableDeMorgan", f = "TruthTableFactor", x = "TruthTableDistribute",
+            s = "TruthTableCommute", S = "TruthTableCommute!", o = "TruthTableXor", u = "TruthTableUnfold",
+            m = "TruthTableDNF", M = "TruthTableCNF", z = "TruthTableSimplify", l = "TruthTableRewrites",
+            v = "TruthTableVerify", V = "TruthTableVerify!",
+            a = "TruthTableApply", A = "TruthTableApplyStep",
         }) do
-            local description = vim.fn.maparg("<leader>tt" .. key, "n", false, true).desc
-            assert.is_truthy(description:find("^" .. family .. ": "), key .. ": " .. description)
+            assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>l" .. key, "n"), key)
+        end
+    end)
+
+    -- Without which-key every mapping describes itself; with it, the gated
+    -- leaves hide behind which_key_ignore and the popup labels them instead.
+    it("describes every key", function()
+        for lhs, want in pairs({
+            ["<leader>Tn"] = "New table", ["<leader>Te"] = "Expand with columns", ["<leader>Tr"] = "Drop row",
+            ["<leader>ld"] = "De Morgan", ["<leader>lm"] = "Disjunctive normal form",
+            ["<leader>la"] = "Apply in place", ["<leader>lA"] = "Apply as a ≡ step",
+        }) do
+            local description = vim.fn.maparg(lhs, "n", false, true).desc
+            assert.are.equal(want, description, lhs)
         end
     end)
 end)
@@ -183,16 +195,16 @@ describe("the table commands", function()
 end)
 
 -- In normal mode the current line is the argument, unless it is blank.
-describe("<leader>ttn", function()
+describe("<leader>Tn", function()
     it("prefills the command on a blank line", function()
-        local ttn = assert(vim.fn.maparg("<leader>ttn", "n", false, true).callback)
+        local new = assert(vim.fn.maparg("<leader>Tn", "n", false, true).callback)
         set({ "A and B", "" }, 2, 0)
-        assert.are.equal(":TruthTable ", ttn())
+        assert.are.equal(":TruthTable ", new())
     end)
 
     it("builds the table from the current line, in its place", function()
         set({ "A and B", "" }, 1, 0)
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<leader>ttn", true, false, true), "x", false)
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<leader>Tn", true, false, true), "x", false)
         local from_line = assert(core.parse(vim.api.nvim_buf_get_lines(0, 0, 6, false)))
         assert.are.equal(3, #from_line.headers)
         assert.are.equal("A ∧ B", from_line.headers[3])

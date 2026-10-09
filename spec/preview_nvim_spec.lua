@@ -97,6 +97,30 @@ local function targets()
     return regions("truth-table.target")
 end
 
+describe("preview.active", function()
+    local active = require("truth-table.preview").active
+
+    it("is nil with no preview pending", function()
+        set({ "not (A and B)" })
+        assert.is_nil(active(vim.api.nvim_get_current_buf()))
+    end)
+
+    it("is the pending preview, carrying its law", function()
+        set({ "not (A and B)" })
+        vim.cmd("TruthTableDeMorgan")
+        local pending = assert(active(vim.api.nvim_get_current_buf()))
+        assert.are.equal("De Morgan", pending.law)
+    end)
+
+    it("is nil once the buffer changes, with no notice and no dismissal of its own", function()
+        set({ "not (A and B)" })
+        vim.cmd("TruthTableDeMorgan")
+        vim.api.nvim_buf_set_lines(0, 0, 0, false, { "prose above" })
+        assert.is_nil(active(vim.api.nvim_get_current_buf()))
+        assert.is_nil(notified)
+    end)
+end)
+
 describe("a De Morgan preview", function()
     it("shows the rewrite beside the line and leaves the source as it was", function()
         set({ "  not (A and B)" })

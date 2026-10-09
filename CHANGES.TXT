@@ -1,6 +1,24 @@
 truth-table.nvim changes
 ========================
 
+- Keymaps: one prefix per family, every key one deep and tagged with the
+  context it serves. The table commands live under <leader>T (n
+  everywhere, e/t/k/r/c inside a table) and the rewrite workflow under
+  <leader>l, for logic (d/f/x/s/S/o/u/z/l on an expression, v/V on a
+  derivation, a/A while a preview is pending), so a rewrite is three
+  keys. m and M are :TruthTableDNF and :TruthTableCNF, after their
+  minterms and maxterms.
+- Which-key popups: each prefix's popup lists its family's legal moves at
+  the cursor: the keys whose context holds, with the apply labels naming
+  the pending rewrite's law. A key the context hides still works;
+  which-key feeds an unlisted key back and the hidden real mapping
+  answers, so the command's own warning explains itself. Without
+  which-key every mapping keeps its description and nothing is hidden.
+  derivation.in_derivation and preview.active are the two new probes
+  behind the popups. The specs register once which-key has loaded, so a
+  group label a config puts on the same prefix cannot take the node from
+  the expand (which-key keeps the last spec a prefix was given, and a
+  node with no expand and no visible children is pruned).
 - Help: every command entry shows a before and an after: the command line,
   the text as it stands with a line of ^ under every place the cursor may
   be, a blank line, and what the screen shows afterwards (the buffer, a

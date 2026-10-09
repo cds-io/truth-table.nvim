@@ -7,7 +7,7 @@ return {
 Two expressions are *logically equivalent* when they have the same truth value
 in every row: no state of the world can tell them apart. The table is the test.
 Here is a claim to check: `a → b` says the same thing as `¬a ∨ b`. Build the
-table from the line in the scratch pane (`:.TruthTable`, `<leader>ttn`).
+table from the line in the scratch pane (`:.TruthTable`, `<leader>Tn`).
 ]],
             template = [[
 a implies b | not a or b
@@ -118,7 +118,7 @@ joined by `or`. With `P`, `G`, `S` for the three checks, this one is
 Two branches that both return true look as if they could be merged, and a
 reviewer proposes `return (isPrivileged || hasGrant) && !isSuspended;`, which
 is `(P ∨ G) ∧ ¬S`. Is it the same function? The scratch pane holds both
-expressions. Build the table (`:.TruthTable`, `<leader>ttn`).
+expressions. Build the table (`:.TruthTable`, `<leader>Tn`).
 ]],
             template = [[
 P or (G and not S) | (P or G) and not S

@@ -117,8 +117,8 @@ differ say which.
         {
             text = [[
 The expression is right, and it carries two negations where the code had one.
-The scratch pane holds it on a single line. Simplify (`<leader>ttz`) and
-apply it as a step (`<leader>ttA`).
+The scratch pane holds it on a single line. Simplify (`<leader>lz`) and
+apply it as a step (`<leader>lA`).
 ]],
             template = [[
 not F and not not T and G
@@ -154,9 +154,9 @@ function canAccess({ isSuperAdmin, isAdmin, hasGrant, isClassified }) {
 Name the four checks `S`, `A`, `G`, `C`. Reading from the top, the function
 is the three branches joined by `or`, which is the expression in the scratch
 pane. The repeated `not C` is the thing to tidy. Put the cursor on either
-`not C`, in yellow, preview `:TruthTableFactor` (`<leader>ttf`), and apply it
-as a step (`<leader>ttA`); then, with the cursor on `S` in the new line,
-commute (`<leader>tts`) and apply that as a step as well.
+`not C`, in yellow, preview `:TruthTableFactor` (`<leader>lf`), and apply it
+as a step (`<leader>lA`); then, with the cursor on `S` in the new line,
+commute (`<leader>ls`) and apply that as a step as well.
 ]],
             template = [[
 S or (A and [:yellow not C]) or (G and [:yellow not C])

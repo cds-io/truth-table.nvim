@@ -13,7 +13,7 @@ can be shorter still.
 
 Build a table from the line in the scratch pane (`:.TruthTable`). Then put the
 cursor in the table's last column and run `:TruthTableKarnaugh`
-(`<leader>ttk`). Two things are written below the table.
+(`<leader>Tk`). Two things are written below the table.
 ]],
             template = [[
 (A xor B) or (A and C)
@@ -59,8 +59,8 @@ written as the head of a derivation.
             text = [[
 The formula line invites one more step. Its first two terms are the
 exclusive-or pattern from the previous lesson. Put the cursor on `¬A`, in
-yellow, preview `:TruthTableXor` (`<leader>tto`), and apply it as a step
-(`<leader>ttA`).
+yellow, preview `:TruthTableXor` (`<leader>lo`), and apply it as a step
+(`<leader>lA`).
 ]],
             template = [[
 (A ⊕ B) ∨ (A ∧ C) ≡ ([:yellow ¬A] ∧ B) ∨ (A ∧ ¬B) ∨ (A ∧ C)
@@ -89,7 +89,7 @@ Each group is the reduction law at work. The two cells of the first group are
 A map can also tell you there is nothing to find. Take the retry condition
 from the last lesson, `(T ⊕ E) ∧ R`: is there a shorter way to write it with
 `and`, `or` and `not`? Build the table, then run `:TruthTableKarnaugh`
-(`<leader>ttk`) with the cursor in its last column.
+(`<leader>Tk`) with the cursor in its last column.
 ]],
             template = [[
 (T xor E) and R
@@ -137,7 +137,7 @@ reached by rewriting instead, with no table: unfold the `⊕`, push each `¬`
 onto a variable, distribute `∧` over `∨`, and drop what collapses. That is a
 *disjunctive normal form* (an `or` of `and` terms of variables and negated
 variables), and `:TruthTableDNF` writes it in one step. With the cursor
-anywhere on the line, preview it and apply it as a step (`<leader>ttA`).
+anywhere on the line, preview it and apply it as a step (`<leader>lA`).
 `:TruthTableCNF` gives the dual, an `and` of `or` clauses.
 ]],
             template = [[
@@ -166,7 +166,7 @@ Rows can be missing, and that is useful. Suppose a door only ever reports
 
 Build the table from the line in the scratch pane. Put the cursor on the row
 where `key` is `0` and `door` is `1`, in the last column. Run
-`:TruthTableDropRow` (`<leader>ttr`), then `:TruthTableKarnaugh`.
+`:TruthTableDropRow` (`<leader>Tr`), then `:TruthTableKarnaugh`.
 ]],
             template = [[
 key and door

@@ -18,7 +18,7 @@ inside it and run:
 
     :TruthTableExpand a xor b, a implies b, a iff b
 
-(`<leader>tte` types the command name for you.) Each expression is appended as
+(`<leader>Te` types the command name for you.) Each expression is appended as
 a column, computed from the columns already there.
 ]],
             template = [[
@@ -50,11 +50,11 @@ row where `a` is `1` and `b` is `0`.
 Three commands tend a table you already have, all with the cursor inside it.
 The scratch pane holds the table from the last step.
 
-- `:TruthTableToggle` (`<leader>ttt`) switches the cells between `0`/`1` and
+- `:TruthTableToggle` (`<leader>Tt`) switches the cells between `0`/`1` and
   `F`/`T`. Run it once; running it again switches back.
-- `:TruthTableDropColumn` (`<leader>ttc`) removes the column under the cursor.
+- `:TruthTableDropColumn` (`<leader>Tc`) removes the column under the cursor.
   Put the cursor in the `a ⇔ b` column, in yellow, and run it.
-- `:TruthTableDropRow` (`<leader>ttr`) removes the row under the cursor in the
+- `:TruthTableDropRow` (`<leader>Tr`) removes the row under the cursor in the
   same way. Put the cursor on the last row and run it.
 ]],
             template = [[

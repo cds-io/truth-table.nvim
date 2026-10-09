@@ -13,7 +13,7 @@ Propositions combine through *connectives*. The three basic ones:
 
 A table can be built straight from expressions. The variables are the names the
 expressions mention, and each expression gets a computed column. Separate the
-expressions with `|` or `,`, then run `:.TruthTable` (`<leader>ttn`) on the
+expressions with `|` or `,`, then run `:.TruthTable` (`<leader>Tn`) on the
 line.
 ]],
             template = [[

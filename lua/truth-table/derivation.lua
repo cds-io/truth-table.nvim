@@ -155,6 +155,14 @@ function M.block(lines, row)
     return first, last
 end
 
+-- Whether `row` (from one) sits in a derivation with at least one ≡ step:
+-- its block spans more than its own line, or the line is a step itself
+-- (a step at the top of the buffer is a block of one).
+function M.in_derivation(lines, row)
+    local first, last = M.block(lines, row)
+    return first < last or is_step(lines[row] or "")
+end
+
 -- The lines of a derivation with every justification bar in one column, GAP
 -- columns past the widest sides in the block, where a step whose sides were
 -- the widest would have put it. A line with no bar is as it was. The

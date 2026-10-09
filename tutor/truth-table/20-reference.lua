@@ -60,42 +60,43 @@ From code to an expression and back, in five stages:
 
 Tables:
 
-- `:TruthTable {N or names or expressions}` (`<leader>ttn`): build a table; on
+- `:TruthTable {N or names or expressions}` (`<leader>Tn`): build a table; on
   a line, from that line.
-- `:TruthTableExpand {expressions}` (`<leader>tte`): append computed columns.
-- `:TruthTableToggle` (`<leader>ttt`): switch `0`/`1` and `F`/`T`.
-- `:TruthTableDropRow` (`<leader>ttr`): remove the row under the cursor.
-- `:TruthTableDropColumn` (`<leader>ttc`): remove the column under the cursor.
-- `:TruthTableKarnaugh` (`<leader>ttk`): Karnaugh map and minimal formula for a
+- `:TruthTableExpand {expressions}` (`<leader>Te`): append computed columns.
+- `:TruthTableToggle` (`<leader>Tt`): switch `0`/`1` and `F`/`T`.
+- `:TruthTableDropRow` (`<leader>Tr`): remove the row under the cursor.
+- `:TruthTableDropColumn` (`<leader>Tc`): remove the column under the cursor.
+- `:TruthTableKarnaugh` (`<leader>Tk`): Karnaugh map and minimal formula for a
   column.
 
 Rewrites, each a preview at the cursor that names its law:
 
-- `:TruthTableDeMorgan` (`<leader>ttd`): De Morgan at the nearest match.
-- `:TruthTableCommute[!]` (`<leader>tts`, `<leader>ttS`): swap an operand with
+- `:TruthTableDeMorgan` (`<leader>ld`): De Morgan at the nearest match.
+- `:TruthTableCommute[!]` (`<leader>ls`, `<leader>lS`): swap an operand with
   its neighbour.
-- `:TruthTableDistribute` (`<leader>ttx`): distribute an operand into a group.
-- `:TruthTableFactor` (`<leader>ttf`): factor an operand out of its terms.
-- `:TruthTableXor` (`<leader>tto`): recognise `⊕` or `⇔`.
-- `:TruthTableUnfold` (`<leader>ttu`): replace `→`, `⊕` or `⇔` by its
+- `:TruthTableDistribute` (`<leader>lx`): distribute an operand into a group.
+- `:TruthTableFactor` (`<leader>lf`): factor an operand out of its terms.
+- `:TruthTableXor` (`<leader>lo`): recognise `⊕` or `⇔`.
+- `:TruthTableUnfold` (`<leader>lu`): replace `→`, `⊕` or `⇔` by its
   definition.
-- `:TruthTableDNF`, `:TruthTableCNF`: the whole expression as a disjunctive
+- `:TruthTableDNF`, `:TruthTableCNF` (`<leader>lm`, `<leader>lM`, after
+  minterms and maxterms): the whole expression as a disjunctive
   (an `or` of `and` terms) or conjunctive (an `and` of `or` clauses) normal
   form, in one step.
-- `:TruthTableSimplify` (`<leader>ttz`): apply the nearest shrinking law:
+- `:TruthTableSimplify` (`<leader>lz`): apply the nearest shrinking law:
   complement, identity, domination, idempotence, absorption or reduction.
-- `:TruthTableApply` (`<leader>tta`): replace the expression with the preview
+- `:TruthTableApply` (`<leader>la`): replace the expression with the preview
   (`:TruthTableDeMorganApply` is an alias).
-- `:TruthTableApplyStep` (`<leader>ttA`): add the preview below as a `≡` step
+- `:TruthTableApplyStep` (`<leader>lA`): add the preview below as a `≡` step
   with its `| by` justification.
-- `:TruthTableRewrites` (`<leader>ttl`): list every rewrite of the expression,
+- `:TruthTableRewrites` (`<leader>ll`): list every rewrite of the expression,
   wherever it applies, and add the one you pick as a `≡` step.
 
 Derivations, the `≡` steps the rewrites write and you write by hand:
 
 - `:TruthTableAlign`: put the `| by` bars of the derivation under the cursor in
   one column.
-- `:TruthTableVerify[!]` (`<leader>ttv`, `<leader>ttV`): judge every step
+- `:TruthTableVerify[!]` (`<leader>lv`, `<leader>lV`): judge every step
   against the side before it; the first that fails is lit, its `≡` shown as
   `≢`, and the breaking assignment named. With `!`, the proof table goes in
   below.

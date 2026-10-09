@@ -68,7 +68,7 @@ when it does not.
 
 Do the idiom and the intent have the same truthiness? There is nothing to
 rewrite here; compare their Boolean expressions with a table. The scratch
-pane holds both. Build the table (`:.TruthTable`, `<leader>ttn`). This checks
+pane holds both. Build the table (`:.TruthTable`, `<leader>Tn`). This checks
 whether their results count as true, not whether they return the same value.
 ]],
             template = [[

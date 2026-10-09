@@ -200,6 +200,17 @@ function M.toggle(name)
     end
 end
 
+-- The pending preview in `buf` while the buffer is as the preview left it,
+-- or nil: a probe with no side effects, where `current` clears stale state
+-- and complains.
+function M.active(buf)
+    local preview = pending[buf]
+    if preview and preview.tick == vim.api.nvim_buf_get_changedtick(buf) then
+        return preview
+    end
+    return nil
+end
+
 -- The pending preview, provided the buffer is as it was when the preview was
 -- made. Otherwise the stale state is cleared and the user is told.
 local function current(buf)

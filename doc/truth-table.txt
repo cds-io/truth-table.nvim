@@ -38,10 +38,9 @@ row), so they render in Markdown viewers with table support. Example: >
 2. REQUIREMENTS                                      *truth-table-requirements*
 
 - Neovim (uses `vim.api`, `vim.keymap`, `vim.fn.strdisplaywidth`).
-- Optional: which-key.nvim (if it is installed, a `<leader>tt` group label is
-  registered and the keys are added family by family, for a popup that lists
-  them in that order; see |truth-table-which-key|. Absence is handled
-  gracefully).
+- Optional: which-key.nvim (if it is installed, the `<leader>T` and
+  `<leader>l` groups show a popup of the keys whose context holds at the
+  cursor; see |truth-table-which-key|. Absence is handled gracefully).
 - Optional: vellum.nvim (the tutorial's lesson pane is shown rendered if it is
   installed, and as Markdown otherwise; see |:TruthTableTutor|). vellum needs
   Neovim 0.12 or later.
@@ -773,9 +772,10 @@ nothing at the cursor says so and leaves the pending preview as it was.
     the scratch buffers live as long as their Neovim does. [!] saves the
     first step.
 
-    Every key a lesson names starts with `<leader>tt`; with which-key.nvim
-    installed, pressing that much and pausing lists the rest, each with what
-    it does. The first lesson says how to read a key like `<leader>ttn`.
+    Every key a lesson names starts with `<leader>T` (the table family) or
+    `<leader>l` (the logic family); with which-key.nvim installed, pressing
+    that much and pausing lists the keys legal at the cursor, each with what
+    it does. The first lesson says how to read a key like `<leader>Tn`.
 
     With vellum.nvim installed, the lesson pane shows the step rendered:
     prose wrapped to the pane's width (100 columns at most), code in shaded
@@ -907,58 +907,60 @@ Examples: >
 ==============================================================================
 6. KEYMAPS                                                *truth-table-keymaps*
 
-`setup()` registers these normal-mode keymaps by default, in three families:
+`setup()` registers these keymaps by default, one family per prefix. Each
+key waits for a context, named in brackets: a truth table around the cursor,
+an expression under it (a parseable line, or any row of a table whose
+heading parses), a derivation with at least one ≡ step, or a pending
+rewrite preview.
 
-  Table ~
-    <leader>ttn   run `:TruthTable` on the current line (new table)
-    <leader>ttn   (visual) run `:TruthTable` on the selected lines
-    <leader>tte   prefill `:TruthTableExpand `  (expand)
-    <leader>ttt   |:TruthTableToggle|
-    <leader>ttr   |:TruthTableDropRow|
-    <leader>ttc   |:TruthTableDropColumn|
-    <leader>ttk   |:TruthTableKarnaugh|
-  Rewrite ~
-    <leader>ttd   |:TruthTableDeMorgan|
-    <leader>ttf   |:TruthTableFactor|
-    <leader>ttx   |:TruthTableDistribute|
-    <leader>tts   |:TruthTableCommute|
-    <leader>ttS   |:TruthTableCommute| with !
-    <leader>tto   |:TruthTableXor|
-    <leader>ttu   |:TruthTableUnfold|
-    <leader>ttz   |:TruthTableSimplify|
-    <leader>ttl   |:TruthTableRewrites|  (list)
-    <leader>ttv   |:TruthTableVerify|  (verify)
-    <leader>ttV   |:TruthTableVerify| with !  (the proof table too)
-  Apply ~
-    <leader>tta   |:TruthTableApply|
-    <leader>ttA   |:TruthTableApplyStep|
+  Table, under <leader>T ~
+    <leader>Tn   run `:TruthTable` on the current line (new table)
+    <leader>Tn   (visual) run `:TruthTable` on the selected lines
+    <leader>Te   prefill `:TruthTableExpand `  (expand)  [table]
+    <leader>Tt   |:TruthTableToggle|  [table]
+    <leader>Tr   |:TruthTableDropRow|  [table]
+    <leader>Tc   |:TruthTableDropColumn|  [table]
+    <leader>Tk   |:TruthTableKarnaugh|  [table]
+  Logic, under <leader>l ~
+    <leader>ld   |:TruthTableDeMorgan|  [expression]
+    <leader>lf   |:TruthTableFactor|  [expression]
+    <leader>lx   |:TruthTableDistribute|  [expression]
+    <leader>ls   |:TruthTableCommute|  [expression]
+    <leader>lS   |:TruthTableCommute| with !  [expression]
+    <leader>lo   |:TruthTableXor|  [expression]
+    <leader>lu   |:TruthTableUnfold|  [expression]
+    <leader>lm   |:TruthTableDNF|  [expression]
+    <leader>lM   |:TruthTableCNF|  [expression]
+    <leader>lz   |:TruthTableSimplify|  [expression]
+    <leader>ll   |:TruthTableRewrites|  (list)  [expression]
+    <leader>lv   |:TruthTableVerify|  (verify)  [derivation]
+    <leader>lV   |:TruthTableVerify| with !  (the proof table too)  [derivation]
+    <leader>la   |:TruthTableApply|  [preview]
+    <leader>lA   |:TruthTableApplyStep|  [preview]
     <Space>       apply in place, while a preview is pending
     <CR>          apply as a ≡ step, while a preview is pending
 
 The last two are transient, buffer-local keys: they appear when a rewrite
-locks a preview and go with it (|truth-table-transient-keys|).
+locks a preview and go with it (|truth-table-transient-keys|). The DNF and
+CNF keys are m and M, after the minterms a disjunctive normal form is built
+from and the maxterms of a conjunctive one.
 
                                                         *truth-table-which-key*
-Each keymap's description opens with its family (`Table: new`,
-`Rewrite: factor operand out`, `Apply: in place`), so the grouping shows in a
-which-key popup. By default which-key lists a popup by key, which interleaves
-the families. To list them in the order above, add "manual" to which-key's
-`sort` option: it follows the order mappings were registered in, and the
-plugin registers its keys family by family. >
-
-    require("which-key").setup({
-        sort = { "local", "order", "group", "manual", "alphanum", "mod" },
-    })
-<
-`sort` applies to every which-key popup.
+With which-key.nvim installed, each prefix is a group (`Truth table`,
+`Logic rewrite`) whose popup lists the legal moves at the cursor: the keys
+whose context holds, in the table above's brackets, with the apply keys
+naming the pending rewrite's law (`Apply in place (De Morgan)`). A key the
+popup hides still runs when typed: which-key feeds an unlisted key back to
+the mapping, and the command's own message says what is missing. Without
+which-key every mapping keeps its own description and nothing is hidden.
 
 When |:TruthTableFactor| or |:TruthTableDistribute| refuses and the other one
 applies at the cursor, the refusal names it.
 
-Normal-mode ttn reads the current line as the argument and replaces it with
-the table; on a blank line it prefills `:TruthTable ` instead and leaves you
-in command-line mode to type the argument, as tte always does. Visual-mode
-ttn immediately executes on the selected lines.
+Normal-mode <leader>Tn reads the current line as the argument and replaces it
+with the table; on a blank line it prefills `:TruthTable ` instead and leaves
+you in command-line mode to type the argument, as <leader>Te always does.
+Visual-mode <leader>Tn immediately executes on the selected lines.
 
 The tutorial's two panes add buffer-local `]]` (|:TruthTableTutorNext|) and
 `[[` (|:TruthTableTutorPrev|).
@@ -983,7 +985,7 @@ require("truth-table").setup({opts})
 
 The commands and mappings have no options. To customize keys, remove unwanted
 mappings after setup() and add replacements, for example: >
-    vim.keymap.del("n", "<leader>ttd")
+    vim.keymap.del("n", "<leader>ld")
     vim.keymap.set("n", "<leader>dm", "<cmd>TruthTableDeMorgan<CR>")
 <
 Calling setup() again reinstalls the default mappings.

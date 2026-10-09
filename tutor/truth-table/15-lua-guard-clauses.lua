@@ -109,8 +109,8 @@ return true
 
 Here `c` is `E ∧ G`, and the rest is `return true`, which is `1`. So this tail
 of the function is `¬(E ∧ G) ∧ 1`, the expression in the scratch pane; the
-red part is about to go. Simplify (`<leader>ttz`) and apply it as a step
-(`<leader>ttA`).
+red part is about to go. Simplify (`<leader>lz`) and apply it as a step
+(`<leader>lA`).
 ]],
             template = [[
 not (E and G) [:red and 1]
@@ -144,8 +144,8 @@ guard 1 in front     [:green ¬¬R ∧] (¬(B ∨ A) ∧ (¬(S ∧ L) ∧ (¬(E 
 
 Guard 1 tests `not range`, so its `c` is `¬R`, and negating that gives `¬¬R`.
 The last line is the whole function, exactly as the rule builds it, and it is
-what the scratch pane holds. Tidy it: simplify twice (`<leader>ttz`), applying
-each as a step (`<leader>ttA`).
+what the scratch pane holds. Tidy it: simplify twice (`<leader>lz`), applying
+each as a step (`<leader>lA`).
 ]],
             template = [[
 not not R and (not (B or A) and (not (S and L) and (not (E and G) and 1)))
@@ -181,9 +181,9 @@ holds.
 **Stage 3 of 5: rewrite.**
 
 The expression is correct and still phrased as reasons to say no. Turn them
-into the conditions for yes: De Morgan (`<leader>ttd`) with the cursor on each
+into the conditions for yes: De Morgan (`<leader>ld`) with the cursor on each
 `¬(` in turn, the yellow ones, applying every preview as a step
-(`<leader>ttA`).
+(`<leader>lA`).
 ]],
             template = [[
 R ∧ [:yellow ¬(]B ∨ A) ∧ [:yellow ¬(]S ∧ L) ∧ [:yellow ¬(]E ∧ G)

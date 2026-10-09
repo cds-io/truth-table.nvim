@@ -126,7 +126,7 @@ describe(":TruthTableVerify", function()
         assert.are.equal(2, #marks())
     end)
 
-    it("is mapped to <leader>ttv in the Rewrite family", function()
+    it("is mapped to <leader>lv", function()
         local found
         for _, map in ipairs(vim.api.nvim_get_keymap("n")) do
             if map.rhs == "<Cmd>TruthTableVerify<CR>" then
@@ -134,7 +134,7 @@ describe(":TruthTableVerify", function()
             end
         end
         assert.is_truthy(found)
-        assert.are.equal("Rewrite: verify the derivation", found.desc)
+        assert.are.equal("Verify the derivation", found.desc)
     end)
 end)
 
