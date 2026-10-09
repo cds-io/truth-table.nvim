@@ -188,8 +188,8 @@ lists or blockquotes are not supported.
     with `data = { buf, row, kind }` (`kind` is "step" or "in_place"); the
     aligner is its own listener.
 
-                                                            *:TruthTableCheck*
-:TruthTableCheck
+                                                            *:TruthTableVerify*
+:TruthTableVerify
     Judge every ≡ step of the derivation under the cursor against the side
     before it, over every assignment of the variables either side mentions.
     When every step holds, say so with the count. Otherwise show the first
@@ -595,7 +595,7 @@ Examples: >
     <leader>tto   |:TruthTableXor|
     <leader>ttz   |:TruthTableSimplify|
     <leader>ttl   |:TruthTableRewrites|  (list)
-    <leader>ttv   |:TruthTableCheck|  (check)
+    <leader>ttv   |:TruthTableVerify|  (verify)
   Apply ~
     <leader>tta   |:TruthTableApply|
     <leader>ttA   |:TruthTableApplyStep|

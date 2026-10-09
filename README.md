@@ -142,7 +142,7 @@ Start with small expressions.
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
 | `:TruthTableApplyStep` | Insert the pending preview below the line as a `≡` derivation step, with its `\| by` justification |
 | `:TruthTableRewrites` | List every rewrite of the expression under the cursor, and write the one you pick as a `≡` step (in place, for a table heading) |
-| `:TruthTableCheck` | Check every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported |
+| `:TruthTableVerify` | Verify every `≡` step of the derivation under the cursor; the first that is not an equivalence is lit, its `≡` shown as `≢`, and the breaking assignment reported |
 | `:TruthTableToggle` | Toggle data cells between `0/1` and `F/T` |
 | `:TruthTableDropRow` | Drop the row under the cursor |
 | `:TruthTableDropColumn` | Drop the column under the cursor |
@@ -426,10 +426,10 @@ in-place apply re-renders the whole side in canonical form, as De Morgan does. A
 formula line written by an earlier version, `F = …`, reads as one
 biconditional; change its `=` to `≡` before stepping from it.
 
-### Checking a derivation
+### Verifying a derivation
 
 Steps written by hand sit beside the ones the rewrites wrote, and nothing
-tells them apart. `:TruthTableCheck` (`<leader>ttv`) reads the derivation
+tells them apart. `:TruthTableVerify` (`<leader>ttv`) reads the derivation
 under the cursor and judges every `≡` step against the side before it, over
 every assignment of the variables either side mentions (a step that drops a
 variable is still judged over it). Every step holds, and it says so with the
@@ -716,7 +716,7 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 | `<leader>tto` | Rewrite | toggle xor-recognition preview |
 | `<leader>ttz` | Rewrite | toggle simplify preview |
 | `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
-| `<leader>ttv` | Rewrite | check the derivation under the cursor |
+| `<leader>ttv` | Rewrite | verify the derivation under the cursor |
 | `<leader>tta` | Apply | apply the preview in place |
 | `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
 | `<Space>` | Apply | while a preview is pending, apply it in place |
