@@ -297,6 +297,28 @@ end
 
 -- Root-only De Morgan rewrite, returning an independent tree. No automatic
 -- double-negation simplification: that is a separate refactoring operation.
+-- Each connective's definition in ∧, ∨ and ¬, over its two operands.
+local DEFINITIONS = {
+    implies = function(a, b)
+        return M.binary("or", M.negation(a), b)
+    end,
+    iff = function(a, b)
+        return M.binary("or", M.binary("and", a, b), M.binary("and", M.negation(a), M.negation(b)))
+    end,
+    xor = function(a, b)
+        return M.binary("or", M.binary("and", a, M.negation(b)), M.binary("and", M.negation(a), b))
+    end,
+}
+
+-- `node` (parentheses around it ignored) replaced by its definition when it
+-- is a →, ⊕ or ⇔, its operands going in as they are; nil otherwise. The
+-- result is a fresh tree over the operands' own nodes.
+function M.unfold(node)
+    local inner = M.unparen(node)
+    local define = DEFINITIONS[inner.type]
+    return define and define(inner.left, inner.right)
+end
+
 -- The other operator of a De Morgan pair.
 local DUAL = { ["and"] = "or", ["or"] = "and" }
 

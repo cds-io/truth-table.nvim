@@ -79,6 +79,9 @@ Rewrites, each a preview at the cursor that names its law:
 - `:TruthTableXor` (`<leader>tto`): recognise `⊕` or `⇔`.
 - `:TruthTableUnfold` (`<leader>ttu`): replace `→`, `⊕` or `⇔` by its
   definition.
+- `:TruthTableDNF`, `:TruthTableCNF`: the whole expression as a disjunctive
+  (an `or` of `and` terms) or conjunctive (an `and` of `or` clauses) normal
+  form, in one step.
 - `:TruthTableSimplify` (`<leader>ttz`): apply the nearest shrinking law:
   complement, identity, domination, idempotence, absorption or reduction.
 - `:TruthTableApply` (`<leader>tta`): replace the expression with the preview.

@@ -43,6 +43,8 @@ local REWRITES = {
         run = rewrite.unfold,
         opposite = { name = "xor", hint = "to recognise ⊕ or ⇔ in the terms, use :TruthTableXor" },
     },
+    dnf = { whole = true, run = rewrite.dnf },
+    cnf = { whole = true, run = rewrite.cnf },
     commute = {
         run = function(ast, byte)
             return rewrite.commute(ast, byte, false)

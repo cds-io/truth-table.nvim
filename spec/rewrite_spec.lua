@@ -328,6 +328,42 @@ describe("rewrite.unfold", function()
     end)
 end)
 
+describe("rewrite.dnf and rewrite.cnf", function()
+    local function form(name, source, byte)
+        local ast = assert(predicate.parse_located(source))
+        local tx, err = rewrite[name](ast, byte)
+        if not tx then
+            return nil, err
+        end
+        return trees.heading(tx.value), tx.change.law
+    end
+
+    it("rewrite the whole expression to the form, naming it, from any cursor or none", function()
+        assert.are.same({ "(a ∧ c) ∨ (b ∧ c)", "disjunctive normal form" }, { form("dnf", "(a ∨ b) ∧ c", 1) })
+        assert.are.same({ "(a ∧ c) ∨ (b ∧ c)", "disjunctive normal form" }, { form("dnf", "(a ∨ b) ∧ c", nil) })
+        assert.are.same({ "(a ∨ c) ∧ (b ∨ c)", "conjunctive normal form" }, { form("cnf", "(a ∧ b) ∨ c", 9) })
+    end)
+
+    it("refuse an expression already in the form", function()
+        local out, err = form("dnf", "(a ∧ b) ∨ c", 1)
+        assert.is_nil(out)
+        assert.are.equal("Already in disjunctive normal form", err)
+        out, err = form("cnf", "a ∧ (b ∨ c)", 1)
+        assert.is_nil(out)
+        assert.are.equal("Already in conjunctive normal form", err)
+    end)
+
+    it("pass the cap's refusal on", function()
+        local clauses = {}
+        for i = 1, 9 do
+            clauses[i] = ("(a%d ∨ b%d)"):format(i, i)
+        end
+        local out, err = form("dnf", table.concat(clauses, " ∧ "), 1)
+        assert.is_nil(out)
+        assert.are.equal("The form would have more than 256 terms", err)
+    end)
+end)
+
 describe("rewrite.de_morgan", function()
     it("contracts the nearest enclosing pair of negations", function()
         assert.are.equal("R ∧ (T ∨ E) ∧ ¬(T ∧ E)", run("de_morgan", "R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)", "¬T"))
@@ -540,6 +576,7 @@ describe("rewrite.moves", function()
             { "complement", "1 ∨ A" },
             { "idempotence", "A ∨ ¬A" },
             { "complement", "A ∨ 1" },
+            { "conjunctive normal form", "1" },
             { "commutativity", "¬A ∨ A ∨ A" },
             { "commutativity", "A ∨ A ∨ ¬A" },
         }, moves(source))
@@ -626,13 +663,35 @@ describe("rewrite.moves", function()
         assert.are.same({
             { "definition of →", "¬(a ⊕ b) ∨ c" },
             { "definition of ⊕", "((a ∧ ¬b) ∨ (¬a ∧ b)) → c" },
+            { "disjunctive normal form", "(¬a ∧ ¬b) ∨ (b ∧ a) ∨ c" },
+            { "conjunctive normal form", "(¬a ∨ b ∨ c) ∧ (a ∨ ¬b ∨ c)" },
             { "commutativity", "(b ⊕ a) → c" },
         }, moves("(a ⊕ b) → c"))
         assert.are.same({
             { "De Morgan", "¬A ∨ ¬(B → C)" },
             { "definition of →", "¬(A ∧ (¬B ∨ C))" },
+            { "disjunctive normal form", "¬A ∨ (B ∧ ¬C)" },
+            { "conjunctive normal form", "(¬A ∨ B) ∧ (¬A ∨ ¬C)" },
             { "commutativity", "¬((B → C) ∧ A)" },
         }, moves("¬(A ∧ (B → C))"))
+    end)
+
+    it("lists each normal form that changes the expression, before the swaps, once per result", function()
+        -- ¬a ∨ ¬b ∨ c is both forms at once, so the CNF entry would repeat
+        -- the DNF's text and is left out.
+        assert.are.same({
+            { "definition of →", "¬(a ∧ b) ∨ c" },
+            { "disjunctive normal form", "¬a ∨ ¬b ∨ c" },
+            { "commutativity", "(b ∧ a) → c" },
+        }, moves("(a ∧ b) → c"))
+        assert.are.same({}, results("(a ∧ b) ∨ c", "disjunctive normal form"))
+        -- (a ∧ b) ∨ c reaches its CNF by one distributing step as well, and
+        -- that entry comes first; a longer expression does not.
+        assert.are.same({}, results("(a ∧ b) ∨ c", "conjunctive normal form"))
+        assert.are.same(
+            { "(a ∨ c) ∧ (a ∨ d) ∧ (b ∨ c) ∧ (b ∨ d)" },
+            results("(a ∧ b) ∨ (c ∧ d)", "conjunctive normal form")
+        )
     end)
 
     it("lists De Morgan over a whole chain once, and each run of a longer chain", function()
@@ -704,6 +763,8 @@ describe("rewrite soundness", function()
         de_morgan = function(ast, byte) return rewrite.de_morgan(ast, byte) end,
         simplify = function(ast, byte) return rewrite.simplify(ast, byte) end,
         unfold = function(ast, byte) return rewrite.unfold(ast, byte) end,
+        dnf = function(ast, byte) return rewrite.dnf(ast, byte) end,
+        cnf = function(ast, byte) return rewrite.cnf(ast, byte) end,
     }
 
     -- Every input a tree reads: variable names and :hN indices. eval_ast looks
@@ -942,6 +1003,7 @@ describe("the terms a rewrite consumed", function()
         assert.are.same({ "(a ∧ b)" }, (consumed("a ∨ (a ∧ b)", rewrite.simplify, "a")))
         assert.are.same({ "(b ∧ c)" }, (consumed("(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ c)", rewrite.simplify, "(b")))
         assert.are.same({ "(T → E)" }, (consumed("R ∧ (T → E)", rewrite.unfold, "→")))
+        assert.are.same({ "R ∧ (T → E)" }, (consumed("R ∧ (T → E)", rewrite.dnf, "→")))
         assert.are.same({ "¬¬a" }, (consumed("¬¬a ∧ b", rewrite.simplify, "¬¬a")))
     end)
 

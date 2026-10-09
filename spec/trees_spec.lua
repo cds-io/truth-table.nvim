@@ -290,6 +290,29 @@ describe("whole-expression De Morgan rewrites", function()
     end)
 end)
 
+describe("trees.unfold", function()
+    local function unfolded(source)
+        local node = trees.unfold(assert(predicate.parse_expression(source)))
+        return node and trees.heading(node)
+    end
+
+    it("gives each connective its definition in ∧, ∨ and ¬", function()
+        assert.are.equal("¬a ∨ b", unfolded("a → b"))
+        assert.are.equal("(a ∧ b) ∨ (¬a ∧ ¬b)", unfolded("a ⇔ b"))
+        assert.are.equal("(a ∧ ¬b) ∨ (¬a ∧ b)", unfolded("a ⊕ b"))
+    end)
+
+    it("negates a compound operand whole, and reads through root parentheses", function()
+        assert.are.equal("¬(p ∧ q) ∨ r", unfolded("(p ∧ q) → r"))
+        assert.are.equal("¬p ∨ q", unfolded("(p → q)"))
+    end)
+
+    it("is nil for a node that is no →, ⊕ or ⇔", function()
+        assert.is_nil(unfolded("a ∧ b"))
+        assert.is_nil(unfolded("¬(a → b)"))
+    end)
+end)
+
 describe("trees.rendered", function()
     local function parse(source) return assert(predicate.parse_expression(source)) end
     local function lit(tree, selected)
