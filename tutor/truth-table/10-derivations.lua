@@ -62,18 +62,17 @@ function canSubmit({ hasTitle, hasEmail, isSaving }) {
 ```
 
 Three reasons to reject under one `not`. Turn them into a list of
-requirements, one law per line. De Morgan takes two operands at a time, so it
-needs two rounds: preview it (`<leader>ttd`) and apply it as a step
-(`<leader>ttA`), then do the same again on the new line. Two double negations
-are left: simplify (`<leader>ttz`) and apply as a step, twice. Each step
-leaves the cursor where the next command needs it.
+requirements, one law per line. De Morgan reads the whole `or` under the
+`not` at once: preview it (`<leader>ttd`) and apply it as a step
+(`<leader>ttA`). Two double negations are left: simplify (`<leader>ttz`) and
+apply as a step, twice. Each step leaves the cursor where the next command
+needs it.
 ]],
             template = [[
 not (not hasTitle or not hasEmail or isSaving)
 ]],
             expect = [[
 not (not hasTitle or not hasEmail or isSaving)
-≡ ¬(¬hasTitle ∨ ¬hasEmail) ∧ ¬isSaving            | by De Morgan
 ≡ ¬¬hasTitle ∧ ¬¬hasEmail ∧ ¬isSaving             | by De Morgan
 ≡ hasTitle ∧ ¬¬hasEmail ∧ ¬isSaving               | by double negation
 ≡ hasTitle ∧ hasEmail ∧ ¬isSaving                 | by double negation
@@ -87,11 +86,6 @@ showing that it is.
             solution = {
                 {
                     on = "not (not hasTitle or not hasEmail or isSaving)",
-                    run = { "TruthTableDeMorgan", "TruthTableApplyStep" },
-                },
-                {
-                    on = "≡ ¬(¬hasTitle ∨ ¬hasEmail) ∧ ¬isSaving            | by De Morgan",
-                    at = "¬(",
                     run = { "TruthTableDeMorgan", "TruthTableApplyStep" },
                 },
                 {

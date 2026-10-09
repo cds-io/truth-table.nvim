@@ -380,22 +380,142 @@ end
 M.xor = operation(at_cursor(xor_at))
 
 -- The draft of De Morgan at `node` of `ast`, or nil where it does not apply.
-local function de_morgan_at(ast, node)
-    local rewritten = trees.de_morgan(node)
-    if rewritten then
-        return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
+-- The nearest ancestor on `path` above `index` that is no parenthesis.
+local function enclosing(path, index)
+    for above = index - 1, 1, -1 do
+        if path[above].type ~= "paren" then
+            return path[above]
+        end
     end
 end
 
--- De Morgan at the nearest node, from the cursor outward, where it applies:
--- ¬(A ∧ B) becomes ¬A ∨ ¬B, and ¬A ∨ ¬B becomes ¬(A ∧ B) (dually for ∨).
--- Without a cursor inside the expression, only the whole expression is tried.
+-- Is the node at `index` inside a run of its own operator? Then it is no
+-- site of its own: the run's root is.
+local function chain_internal(path, index)
+    local above = enclosing(path, index)
+    return above ~= nil and above.type == unparen(path[index]).type and DUAL[above.type] ~= nil
+end
+
+local function negated(item)
+    return unparen(item).type == "not"
+end
+
+-- The run of adjacent negated operands of `items` holding the one at
+-- `focus`: its first and last indices, or nil when that operand is no
+-- negation. Without a focus the run is every operand, when all are negated.
+local function run_around(items, focus)
+    if not focus then
+        for _, item in ipairs(items) do
+            if not negated(item) then
+                return nil
+            end
+        end
+        return 1, #items
+    end
+    if not negated(items[focus]) then
+        return nil
+    end
+    local first, last = focus, focus
+    while first > 1 and negated(items[first - 1]) do
+        first = first - 1
+    end
+    while last < #items and negated(items[last + 1]) do
+        last = last + 1
+    end
+    return first, last
+end
+
+-- De Morgan at one site. A negation pushes in over the chain it negates. A
+-- chain contracts a run of two or more adjacent negated operands into one
+-- negation: the run holding the operand at `focus`, or every operand when
+-- there is no focus. Nil when neither applies.
+local function de_morgan_at(ast, node, focus)
+    local inner = unparen(node)
+    if inner.type == "not" or not DUAL[inner.type] then
+        local rewritten = trees.de_morgan(node)
+        if rewritten then
+            return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
+        end
+        return nil
+    end
+    local items = operands(node, inner.type)
+    local first, last = run_around(items, focus)
+    if not first or last == first then
+        return nil
+    end
+    if first == 1 and last == #items then
+        local rewritten = trees.de_morgan(node)
+        return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
+    end
+    local run, kept = {}, {}
+    for index, item in ipairs(items) do
+        if index >= first and index <= last then
+            run[#run + 1] = item
+        end
+    end
+    local contracted = trees.de_morgan(fold(inner.type, run))
+    for index, item in ipairs(items) do
+        if index == first then
+            kept[#kept + 1] = contracted
+        elseif index < first or index > last then
+            kept[#kept + 1] = item
+        end
+    end
+    return {
+        tree = substitute(ast, node, fold(inner.type, kept)), law = DE_MORGAN,
+        consumed = run, produced = { contracted },
+    }
+end
+
+-- The index among `items` of the operand the path passes through below
+-- `index`, or nil when the path ends at the chain itself.
+local function focus_below(path, index, items)
+    local positions = {}
+    for position, item in ipairs(items) do
+        positions[item] = position
+    end
+    for below = index + 1, #path do
+        if positions[path[below]] then
+            return positions[path[below]]
+        end
+    end
+end
+
+-- The runs of two or more adjacent negated operands of `items`, each as
+-- the index of its first operand.
+local function runs(items)
+    local found, index = {}, 1
+    while index <= #items do
+        local first, last = run_around(items, index)
+        if first and last > first then
+            found[#found + 1] = first
+            index = last + 1
+        else
+            index = index + 1
+        end
+    end
+    return found
+end
+
+-- De Morgan at the nearest site, from the cursor outward, where it applies:
+-- every negation and every chain root is a site, and the operand under the
+-- cursor picks the run a chain contracts. ¬(A ∧ B ∧ C) becomes
+-- ¬A ∨ ¬B ∨ ¬C, and ¬A ∨ ¬B ∨ C becomes ¬(A ∧ B) ∨ C (dually for ∨).
+-- Without a cursor inside the expression, only the whole expression is
+-- tried.
 local function de_morgan(ast, byte)
     local path = byte and path_to(ast, byte) or {}
     for index = #path, 1, -1 do
-        local draft = de_morgan_at(ast, path[index])
-        if draft then
-            return { draft }
+        if not chain_internal(path, index) then
+            local node = path[index]
+            local focus
+            if DUAL[unparen(node).type] then
+                focus = focus_below(path, index, operands(node, unparen(node).type))
+            end
+            local draft = de_morgan_at(ast, node, focus)
+            if draft then
+                return { draft }
+            end
         end
     end
     return { de_morgan_at(ast, ast) }, "No De Morgan rewrite applies under the cursor or to the whole expression"
@@ -814,9 +934,17 @@ function M.moves(ast)
 
     local everywhere, operand_paths = paths(ast), {}
     for _, path in ipairs(everywhere) do
-        local draft = de_morgan_at(ast, path[#path])
-        if draft then
-            add(draft)
+        local node = path[#path]
+        if not chain_internal(path, #path) then
+            local draft = de_morgan_at(ast, node)
+            if draft then
+                add(draft)
+            elseif DUAL[unparen(node).type] then
+                local items = operands(node, unparen(node).type)
+                for _, first in ipairs(runs(items)) do
+                    add(de_morgan_at(ast, node, first))
+                end
+            end
         end
         if is_operand(path, #path) then
             operand_paths[#operand_paths + 1] = path
