@@ -115,11 +115,14 @@ end
 -- nothing.
 function M.append_columns(tbl, columns)
     local present = fp.set(tbl.headers)
-    local appended = fp.unique(fp.filter(columns, function(column)
-        return not present[column.heading]
-    end), function(column)
-        return column.heading
-    end)
+    local appended = fp.unique(
+        fp.filter(columns, function(column)
+            return not present[column.heading]
+        end),
+        function(column)
+            return column.heading
+        end
+    )
     local headers = fp.map(tbl.headers, function(header)
         return header
     end)
@@ -155,14 +158,17 @@ function M.drop_column(tbl, index)
     end
     return {
         headers = without(tbl.headers, index),
-        rows = fp.map(tbl.rows, function(row) return without(row, index) end),
+        rows = fp.map(tbl.rows, function(row)
+            return without(row, index)
+        end),
         encoding = tbl.encoding,
     }
 end
 
 function M.toggle(tbl)
     return {
-        headers = tbl.headers, rows = tbl.rows,
+        headers = tbl.headers,
+        rows = tbl.rows,
         encoding = tbl.encoding == "tf" and "bits" or "tf",
     }
 end

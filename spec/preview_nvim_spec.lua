@@ -71,7 +71,12 @@ local function regions(name)
         -- A mark an edit has orphaned, before its scheduled removal, may point
         -- past the buffer.
         local line = vim.api.nvim_buf_get_lines(0, mark[2], mark[2] + 1, false)[1] or ""
-        found[#found + 1] = { row = mark[2] + 1, col = mark[3], text = line:sub(mark[3] + 1, mark[4].end_col or mark[3]), group = mark[4].hl_group }
+        found[#found + 1] = {
+            row = mark[2] + 1,
+            col = mark[3],
+            text = line:sub(mark[3] + 1, mark[4].end_col or mark[3]),
+            group = mark[4].hl_group,
+        }
     end
     table.sort(found, function(a, b)
         if a.row ~= b.row then
@@ -780,18 +785,21 @@ describe("what a rewrite consumed and put in", function()
         }, marks()[1][4].virt_text)
     end)
 
-    it("lights the consumed terms on the line while the preview is pending, and no longer once it is dismissed", function()
-        set({ "a ∧ b ∨ c" })
-        on("a")
-        vim.cmd("TruthTableCommute")
-        assert.are.same({
-            { row = 1, text = "a", group = consumed },
-            { row = 1, text = "b", group = consumed },
-        }, targets())
-        vim.cmd("TruthTableCommute")
-        assert.are.same({}, targets())
-        assert.are.same({}, lit())
-    end)
+    it(
+        "lights the consumed terms on the line while the preview is pending, and no longer once it is dismissed",
+        function()
+            set({ "a ∧ b ∨ c" })
+            on("a")
+            vim.cmd("TruthTableCommute")
+            assert.are.same({
+                { row = 1, text = "a", group = consumed },
+                { row = 1, text = "b", group = consumed },
+            }, targets())
+            vim.cmd("TruthTableCommute")
+            assert.are.same({}, targets())
+            assert.are.same({}, lit())
+        end
+    )
 
     it("drops the consumed marks with a preview the buffer invalidated", function()
         set({ "not (A or B)" })
@@ -804,27 +812,30 @@ describe("what a rewrite consumed and put in", function()
         assert.are.same({}, targets())
     end)
 
-    it("is lit on the step it is written as, with what it consumed above, and stays as the next step is written", function()
-        set({ "r and not (s or t)" })
-        on("not")
-        vim.cmd("TruthTableDeMorgan")
-        vim.cmd("TruthTableApplyStep")
-        assert.are.same({}, targets())
-        assert.are.same({
-            { row = 1, text = "not (s or t)", group = consumed },
-            { row = 2, text = "¬s ∧ ¬t", group = group },
-        }, lit())
-        on("r", 2)
-        vim.cmd("TruthTableCommute")
-        vim.cmd("TruthTableApplyStep")
-        assert.are.same({
-            { row = 1, text = "not (s or t)", group = consumed },
-            { row = 2, text = "r", group = consumed },
-            { row = 2, text = "¬s", group = consumed },
-            { row = 2, text = "¬s ∧ ¬t", group = group },
-            { row = 3, text = "¬s ∧ r", group = group },
-        }, lit())
-    end)
+    it(
+        "is lit on the step it is written as, with what it consumed above, and stays as the next step is written",
+        function()
+            set({ "r and not (s or t)" })
+            on("not")
+            vim.cmd("TruthTableDeMorgan")
+            vim.cmd("TruthTableApplyStep")
+            assert.are.same({}, targets())
+            assert.are.same({
+                { row = 1, text = "not (s or t)", group = consumed },
+                { row = 2, text = "¬s ∧ ¬t", group = group },
+            }, lit())
+            on("r", 2)
+            vim.cmd("TruthTableCommute")
+            vim.cmd("TruthTableApplyStep")
+            assert.are.same({
+                { row = 1, text = "not (s or t)", group = consumed },
+                { row = 2, text = "r", group = consumed },
+                { row = 2, text = "¬s", group = consumed },
+                { row = 2, text = "¬s ∧ ¬t", group = group },
+                { row = 3, text = "¬s ∧ r", group = group },
+            }, lit())
+        end
+    )
 
     it("lights the consumed terms of a pick from the menu with its step", function()
         local picked
@@ -864,7 +875,15 @@ describe("what a rewrite consumed and put in", function()
     end)
 
     it("is lit in a heading rewritten in place, whose consumed term was lit while pending", function()
-        set(core.format({ headers = { "A", "B", "A ∧ ¬(A ∧ B)" }, rows = { { 0, 0, 0 }, { 1, 0, 1 } }, encoding = "bits" }), 1, 20)
+        set(
+            core.format({
+                headers = { "A", "B", "A ∧ ¬(A ∧ B)" },
+                rows = { { 0, 0, 0 }, { 1, 0, 1 } },
+                encoding = "bits",
+            }),
+            1,
+            20
+        )
         on("¬(")
         vim.cmd("TruthTableDeMorgan")
         assert.are.same({ { row = 1, text = "¬(A ∧ B)", group = consumed } }, targets())
@@ -897,7 +916,9 @@ end)
 
 describe("editor patches and undo", function()
     local function settle()
-        vim.wait(20, function() return false end, 1)
+        vim.wait(20, function()
+            return false
+        end, 1)
     end
 
     it("undoes and redoes a step's text and annotations together", function()
@@ -1150,7 +1171,8 @@ describe("the transient apply keys", function()
     end)
 
     it("warn on <CR> over a heading and stay; <Space> still renames it", function()
-        local heading_table = core.format(assert(model.parse({ "A", "B", "A ∧ B" }, { { "0", "0", "0" }, { "1", "1", "1" } })))
+        local heading_table =
+            core.format(assert(model.parse({ "A", "B", "A ∧ B" }, { { "0", "0", "0" }, { "1", "1", "1" } })))
         set(heading_table)
         on("A ∧")
         vim.cmd("TruthTableCommute")

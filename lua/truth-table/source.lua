@@ -46,7 +46,8 @@ local function heading_source(lines, bounds, at)
                 return nil, reason
             end
             local cell_first, cell_last = markdown.heading_cell(replaced, column)
-            local written = cell_first and replaced:sub(cell_first, cell_last) == rewritten.text and cell_first - 1 or nil
+            local written = cell_first and replaced:sub(cell_first, cell_last) == rewritten.text and cell_first - 1
+                or nil
             return replaced, written
         end,
     }

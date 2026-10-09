@@ -218,6 +218,8 @@ end
 -- command takes (nargs, range, bang) with its description. The tables and
 -- the derivation check first, then the rewrites (the previews, the menu of them all, the two
 -- ways to apply one), then the tutor.
+-- stylua: ignore start
+-- Packed rows: each command on a line, its long desc on a continuation.
 local COMMANDS = {
     { name = "TruthTable", run = cmd_truth_table, nargs = "*", range = true, desc = "Generate a truth table" },
     { name = "TruthTableExpand", run = cmd_expand, nargs = "+", desc = "Expand truth table with computed columns" },
@@ -301,6 +303,7 @@ local KEYMAPS = {
     { family = "rewrite", key = "a", command = "TruthTableApply", desc = "Apply in place", when = "preview" },
     { family = "rewrite", key = "A", command = "TruthTableApplyStep", desc = "Apply as a ≡ step", when = "preview" },
 }
+-- stylua: ignore end
 
 -- The contexts a leaf can wait for, read fresh at the cursor: each is one
 -- pass over the buffer, cheap enough to run on every popup. An expression
@@ -381,7 +384,10 @@ function M.setup(opts)
     local defined = {}
     for _, command in ipairs(COMMANDS) do
         vim.api.nvim_create_user_command(command.name, command.run, {
-            nargs = command.nargs, range = command.range, bang = command.bang, desc = command.desc,
+            nargs = command.nargs,
+            range = command.range,
+            bang = command.bang,
+            desc = command.desc,
         })
         defined[command.name] = true
     end
@@ -408,15 +414,25 @@ function M.setup(opts)
         -- which-key's spec is intentionally mixed: positional key + named fields.
         local spec = {
             -- selene: allow(mixed_table)
-            { PREFIXES.table, group = "Truth table", mode = "n", expand = function()
-                return legal_leaves("table")
-            end },
+            {
+                PREFIXES.table,
+                group = "Truth table",
+                mode = "n",
+                expand = function()
+                    return legal_leaves("table")
+                end,
+            },
             -- selene: allow(mixed_table)
             { PREFIXES.table, group = "Truth table", mode = "x" },
             -- selene: allow(mixed_table)
-            { PREFIXES.rewrite, group = "Logic rewrite", mode = "n", expand = function()
-                return legal_leaves("rewrite")
-            end },
+            {
+                PREFIXES.rewrite,
+                group = "Logic rewrite",
+                mode = "n",
+                expand = function()
+                    return legal_leaves("rewrite")
+                end,
+            },
         }
         -- which-key keeps the last spec a prefix was given, and it drains
         -- the queue of specs added before it loaded ahead of the ones from

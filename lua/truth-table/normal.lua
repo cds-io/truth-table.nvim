@@ -150,7 +150,9 @@ end
 -- The terms with repeats collapsed and absorbed terms gone: an empty term
 -- takes the whole form, as the outer operator's dominator.
 local function tidy(terms)
-    if fp.any(terms, function(item) return #item.literals == 0 end) then
+    if fp.any(terms, function(item)
+        return #item.literals == 0
+    end) then
         return { term({}) }
     end
     local distinct = fp.unique(terms, signature)
@@ -169,11 +171,17 @@ local function render(terms, outer, inner)
     if #terms[1].literals == 0 then
         return trees.literal(DOMINATOR[outer])
     end
-    return trees.fold(outer, fp.map(terms, function(item)
-        return trees.fold(inner, fp.map(item.literals, function(found)
-            return found.node
-        end))
-    end))
+    return trees.fold(
+        outer,
+        fp.map(terms, function(item)
+            return trees.fold(
+                inner,
+                fp.map(item.literals, function(found)
+                    return found.node
+                end)
+            )
+        end)
+    )
 end
 
 local function form(ast, outer, inner)

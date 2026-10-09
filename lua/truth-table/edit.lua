@@ -57,7 +57,9 @@ local function watch(buf)
                 synchronize(buf, history)
             end)
         end,
-        on_detach = function() histories[buf] = nil end,
+        on_detach = function()
+            histories[buf] = nil
+        end,
     })
     return history
 end
@@ -78,8 +80,11 @@ function M.prepare(buf, write)
         if inserted or mark.row ~= row then
             local shift = inserted and mark.row > row and 1 or 0
             after[#after + 1] = {
-                row = mark.row + shift, col = mark.col, end_col = mark.end_col,
-                group = mark.group, priority = mark.priority,
+                row = mark.row + shift,
+                col = mark.col,
+                end_col = mark.end_col,
+                group = mark.group,
+                priority = mark.priority,
             }
         end
     end

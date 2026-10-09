@@ -22,7 +22,9 @@ describe("insert-mode abbreviations", function()
         }
         vim.opt.rtp:append(vim.fn.getcwd())
         package.loaded["which-key"] = nil
-        package.preload["which-key"] = function() error("which-key intentionally absent") end
+        package.preload["which-key"] = function()
+            error("which-key intentionally absent")
+        end
         vim.o.showmode = false
         tt = require("truth-table")
     end)
@@ -63,7 +65,20 @@ describe("insert-mode abbreviations", function()
     describe("abbreviation defaults", function()
         it("pair each constant's ascii word plus @ with its unicode symbol", function()
             assert.are.equal("@", defaults.trigger)
-            for _, key in ipairs({ "NOT", "AND", "OR", "XOR", "IMPLIES", "IFF", "FORALL", "EXISTS", "TOP", "BOTTOM", "EQUIV", "NOT_EQUIV" }) do
+            for _, key in ipairs({
+                "NOT",
+                "AND",
+                "OR",
+                "XOR",
+                "IMPLIES",
+                "IFF",
+                "FORALL",
+                "EXISTS",
+                "TOP",
+                "BOTTOM",
+                "EQUIV",
+                "NOT_EQUIV",
+            }) do
                 assert.are.equal(symbols[key].unicode, defaults.symbols[symbols[key].ascii], key)
             end
         end)
@@ -122,9 +137,15 @@ describe("insert-mode abbreviations", function()
             tt.setup()
             local before = vim.fn.maplist(true)
             for _, option in ipairs({
-                true, { trigger = " x" }, { trigger = "" }, { trigger = "xx" }, { trigger = "|" },
-                { symbols = true }, { symbols = { ["bad key"] = "X" } },
-                { symbols = { and_word = 1 } }, { symbols = { and_word = "" } },
+                true,
+                { trigger = " x" },
+                { trigger = "" },
+                { trigger = "xx" },
+                { trigger = "|" },
+                { symbols = true },
+                { symbols = { ["bad key"] = "X" } },
+                { symbols = { and_word = 1 } },
+                { symbols = { and_word = "" } },
                 { symbols = { and_word = "X\nY" } },
             }) do
                 local ok, err = pcall(tt.setup, { abbreviations = option })

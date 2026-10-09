@@ -2,7 +2,9 @@
 -- point and with which-key unavailable. Each case writes the buffer it needs.
 -- Runs inside Neovim (make test-nvim): busted with nlua as its interpreter.
 vim.opt.rtp:append(vim.fn.getcwd())
-package.preload["which-key"] = function() error("which-key intentionally absent") end
+package.preload["which-key"] = function()
+    error("which-key intentionally absent")
+end
 vim.cmd("runtime plugin/truth-table.lua")
 
 local core = require("truth-table.core")
@@ -33,10 +35,23 @@ describe("the plugin entry point", function()
     it("defines every command", function()
         local commands = vim.api.nvim_get_commands({})
         for _, command in ipairs({
-            "TruthTable", "TruthTableExpand", "TruthTableToggle", "TruthTableDropRow", "TruthTableDropColumn",
-            "TruthTableKarnaugh", "TruthTableDeMorgan", "TruthTableDeMorganApply", "TruthTableFactor",
-            "TruthTableDistribute", "TruthTableCommute", "TruthTableApply", "TruthTableApplyStep", "TruthTableXor",
-            "TruthTableSimplify", "TruthTableRewrites", "TruthTableTutor",
+            "TruthTable",
+            "TruthTableExpand",
+            "TruthTableToggle",
+            "TruthTableDropRow",
+            "TruthTableDropColumn",
+            "TruthTableKarnaugh",
+            "TruthTableDeMorgan",
+            "TruthTableDeMorganApply",
+            "TruthTableFactor",
+            "TruthTableDistribute",
+            "TruthTableCommute",
+            "TruthTableApply",
+            "TruthTableApplyStep",
+            "TruthTableXor",
+            "TruthTableSimplify",
+            "TruthTableRewrites",
+            "TruthTableTutor",
         }) do
             assert.is_truthy(commands[command], command)
         end
@@ -44,7 +59,10 @@ describe("the plugin entry point", function()
 
     it("maps the table family under <leader>T", function()
         for key, command in pairs({
-            t = "TruthTableToggle", k = "TruthTableKarnaugh", r = "TruthTableDropRow", c = "TruthTableDropColumn",
+            t = "TruthTableToggle",
+            k = "TruthTableKarnaugh",
+            r = "TruthTableDropRow",
+            c = "TruthTableDropColumn",
         }) do
             assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>T" .. key, "n"), key)
         end
@@ -52,11 +70,21 @@ describe("the plugin entry point", function()
 
     it("maps the rewrite family under <leader>l", function()
         for key, command in pairs({
-            d = "TruthTableDeMorgan", f = "TruthTableFactor", x = "TruthTableDistribute",
-            s = "TruthTableCommute", S = "TruthTableCommute!", o = "TruthTableXor", u = "TruthTableUnfold",
-            m = "TruthTableDNF", M = "TruthTableCNF", z = "TruthTableSimplify", l = "TruthTableRewrites",
-            v = "TruthTableVerify", V = "TruthTableVerify!",
-            a = "TruthTableApply", A = "TruthTableApplyStep",
+            d = "TruthTableDeMorgan",
+            f = "TruthTableFactor",
+            x = "TruthTableDistribute",
+            s = "TruthTableCommute",
+            S = "TruthTableCommute!",
+            o = "TruthTableXor",
+            u = "TruthTableUnfold",
+            m = "TruthTableDNF",
+            M = "TruthTableCNF",
+            z = "TruthTableSimplify",
+            l = "TruthTableRewrites",
+            v = "TruthTableVerify",
+            V = "TruthTableVerify!",
+            a = "TruthTableApply",
+            A = "TruthTableApplyStep",
         }) do
             assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>l" .. key, "n"), key)
         end
@@ -66,9 +94,13 @@ describe("the plugin entry point", function()
     -- leaves hide behind which_key_ignore and the popup labels them instead.
     it("describes every key", function()
         for lhs, want in pairs({
-            ["<leader>Tn"] = "New table", ["<leader>Te"] = "Expand with columns", ["<leader>Tr"] = "Drop row",
-            ["<leader>ld"] = "De Morgan", ["<leader>lm"] = "Disjunctive normal form",
-            ["<leader>la"] = "Apply in place", ["<leader>lA"] = "Apply as a ≡ step",
+            ["<leader>Tn"] = "New table",
+            ["<leader>Te"] = "Expand with columns",
+            ["<leader>Tr"] = "Drop row",
+            ["<leader>ld"] = "De Morgan",
+            ["<leader>lm"] = "Disjunctive normal form",
+            ["<leader>la"] = "Apply in place",
+            ["<leader>lA"] = "Apply as a ≡ step",
         }) do
             local description = vim.fn.maparg(lhs, "n", false, true).desc
             assert.are.equal(want, description, lhs)
@@ -234,7 +266,13 @@ end)
 
 describe(":TruthTableKarnaugh", function()
     local table_lines = {
-        "  | A | B | A ∧ B |", "  |---|---|---|", "  |0|0|0|", "  |0|1|0|", "  |1|0|0|", "  |1|1|1|", "after",
+        "  | A | B | A ∧ B |",
+        "  |---|---|---|",
+        "  |0|0|0|",
+        "  |0|1|0|",
+        "  |1|0|0|",
+        "  |1|1|1|",
+        "after",
     }
 
     -- The cursor column is the target.

@@ -104,9 +104,17 @@ end)
 
 describe("a normal form", function()
     local corpus = {
-        "a → b", "a ⊕ b ⊕ c", "(a ⇔ b) → (c ∧ ¬a)", "¬(a ∨ (b ∧ ¬(c ∨ a)))",
-        "(a ∨ b) ∧ (¬a ∨ c) ∧ (b ∨ c)", "a ∧ (b ∨ c) ∧ (d ∨ e)", "¬(p → q) ∨ (q ⇔ ¬p)",
-        "(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C ∧ D)", "⊤ ∧ (a ∨ ⊥)", "a ∧ ¬a ∨ b", "(a → b) ∧ (b → a) ∧ (a ⊕ b)",
+        "a → b",
+        "a ⊕ b ⊕ c",
+        "(a ⇔ b) → (c ∧ ¬a)",
+        "¬(a ∨ (b ∧ ¬(c ∨ a)))",
+        "(a ∨ b) ∧ (¬a ∨ c) ∧ (b ∨ c)",
+        "a ∧ (b ∨ c) ∧ (d ∨ e)",
+        "¬(p → q) ∨ (q ⇔ ¬p)",
+        "(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C ∧ D)",
+        "⊤ ∧ (a ∨ ⊥)",
+        "a ∧ ¬a ∨ b",
+        "(a → b) ∧ (b → a) ∧ (a ⊕ b)",
     }
 
     local function agrees(source, form)
@@ -117,7 +125,11 @@ describe("a normal form", function()
             for i, name in ipairs(names) do
                 ctx[name] = row[i]
             end
-            assert.are.equal(predicate.eval_ast(ast, ctx), predicate.eval_ast(result, ctx), source .. " at row " .. table.concat(row, ""))
+            assert.are.equal(
+                predicate.eval_ast(ast, ctx),
+                predicate.eval_ast(result, ctx),
+                source .. " at row " .. table.concat(row, "")
+            )
         end
     end
 

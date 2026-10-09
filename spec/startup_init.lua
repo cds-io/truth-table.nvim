@@ -7,7 +7,9 @@ vim.opt.swapfile = false
 if vim.env.TRUTH_TABLE_TEST_CUSTOM == "1" then
     require("truth-table").setup({ abbreviations = false })
 end
-package.preload["which-key"] = function() error("which-key intentionally absent") end
+package.preload["which-key"] = function()
+    error("which-key intentionally absent")
+end
 vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
     callback = function()

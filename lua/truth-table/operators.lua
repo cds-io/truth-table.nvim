@@ -9,6 +9,8 @@ local SYMBOLS = require("truth-table.symbols")
 local M = {}
 
 -- Ordered from tightest to loosest. Every binary operator associates left.
+-- stylua: ignore start
+-- Packed rows: each operator's names and aliases on a line, its apply below.
 M.OPERATORS = {
     { name = SYMBOLS.NOT.ascii, symbol = SYMBOLS.NOT.unicode, aliases = { SYMBOLS.NOT.unicode, "!" }, unary = true,
         apply = function(a) return a == 0 end },
@@ -25,6 +27,7 @@ M.OPERATORS = {
         aliases = { SYMBOLS.IFF.unicode, "=", "↔", "<->", "<=>" },
         apply = function(a, b) return a == b end },
 }
+-- stylua: ignore end
 
 -- By operator name: KEYWORDS, the words that are operators; BINARY, the
 -- two-operand ones; BY_NAME, the record above; SYMBOLS, the rendered symbol,

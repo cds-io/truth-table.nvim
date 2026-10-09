@@ -20,7 +20,8 @@ local function shown()
         local row, col, detail = mark[2] + 1, mark[3], mark[4]
         local line = vim.api.nvim_buf_get_lines(0, mark[2], mark[2] + 1, false)[1] or ""
         if detail.virt_text then
-            overlays[#overlays + 1] = { row = row, col = col, text = detail.virt_text[1][1], position = detail.virt_text_pos }
+            overlays[#overlays + 1] =
+                { row = row, col = col, text = detail.virt_text[1][1], position = detail.virt_text_pos }
         else
             lit[#lit + 1] = { row = row, text = line:sub(col + 1, detail.end_col), group = detail.hl_group }
         end
@@ -143,7 +144,10 @@ describe(":TruthTableVerify!", function()
         set({ "(a ∧ b) ∨ (¬a ∧ b)", "≡ b ∧ (a ∨ ¬a)", "≡ b" })
         vim.cmd("TruthTableVerify!")
         local got = lines()
-        assert.are.same({ "(a ∧ b) ∨ (¬a ∧ b)", "≡ b ∧ (a ∨ ¬a)", "≡ b", "" }, vim.list_slice(got, 1, 4))
+        assert.are.same(
+            { "(a ∧ b) ∨ (¬a ∧ b)", "≡ b ∧ (a ∨ ¬a)", "≡ b", "" },
+            vim.list_slice(got, 1, 4)
+        )
         local tbl = assert(markdown.parse_table_lines(vim.list_slice(got, 5)))
         assert.are.same({ "a", "b", "(a ∧ b) ∨ (¬a ∧ b)", "b ∧ (a ∨ ¬a)" }, tbl.headers)
         assert.are.equal(4, #tbl.rows)

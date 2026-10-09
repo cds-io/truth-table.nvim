@@ -18,8 +18,10 @@ local PRIORITY = { [M.CHANGED_GROUP] = 4096, [M.CONSUMED_GROUP] = 4097 }
 function M.rendered(rewritten)
     local change = rewritten.change
     return {
-        text = change.text, law = change.law,
-        produced = change.produced_ranges, consumed = change.consumed_ranges,
+        text = change.text,
+        law = change.law,
+        produced = change.produced_ranges,
+        consumed = change.consumed_ranges,
     }
 end
 
@@ -64,8 +66,11 @@ function M.lit(at, ranges, group)
     local out = {}
     for _, range in ipairs(ranges) do
         out[#out + 1] = {
-            row = at.row, col = at.col + range[1], end_col = at.col + range[2],
-            group = group, priority = PRIORITY[group],
+            row = at.row,
+            col = at.col + range[1],
+            end_col = at.col + range[2],
+            group = group,
+            priority = PRIORITY[group],
         }
     end
     return out
@@ -95,7 +100,10 @@ function M.step(win, plan)
     for _, mark in ipairs(M.lit({ row = plan.row + 1, col = plan.step_column }, plan.changed, M.CHANGED_GROUP)) do
         additions[#additions + 1] = mark
     end
-    edit.apply(buf, edit.prepare(buf, { row = plan.row, replacement = plan.step, inserted = true, additions = additions }))
+    edit.apply(
+        buf,
+        edit.prepare(buf, { row = plan.row, replacement = plan.step, inserted = true, additions = additions })
+    )
     written(buf, plan.row + 2, "step")
     vim.api.nvim_win_set_cursor(win, { plan.row + 2, plan.step_column })
 end

@@ -43,7 +43,9 @@ describe("the lesson pane with no vellum", function()
         for _, name in ipairs({ "vellum.render", "vellum.theme" }) do
             saved[name] = { loaded = package.loaded[name], preload = package.preload[name] }
             package.loaded[name] = nil
-            package.preload[name] = function() error("vellum intentionally absent") end
+            package.preload[name] = function()
+                error("vellum intentionally absent")
+            end
         end
     end)
     teardown(function()
@@ -121,7 +123,11 @@ describe("the lesson pane with the installed vellum", function()
             for i, mark in ipairs(placed) do
                 local span = marked[i]
                 local expected = markdown[span.row]:sub(span.col + 1, span.end_col)
-                assert.are.equal(expected, lines[mark.row + 1]:sub(mark.col + 1, mark.end_col), ("width %d: span %d"):format(width, i))
+                assert.are.equal(
+                    expected,
+                    lines[mark.row + 1]:sub(mark.col + 1, mark.end_col),
+                    ("width %d: span %d"):format(width, i)
+                )
                 assert.are.equal(span.group, mark.group)
             end
         end
@@ -178,7 +184,10 @@ describe("the lesson pane with a stand-in vellum that pads code", function()
     it("puts each span after the margin and the prefix of its rendered line", function()
         local markdown, marked = page.render(spanned, { lesson = 1, step = 1 })
         local lines, marks = styled.render(markdown, 80, marked)
-        assert.are.same({ "", "  logic", "    A ∨ ¬(B ∧ ¬C)    ", "    a ∧ (a ∨ b)  ≡  a    ", "  " }, lines)
+        assert.are.same(
+            { "", "  logic", "    A ∨ ¬(B ∧ ¬C)    ", "    a ∧ (a ∨ b)  ≡  a    ", "  " },
+            lines
+        )
         assert.are.same({
             { row = 2, col = 10, end_col = 14, group = "TruthTableTutorRed", priority = 200 },
             { row = 3, col = 10, end_col = 19, group = "TruthTableTutorBlue", priority = 200 },
@@ -259,7 +268,11 @@ describe("the lesson pane with a stand-in vellum", function()
     local function styled_at(lesson, step)
         local win, buf = pane("lesson")
         local width = vim.api.nvim_win_get_width(win)
-        local expected = { "", ("  width %d of 100"):format(width), "  " .. page.render(course, { lesson = lesson, step = step })[1] }
+        local expected = {
+            "",
+            ("  width %d of 100"):format(width),
+            "  " .. page.render(course, { lesson = lesson, step = step })[1],
+        }
         assert.are.same(expected, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
         local found = marks()
         assert.are.equal(1, #found, "marks in the pane")
@@ -279,7 +292,10 @@ describe("the lesson pane with a stand-in vellum", function()
     -- The lesson pane holds the step's Markdown, as it does with no vellum.
     local function markdown_at(lesson, step)
         local win, buf = pane("lesson")
-        assert.are.same(page.render(course, { lesson = lesson, step = step }), vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+        assert.are.same(
+            page.render(course, { lesson = lesson, step = step }),
+            vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        )
         assert.are.equal(0, #marks(), "marks in the pane")
         assert.are.equal("markdown", vim.bo[buf].filetype)
         assert.is_false(vim.bo[buf].modifiable, "lesson pane modifiable")

@@ -9,8 +9,10 @@ describe("standalone predicate pipeline", function()
         -- A is row position 1, B is position 2. These inputs distinguish both
         -- the binding order and a constant evaluator from the intended formula.
         for _, case in ipairs({
-            { row = { 0, 0 }, expected = 1 }, { row = { 0, 1 }, expected = 0 },
-            { row = { 1, 0 }, expected = 1 }, { row = { 1, 1 }, expected = 1 },
+            { row = { 0, 0 }, expected = 1 },
+            { row = { 0, 1 }, expected = 0 },
+            { row = { 1, 0 }, expected = 1 },
+            { row = { 1, 1 }, expected = 1 },
         }) do
             assert.are.equal(case.expected, predicate.eval_ast(bound, case.row))
         end
@@ -33,21 +35,21 @@ end)
 
 describe("predicate source diagnostics", function()
     it("gives each token the bytes it was read from", function()
-        local tokens = assert(predicate.tokenize('  A ∧ :h2'))
+        local tokens = assert(predicate.tokenize("  A ∧ :h2"))
         assert.are.same({
-            { type = 'ident', value = 'A', span = { start_byte = 3, end_byte = 3 } },
-            { type = 'op', value = 'and', span = { start_byte = 5, end_byte = 7 } },
-            { type = 'reference', value = 2, span = { start_byte = 9, end_byte = 11 } },
+            { type = "ident", value = "A", span = { start_byte = 3, end_byte = 3 } },
+            { type = "op", value = "and", span = { start_byte = 5, end_byte = 7 } },
+            { type = "reference", value = 2, span = { start_byte = 9, end_byte = 11 } },
         }, tokens)
     end)
 
     it("points to unexpected tokens and end-of-input after multibyte symbols", function()
         for _, case in ipairs({
-            { '  A ∧ )', 'Unexpected token: ) at byte 9' },
-            { 'A ∧ ', 'Unexpected end of expression at byte 7' },
-            { '(A or B', 'Expected ) at byte 8' },
-            { 'A B', 'Unexpected token after expression: B at byte 3' },
-            { '   ', 'Unexpected end of expression at byte 4' },
+            { "  A ∧ )", "Unexpected token: ) at byte 9" },
+            { "A ∧ ", "Unexpected end of expression at byte 7" },
+            { "(A or B", "Expected ) at byte 8" },
+            { "A B", "Unexpected token after expression: B at byte 3" },
+            { "   ", "Unexpected end of expression at byte 4" },
         }) do
             local ast, err = predicate.parse_expression(case[1])
             assert.is_nil(ast)
@@ -56,20 +58,20 @@ describe("predicate source diagnostics", function()
     end)
 
     it("shows complete unexpected Unicode characters and reference positions", function()
-        local _, unicode_err = predicate.parse_expression('A ∧ λ')
-        assert.is_truthy(unicode_err:find('Unexpected character: λ at byte 7', 1, true))
-        local _, reference_err = predicate.parse_expression('  :h')
-        assert.is_truthy(reference_err:find('Invalid column reference at byte 3', 1, true))
+        local _, unicode_err = predicate.parse_expression("A ∧ λ")
+        assert.is_truthy(unicode_err:find("Unexpected character: λ at byte 7", 1, true))
+        local _, reference_err = predicate.parse_expression("  :h")
+        assert.is_truthy(reference_err:find("Invalid column reference at byte 3", 1, true))
     end)
 
     it("places an error by its token's bytes when given tokens alone, and runs out after the last", function()
-        local tokens = assert(predicate.tokenize('A B'))
+        local tokens = assert(predicate.tokenize("A B"))
         local ast, err = predicate.parse_predicate(tokens)
         assert.is_nil(ast)
-        assert.are.equal('Unexpected token after expression: B at byte 3', err)
-        local open, open_err = predicate.parse_predicate(assert(predicate.tokenize('A ∧  ')))
+        assert.are.equal("Unexpected token after expression: B at byte 3", err)
+        local open, open_err = predicate.parse_predicate(assert(predicate.tokenize("A ∧  ")))
         assert.is_nil(open)
-        assert.are.equal('Unexpected end of expression at byte 6', open_err)
+        assert.are.equal("Unexpected end of expression at byte 6", open_err)
     end)
 end)
 
@@ -133,14 +135,14 @@ end)
 
 describe("positional column references", function()
     it("parses indices and retains expression syntax", function()
-        local ast = assert(predicate.parse_expression('not :h12'))
-        assert.are.same({ type = 'not', operand = { type = 'reference', index = 12 } }, ast)
-        assert.are.equal('¬:h12', trees.heading(ast))
-        assert.are.same({ 'not :h12', 'A' }, predicate.split_expressions('not :h12, A', ','))
+        local ast = assert(predicate.parse_expression("not :h12"))
+        assert.are.same({ type = "not", operand = { type = "reference", index = 12 } }, ast)
+        assert.are.equal("¬:h12", trees.heading(ast))
+        assert.are.same({ "not :h12", "A" }, predicate.split_expressions("not :h12, A", ","))
     end)
 
     it("rejects invalid indices and named reference syntax", function()
-        for _, input in ipairs({ ':h0', ':h', ':h-1', ':h1x', ':h1.5', ':H1', '[A]', '`A`' }) do
+        for _, input in ipairs({ ":h0", ":h", ":h-1", ":h1x", ":h1.5", ":H1", "[A]", "`A`" }) do
             local ast, err = predicate.parse_expression(input)
             assert.is_nil(ast)
             assert.is_string(err)

@@ -4,15 +4,26 @@ local result = require("truth-table.result")
 
 describe("result composition", function()
     it("preserves false and zero successes and short-circuits errors", function()
-        assert.is_false(result.bind(false, nil, function(value) return value end))
-        assert.are.equal(0, result.bind(0, nil, function(value) return value end))
-        local value, err = result.bind(nil, "failure", function() error("must not run") end)
+        assert.is_false(result.bind(false, nil, function(value)
+            return value
+        end))
+        assert.are.equal(
+            0,
+            result.bind(0, nil, function(value)
+                return value
+            end)
+        )
+        local value, err = result.bind(nil, "failure", function()
+            error("must not run")
+        end)
         assert.is_nil(value)
         assert.are.equal("failure", err)
         local calls = 0
         value, err = result.traverse({ 1, 2, 3 }, function(n)
             calls = calls + 1
-            if n == 2 then return nil, "stop" end
+            if n == 2 then
+                return nil, "stop"
+            end
             return n
         end)
         assert.is_nil(value)
@@ -23,13 +34,22 @@ end)
 
 describe("result.map", function()
     it("applies the function to a value, false and zero included", function()
-        assert.are.equal(2, result.map(1, nil, function(value) return value + 1 end))
-        assert.is_true(result.map(false, nil, function(value) return not value end))
+        assert.are.equal(
+            2,
+            result.map(1, nil, function(value)
+                return value + 1
+            end)
+        )
+        assert.is_true(result.map(false, nil, function(value)
+            return not value
+        end))
         assert.are.equal("0", result.map(0, nil, tostring))
     end)
 
     it("passes an error through without calling the function", function()
-        local value, err = result.map(nil, "failure", function() error("must not run") end)
+        local value, err = result.map(nil, "failure", function()
+            error("must not run")
+        end)
         assert.is_nil(value)
         assert.are.equal("failure", err)
     end)

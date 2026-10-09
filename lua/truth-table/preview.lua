@@ -186,7 +186,8 @@ function M.toggle(name)
     end
     watch(buf)
     preview.mark = vim.api.nvim_buf_set_extmark(buf, namespace, preview.row, 0, {
-        virt_text = chunks(preview), virt_text_pos = "eol",
+        virt_text = chunks(preview),
+        virt_text_pos = "eol",
     })
     local targets = write.lit({ row = preview.row, col = preview.source }, preview.consumed, write.CONSUMED_GROUP)
     for _, mark in ipairs(targets) do
@@ -196,7 +197,10 @@ function M.toggle(name)
     pending[buf] = preview
     transient.engage(buf, KEYS)
     if preview.column then
-        vim.notify("Applying renames the heading; update explicit references to its old label if needed", vim.log.levels.INFO)
+        vim.notify(
+            "Applying renames the heading; update explicit references to its old label if needed",
+            vim.log.levels.INFO
+        )
     end
 end
 

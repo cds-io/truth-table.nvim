@@ -5,10 +5,11 @@ BUSTED ?= $(if $(wildcard $(HOME)/.luarocks/bin/busted),$(HOME)/.luarocks/bin/bu
 NLUA ?= $(if $(wildcard $(HOME)/.luarocks/bin/nlua),$(HOME)/.luarocks/bin/nlua,nlua)
 LUAROCKS ?= luarocks
 SELENE ?= selene
+STYLUA ?= stylua
 
-.PHONY: check test test-nvim lint
+.PHONY: check test test-nvim lint fmt fmt-check
 
-check: test test-nvim lint
+check: test test-nvim lint fmt-check
 
 test:
 	$(BUSTED)
@@ -33,3 +34,12 @@ test-nvim:
 # DSL, which selene's lua/neovim std library does not model.
 lint:
 	$(SELENE) lua
+
+# Formats lua/ and spec/ with stylua (stylua.toml). The packed data tables
+# (COMMANDS, KEYMAPS, OPERATORS) sit behind stylua: ignore fences, and
+# tutor/ is content, excluded by .styluaignore.
+fmt:
+	$(STYLUA) lua spec
+
+fmt-check:
+	$(STYLUA) --check lua spec

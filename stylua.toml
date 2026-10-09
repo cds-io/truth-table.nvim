@@ -1,0 +1,10 @@
+# Matched to the codebase: 4-space indent throughout, double quotes (1003
+# double vs 20 single), calls always parenthesised. Width 120 is the code's
+# practical ceiling; the lines past it are single desc strings and spec
+# expressions, which stylua cannot split anyway.
+column_width = 120
+line_endings = "Unix"
+indent_type = "Spaces"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+call_parentheses = "Always"

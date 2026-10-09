@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- stylua formats lua/ and spec/, with stylua.toml matched to the house
+  style (4-space indent, double quotes, width 120, calls always
+  parenthesised). The packed data tables keep their hand layout behind
+  stylua: ignore fences (COMMANDS and KEYMAPS in init.lua, OPERATORS in
+  operators.lua), and tutor/ is content, excluded by .styluaignore.
+  `make fmt` formats; `make check` verifies formatting along with the
+  tests and selene.
 - :TruthTableDropRow and :TruthTableDropColumn repeat with `.`: the dot
   runs the same drop on the row or column then under the cursor, so a run
   of rows goes with <leader>Tr and a few dots. Each command sets

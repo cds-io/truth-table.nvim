@@ -192,8 +192,12 @@ function M.find_table(lines, cursor_row)
     while row <= #lines do
         local marker = fence_marker(lines[row])
         if fence then
-            if marker and marker.character == fence.character and marker.length >= fence.length
-                and marker.rest:match("^%s*$") then
+            if
+                marker
+                and marker.character == fence.character
+                and marker.length >= fence.length
+                and marker.rest:match("^%s*$")
+            then
                 fence = nil
             end
             row = row + 1
@@ -208,8 +212,11 @@ function M.find_table(lines, cursor_row)
                 while lines[last + 1] and table_indent(lines[last + 1]) == indent do
                     -- A second heading/separator starts another table, even
                     -- when there is no blank line between the two blocks.
-                    if lines[last + 2] and table_indent(lines[last + 2]) == indent
-                        and M.is_separator(lines[last + 2]) then
+                    if
+                        lines[last + 2]
+                        and table_indent(lines[last + 2]) == indent
+                        and M.is_separator(lines[last + 2])
+                    then
                         break
                     end
                     last = last + 1

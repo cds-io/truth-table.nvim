@@ -169,9 +169,14 @@ local function completed(ast, draft)
     return {
         value = value,
         change = {
-            law = draft.law, before = ast, after = value, text = text,
-            consumed = draft.consumed, produced = mapped,
-            consumed_ranges = input, produced_ranges = output,
+            law = draft.law,
+            before = ast,
+            after = value,
+            text = text,
+            consumed = draft.consumed,
+            produced = mapped,
+            consumed_ranges = input,
+            produced_ranges = output,
         },
     }
 end
@@ -216,10 +221,14 @@ local function commute_at(path, index, backward)
     end
     local moved = { items[math.min(from, to)], items[math.max(from, to)] }
     items[from], items[to] = items[to], items[from]
-    return { {
-        tree = substitute(path[1], path[chain.top], fold(chain.op, items)),
-        law = "commutativity", consumed = moved, produced = moved,
-    } }
+    return {
+        {
+            tree = substitute(path[1], path[chain.top], fold(chain.op, items)),
+            law = "commutativity",
+            consumed = moved,
+            produced = moved,
+        },
+    }
 end
 M.commute = operation(at_cursor(commute_at))
 
@@ -261,10 +270,14 @@ local function factor_at(path, index)
 
     local factored = { type = inner.op, left = target, right = fold(outer.op, remainders) }
     table.insert(terms, position, factored)
-    return { {
-        tree = substitute(path[1], path[outer.top], fold(outer.op, terms)),
-        law = FACTORING, consumed = pulled, produced = { factored },
-    } }
+    return {
+        {
+            tree = substitute(path[1], path[outer.top], fold(outer.op, terms)),
+            law = FACTORING,
+            consumed = pulled,
+            produced = { factored },
+        },
+    }
 end
 M.factor = operation(at_cursor(factor_at))
 
@@ -434,7 +447,12 @@ local function de_morgan_at(ast, node, focus)
     if inner.type == "not" or not DUAL[inner.type] then
         local rewritten = trees.de_morgan(node)
         if rewritten then
-            return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
+            return {
+                tree = substitute(ast, node, rewritten),
+                law = DE_MORGAN,
+                consumed = { node },
+                produced = { rewritten },
+            }
         end
         return nil
     end
@@ -445,7 +463,12 @@ local function de_morgan_at(ast, node, focus)
     end
     if first == 1 and last == #items then
         local rewritten = trees.de_morgan(node)
-        return { tree = substitute(ast, node, rewritten), law = DE_MORGAN, consumed = { node }, produced = { rewritten } }
+        return {
+            tree = substitute(ast, node, rewritten),
+            law = DE_MORGAN,
+            consumed = { node },
+            produced = { rewritten },
+        }
     end
     local run = fp.filter(items, function(_, index)
         return index >= first and index <= last
@@ -460,8 +483,10 @@ local function de_morgan_at(ast, node, focus)
         end
     end
     return {
-        tree = substitute(ast, node, fold(inner.type, kept)), law = DE_MORGAN,
-        consumed = run, produced = { contracted },
+        tree = substitute(ast, node, fold(inner.type, kept)),
+        law = DE_MORGAN,
+        consumed = run,
+        produced = { contracted },
     }
 end
 
@@ -648,7 +673,9 @@ end
 -- they were (a ∨ ¬a ∨ b becomes 1 ∨ b): what it produced is that term. One
 -- that only removes terms produced what remains at the site.
 local function replacement_terms(site, new)
-    if not DUAL[site.type] then return { new } end
+    if not DUAL[site.type] then
+        return { new }
+    end
     local original = fp.set(operands(site, site.type))
     local introduced = fp.filter(operands(new, site.type), function(item)
         return not original[item]
@@ -730,129 +757,153 @@ end
 -- answers once per partner, in operand order.
 local CHAIN_LAWS = {
     -- A ∨ ¬A is 1, and A ∧ ¬A is 0.
-    { name = "complement", apply = function(items, at, op)
-        local found = {}
-        for other, item in ipairs(items) do
-            if other ~= at and complement(items[at], item) then
-                local kept = without(items, math.max(at, other))
-                kept[math.min(at, other)] = trees.literal(DOMINATOR[op])
-                found[#found + 1] = kept
-            end
-        end
-        return found
-    end },
-    -- A ∨ 1 is 1, and A ∧ 0 is 0. The constant stays as it was typed.
-    { name = "domination", apply = function(items, _, op)
-        local item = fp.find(items, function(candidate)
-            return constant(candidate) == DOMINATOR[op]
-        end)
-        return item and { { item } } or {}
-    end },
-    -- A ∨ 0 and A ∧ 1 are A.
-    { name = "identity", apply = function(items, at, op)
-        if constant(items[at]) == IDENTITY[op] then
-            return { without(items, at) }
-        end
-        return {}
-    end },
-    -- A ∨ A is A. The first of the two stays.
-    { name = "idempotence", apply = function(items, at, op)
-        local found = {}
-        for other, item in ipairs(items) do
-            if other ~= at and within(items[at], item, DUAL[op]) and within(item, items[at], DUAL[op]) then
-                found[#found + 1] = without(items, math.max(at, other))
-            end
-        end
-        return found
-    end },
-    -- A ∨ A ∧ B is A: the focus absorbs every term that contains it, or is
-    -- itself absorbed by a term it contains. A term with the focus's own
-    -- factors is idempotence's.
-    { name = "absorption", apply = function(items, at, op)
-        local function absorbs(small, large)
-            return within(small, large, DUAL[op]) and not within(large, small, DUAL[op])
-        end
-        local kept = fp.filter(items, function(item, other)
-            return other == at or not absorbs(items[at], item)
-        end)
-        if #kept < #items then
-            return { kept }
-        end
-        local absorbed = fp.any(items, function(item, other)
-            return other ~= at and absorbs(item, items[at])
-        end)
-        return absorbed and { without(items, at) } or {}
-    end },
-    -- A ∨ ¬A ∧ B is A ∨ B: every term holding the focus's complement loses
-    -- it, or the focus loses the complement of another operand.
-    { name = "absorption", apply = function(items, at, op)
-        local kept, changed = {}, false
-        for other, item in ipairs(items) do
-            local stripped = other ~= at and strip(item, items[at], DUAL[op])
-            kept[other] = stripped or item
-            changed = changed or stripped ~= nil and stripped ~= false
-        end
-        if changed then
-            return { kept }
-        end
-        local found = {}
-        for other, item in ipairs(items) do
-            local stripped = other ~= at and strip(items[at], item, DUAL[op])
-            if stripped then
-                local result = {}
-                for index, operand in ipairs(items) do
-                    result[index] = index == at and stripped or operand
-                end
-                found[#found + 1] = result
-            end
-        end
-        return found
-    end },
-    -- A ∧ B ∨ ¬A ∧ B is B.
-    { name = "reduction", apply = function(items, at, op)
-        local found = {}
-        for other in ipairs(items) do
-            if other ~= at then
-                local low, high = math.min(at, other), math.max(at, other)
-                local merged = merge(items[low], items[high], DUAL[op])
-                if merged then
-                    local kept = without(items, high)
-                    kept[low] = merged
+    {
+        name = "complement",
+        apply = function(items, at, op)
+            local found = {}
+            for other, item in ipairs(items) do
+                if other ~= at and complement(items[at], item) then
+                    local kept = without(items, math.max(at, other))
+                    kept[math.min(at, other)] = trees.literal(DOMINATOR[op])
                     found[#found + 1] = kept
                 end
             end
-        end
-        return found
-    end },
+            return found
+        end,
+    },
+    -- A ∨ 1 is 1, and A ∧ 0 is 0. The constant stays as it was typed.
+    {
+        name = "domination",
+        apply = function(items, _, op)
+            local item = fp.find(items, function(candidate)
+                return constant(candidate) == DOMINATOR[op]
+            end)
+            return item and { { item } } or {}
+        end,
+    },
+    -- A ∨ 0 and A ∧ 1 are A.
+    {
+        name = "identity",
+        apply = function(items, at, op)
+            if constant(items[at]) == IDENTITY[op] then
+                return { without(items, at) }
+            end
+            return {}
+        end,
+    },
+    -- A ∨ A is A. The first of the two stays.
+    {
+        name = "idempotence",
+        apply = function(items, at, op)
+            local found = {}
+            for other, item in ipairs(items) do
+                if other ~= at and within(items[at], item, DUAL[op]) and within(item, items[at], DUAL[op]) then
+                    found[#found + 1] = without(items, math.max(at, other))
+                end
+            end
+            return found
+        end,
+    },
+    -- A ∨ A ∧ B is A: the focus absorbs every term that contains it, or is
+    -- itself absorbed by a term it contains. A term with the focus's own
+    -- factors is idempotence's.
+    {
+        name = "absorption",
+        apply = function(items, at, op)
+            local function absorbs(small, large)
+                return within(small, large, DUAL[op]) and not within(large, small, DUAL[op])
+            end
+            local kept = fp.filter(items, function(item, other)
+                return other == at or not absorbs(items[at], item)
+            end)
+            if #kept < #items then
+                return { kept }
+            end
+            local absorbed = fp.any(items, function(item, other)
+                return other ~= at and absorbs(item, items[at])
+            end)
+            return absorbed and { without(items, at) } or {}
+        end,
+    },
+    -- A ∨ ¬A ∧ B is A ∨ B: every term holding the focus's complement loses
+    -- it, or the focus loses the complement of another operand.
+    {
+        name = "absorption",
+        apply = function(items, at, op)
+            local kept, changed = {}, false
+            for other, item in ipairs(items) do
+                local stripped = other ~= at and strip(item, items[at], DUAL[op])
+                kept[other] = stripped or item
+                changed = changed or stripped ~= nil and stripped ~= false
+            end
+            if changed then
+                return { kept }
+            end
+            local found = {}
+            for other, item in ipairs(items) do
+                local stripped = other ~= at and strip(items[at], item, DUAL[op])
+                if stripped then
+                    local result = {}
+                    for index, operand in ipairs(items) do
+                        result[index] = index == at and stripped or operand
+                    end
+                    found[#found + 1] = result
+                end
+            end
+            return found
+        end,
+    },
+    -- A ∧ B ∨ ¬A ∧ B is B.
+    {
+        name = "reduction",
+        apply = function(items, at, op)
+            local found = {}
+            for other in ipairs(items) do
+                if other ~= at then
+                    local low, high = math.min(at, other), math.max(at, other)
+                    local merged = merge(items[low], items[high], DUAL[op])
+                    if merged then
+                        local kept = without(items, high)
+                        kept[low] = merged
+                        found[#found + 1] = kept
+                    end
+                end
+            end
+            return found
+        end,
+    },
     -- A ∧ B ∨ ¬A ∧ C ∨ B ∧ C is A ∧ B ∨ ¬A ∧ C: the focus goes when two
     -- other terms split on an operand, one holding it and the other its
     -- complement, and the focus holds every other factor of both, of which
     -- there is at least one (a pair with none is complement's). Dually for
     -- an ∧ chain of ∨ terms.
-    { name = "consensus", apply = function(items, at, op)
-        local dual = DUAL[op]
-        -- Does the focus hold every factor of `these` but the one at `split`?
-        -- A lone factor leaves nothing to hold.
-        local function covered(these, split)
-            return #these == 1 or within(fold(dual, without(these, split)), items[at], dual)
-        end
-        for p = 1, #items do
-            for q = p + 1, #items do
-                local left, right = factors(items[p], dual), factors(items[q], dual)
-                if p ~= at and q ~= at and #left + #right > 2 then
-                    local split = fp.any(left, function(x, i)
-                        return fp.any(right, function(y, j)
-                            return complement(x, y) and covered(left, i) and covered(right, j)
+    {
+        name = "consensus",
+        apply = function(items, at, op)
+            local dual = DUAL[op]
+            -- Does the focus hold every factor of `these` but the one at `split`?
+            -- A lone factor leaves nothing to hold.
+            local function covered(these, split)
+                return #these == 1 or within(fold(dual, without(these, split)), items[at], dual)
+            end
+            for p = 1, #items do
+                for q = p + 1, #items do
+                    local left, right = factors(items[p], dual), factors(items[q], dual)
+                    if p ~= at and q ~= at and #left + #right > 2 then
+                        local split = fp.any(left, function(x, i)
+                            return fp.any(right, function(y, j)
+                                return complement(x, y) and covered(left, i) and covered(right, j)
+                            end)
                         end)
-                    end)
-                    if split then
-                        return { without(items, at) }
+                        if split then
+                            return { without(items, at) }
+                        end
                     end
                 end
             end
-        end
-        return {}
-    end },
+            return {}
+        end,
+    },
 }
 
 -- Where a collapsing law can apply: every ¬, and the root of every ∧ or ∨
@@ -949,7 +1000,9 @@ local function simplify(ast, byte)
         return on_path[site]
     end
     local function inside(site)
-        if not target then return false end
+        if not target then
+            return false
+        end
         local selected, span = target.span or positions[target], site.span or positions[site]
         return selected.start_byte <= span.start_byte and span.end_byte <= selected.end_byte
     end

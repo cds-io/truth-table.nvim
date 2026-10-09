@@ -24,8 +24,11 @@ function M.read(buf, namespace)
     for _, found in ipairs(vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })) do
         local detail = found[4]
         out[#out + 1] = {
-            row = found[2], col = found[3], end_col = detail.end_col,
-            group = detail.hl_group, priority = detail.priority,
+            row = found[2],
+            col = found[3],
+            end_col = detail.end_col,
+            group = detail.hl_group,
+            priority = detail.priority,
         }
     end
     return out

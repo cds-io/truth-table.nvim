@@ -93,7 +93,10 @@ describe("derivation.replace", function()
     it("rewrites one side and keeps the rest of the line byte for byte", function()
         local line = "\t F  ≡  A ∨ B   ≡ C  "
         local side = assert(derivation.working_side(line, (line:find("A", 1, true))))
-        assert.are.equal("\t F  ≡  B ∨ A   ≡ C  ", derivation.replace(line, side, { text = "B ∨ A", law = "commutativity" }))
+        assert.are.equal(
+            "\t F  ≡  B ∨ A   ≡ C  ",
+            derivation.replace(line, side, { text = "B ∨ A", law = "commutativity" })
+        )
     end)
 end)
 
@@ -111,7 +114,8 @@ describe("derivation.step", function()
     local width = markdown.display_width
 
     it("justifies a step four columns clear of the wider of the two lines", function()
-        local first = derivation.step("(a and b) or (not a and b)", { text = "b ∧ (a ∨ ¬a)", law = "distributivity" }, width)
+        local first =
+            derivation.step("(a and b) or (not a and b)", { text = "b ∧ (a ∨ ¬a)", law = "distributivity" }, width)
         assert.are.equal("≡ b ∧ (a ∨ ¬a)                | by distributivity", first)
         local wide = derivation.step("a ∨ b", { text = "¬(¬a ∧ ¬b)", law = "De Morgan" }, width)
         assert.are.equal("≡ ¬(¬a ∧ ¬b)    | by De Morgan", wide)
@@ -142,7 +146,10 @@ describe("derivation.step", function()
         local head = "S ∨ (A ∧ ¬C) ∨ (G ∧ ¬C) ≡ S ∨ A ∧ ¬C ∨ G ∧ ¬C"
         local step = derivation.step(head, { text = "S ∨ ¬C ∧ (A ∨ G)" }, width)
         assert.are.equal("                        ≡ S ∨ ¬C ∧ (A ∨ G)", step)
-        assert.are.equal(width(head:sub(1, (head:find("≡", 1, true)) - 1)), width(step:sub(1, (step:find("≡", 1, true)) - 1)))
+        assert.are.equal(
+            width(head:sub(1, (head:find("≡", 1, true)) - 1)),
+            width(step:sub(1, (step:find("≡", 1, true)) - 1))
+        )
     end)
 
     it("continues a chain from a continuation line", function()
