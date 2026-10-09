@@ -1,6 +1,11 @@
 truth-table.nvim changes
 ========================
 
+- trees.lua: every node comes from a constructor (`var`, `reference`,
+  `column`, `literal`, `paren`, `negation`, `binary`); the parser, binding,
+  the rewrites and the Karnaugh formula call them, so the node types a
+  traversal meets are the ones the module lists. `binary` refuses an
+  operator the operator table does not have.
 - rewrite.lua: `sites(ast)` lists where a collapsing law can apply and
   makes its own list, as trees.operands and predicate.variables do; the
   recursion is an inner `visit`.

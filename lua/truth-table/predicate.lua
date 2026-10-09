@@ -140,17 +140,17 @@ function M.parse_predicate(tokens, options)
         local first = pos
         if tok.type == "reference" then
             consume()
-            return located({ type = "reference", index = tok.value }, first)
+            return located(trees.reference(tok.value), first)
         elseif tok.type == "ident" then
             consume()
-            return located({ type = "var", name = tok.value }, first)
+            return located(trees.var(tok.value), first)
         elseif tok.type == "literal" then
             consume()
             -- A constant typed as a symbol keeps it, so the heading renders
             -- as written; a digit is its own rendering.
             local value = CONSTANTS[tok.value]
             local symbol = tok.value ~= tostring(value) and tok.value or nil
-            return located({ type = "literal", value = value, symbol = symbol }, first)
+            return located(trees.literal(value, symbol), first)
         elseif tok.type == "paren" and tok.value == "(" then
             consume()
             local node, err = parse_expr()
@@ -161,7 +161,7 @@ function M.parse_predicate(tokens, options)
             if not ok then
                 return nil, err2 or "Expected closing parenthesis"
             end
-            return located({ type = "paren", expr = node }, first)
+            return located(trees.paren(node), first)
         else
             return failure("Unexpected token: " .. tok.value)
         end
@@ -176,7 +176,7 @@ function M.parse_predicate(tokens, options)
             if not operand then
                 return nil, err
             end
-            return located({ type = "not", operand = operand }, first)
+            return located(trees.negation(operand), first)
         end
         return parse_atom()
     end
@@ -195,7 +195,7 @@ function M.parse_predicate(tokens, options)
                 if not right then
                     return nil, right_err
                 end
-                left = located({ type = operator, left = left, right = right }, first)
+                left = located(trees.binary(operator, left, right), first)
             end
             return left
         end
@@ -269,13 +269,13 @@ function M.bind_columns(node, columns, headers)
             if not headers or not headers[copy.index] then
                 return nil, "Column reference out of range: :h" .. copy.index
             end
-            return { type = "column", index = copy.index, name = headers[copy.index] }
+            return trees.column(copy.index, headers[copy.index])
         elseif copy.type == "var" then
             local index = columns[copy.name]
             if not index then
                 return nil, "Unknown column: " .. copy.name
             end
-            return { type = "column", index = index, variable = copy.name }
+            return trees.column(index, nil, copy.name)
         end
         return copy
     end)

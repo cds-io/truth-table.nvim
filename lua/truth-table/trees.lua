@@ -8,11 +8,49 @@
 -- two before it), "literal" (value, and the symbol it was typed as), "paren"
 -- (expr), "not" (operand), or a binary operator's name (left, right). A node
 -- has no editor annotations. Provenance is supplied separately to rendered().
+--
+-- Every node is made by a constructor below; the parser and the rewrites
+-- call them, and no other code spells a node. So the types a traversal
+-- meets are the ones listed, `binary` is where a wrong operator name is
+-- refused, and a tree transform() does not know is a programming error,
+-- which rendered() raises on.
 local fp = require("truth-table.fp")
 local result = require("truth-table.result")
 local operators = require("truth-table.operators")
 local BINARY, SYMBOLS = operators.BINARY, operators.SYMBOLS
 local M = {}
+
+function M.var(name)
+    return { type = "var", name = name }
+end
+
+function M.reference(index)
+    return { type = "reference", index = index }
+end
+
+-- A column is a bound variable or reference: `name` when a reference was
+-- bound to a heading, `variable` when a variable was.
+function M.column(index, name, variable)
+    return { type = "column", index = index, name = name, variable = variable }
+end
+
+-- `symbol` is the constant as it was typed, when it was typed.
+function M.literal(value, symbol)
+    return { type = "literal", value = value, symbol = symbol }
+end
+
+function M.paren(expr)
+    return { type = "paren", expr = expr }
+end
+
+function M.negation(operand)
+    return { type = "not", operand = operand }
+end
+
+function M.binary(op, left, right)
+    assert(BINARY[op], "Unknown binary operator: " .. tostring(op))
+    return { type = op, left = left, right = right }
+end
 
 function M.unparen(node)
     while node.type == "paren" do
@@ -61,7 +99,7 @@ function M.fold(op, operands)
     end
     local chain = flat[1]
     for i = 2, #flat do
-        chain = { type = op, left = chain, right = flat[i] }
+        chain = M.binary(op, chain, flat[i])
     end
     return chain
 end
@@ -108,7 +146,7 @@ end
 local FLAT = { ["and"] = true, ["or"] = true }
 
 local function grouped(operand)
-    return BINARY[operand.type] and { type = "paren", expr = operand } or operand
+    return BINARY[operand.type] and M.paren(operand) or operand
 end
 
 -- The canonical form of a tree: one tree, and so one text, for every way of
@@ -140,7 +178,7 @@ function M.canonical(node, selected)
         if copy.type == "paren" then
             output = copy.expr
         elseif copy.type == "not" then
-            output = { type = "not", operand = grouped_copy(copy.operand) }
+            output = M.negation(grouped_copy(copy.operand))
         elseif FLAT[copy.type] then
             output = M.fold(copy.type, fp.map(M.operands(copy, copy.type), grouped_copy))
         elseif BINARY[copy.type] then
@@ -268,19 +306,17 @@ function M.de_morgan(node)
     if root.type == "not" then
         local operand = M.unparen(root.operand)
         if operand.type == "and" or operand.type == "or" then
-            rewritten = {
-                type = operand.type == "and" and "or" or "and",
-                left = { type = "not", operand = operand.left },
-                right = { type = "not", operand = operand.right },
-            }
+            rewritten = M.binary(
+                operand.type == "and" and "or" or "and",
+                M.negation(operand.left), M.negation(operand.right)
+            )
         end
     elseif root.type == "and" or root.type == "or" then
         local left, right = M.unparen(root.left), M.unparen(root.right)
         if left.type == "not" and right.type == "not" then
-            rewritten = { type = "not", operand = {
-                type = root.type == "and" and "or" or "and",
-                left = left.operand, right = right.operand,
-            } }
+            rewritten = M.negation(M.binary(
+                root.type == "and" and "or" or "and", left.operand, right.operand
+            ))
         end
     end
     if not rewritten then
