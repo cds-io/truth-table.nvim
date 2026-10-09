@@ -209,6 +209,32 @@ describe("derivation.block", function()
     end)
 end)
 
+describe("derivation.in_derivation", function()
+    local lines = {
+        "prose",
+        "A ∧ B",
+        "≡ B ∧ A    | by commutativity",
+        "",
+        "≡ an orphan step",
+        "F ≡ A ∧ B",
+    }
+
+    it("holds on a head and on its steps", function()
+        assert.is_true(derivation.in_derivation(lines, 2))
+        assert.is_true(derivation.in_derivation(lines, 3))
+    end)
+
+    it("holds on a step that is a block of its own", function()
+        assert.is_true(derivation.in_derivation(lines, 5))
+        assert.is_true(derivation.in_derivation({ "≡ A" }, 1))
+    end)
+
+    it("does not hold on a line with no step above or below", function()
+        assert.is_false(derivation.in_derivation(lines, 1))
+        assert.is_false(derivation.in_derivation(lines, 6))
+    end)
+end)
+
 describe("derivation.aligned", function()
     it("puts every bar four columns past the widest sides in the block", function()
         local block = {

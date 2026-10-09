@@ -8,10 +8,10 @@ Three more families of laws let you reshape an expression while keeping its
 meaning.
 
 The *commutative* laws say order is free: `m ∧ n ≡ n ∧ m`, and the same for
-`∨`, `⊕`, and `⇔`. `:TruthTableCommute` (`<leader>tts`) swaps the operand under
-the cursor with the one to its right (`:TruthTableCommute!`, `<leader>ttS`, with
+`∨`, `⊕`, and `⇔`. `:TruthTableCommute` (`<leader>ls`) swaps the operand under
+the cursor with the one to its right (`:TruthTableCommute!`, `<leader>lS`, with
 the one to its left). Put the cursor on `m`, in yellow, preview, then apply
-with `<leader>tta`.
+with `<leader>la`.
 ]],
             template = [[
 [:yellow m] and n
@@ -102,7 +102,7 @@ distributes over the other.)
 A law can be used from either of its sides, and here each use has a name for
 what happens to `u`. Starting from the left side, `u` moves *in*: the red `u`
 outside the group becomes the green `u` in each term. That is *distributing*.
-`:TruthTableDistribute` (`<leader>ttx`) moves the operand under the cursor into
+`:TruthTableDistribute` (`<leader>lx`) moves the operand under the cursor into
 the group next to it. Put the cursor on `u`, in yellow, preview, then apply.
 ]],
             template = [[
@@ -139,7 +139,7 @@ the terms becomes a group. That is *factoring*.
 ([:red c] ∧ d) ∨ ([:red c] ∧ e)  ≡  [:green c] ∧ (d ∨ e)
 ```
 
-`:TruthTableFactor` (`<leader>ttf`) pulls the operand under the cursor out of
+`:TruthTableFactor` (`<leader>lf`) pulls the operand under the cursor out of
 every term that has it. Put the cursor on either `c`, in yellow, preview, then
 apply.
 ]],
@@ -172,7 +172,7 @@ function canMerge({ isRepoAdmin, ciPasses, hasBlockingReviews }) {
 ```
 
 It is correct, and it says the admin check twice. Put the cursor on either
-`isRepoAdmin`, in yellow, preview the factoring (`<leader>ttf`), and apply.
+`isRepoAdmin`, in yellow, preview the factoring (`<leader>lf`), and apply.
 ]],
             template = [[
 ([:yellow isRepoAdmin] or ciPasses) and ([:yellow isRepoAdmin] or not hasBlockingReviews)

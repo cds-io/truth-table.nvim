@@ -82,7 +82,7 @@ Which De Morgan, though? The command takes the nearest match around the
 cursor. On the first `not`, in red, that is the group behind it, and the
 negation would be pushed inward. Put the cursor on the `and` between the two
 negated groups, in yellow, so that the match is the pair. Preview
-(`<leader>ttd`) and apply it as a step (`<leader>ttA`).
+(`<leader>ld`) and apply it as a step (`<leader>lA`).
 ]],
             template = [[
 [:red not] (N and W) [:yellow and] not A

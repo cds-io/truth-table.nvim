@@ -16,9 +16,9 @@ false". The negation moves inward and the connective flips, red to green.
 
 The plugin applies the law to an expression on a line of its own. A rewrite
 happens in two moves, so you can look before you commit: `:TruthTableDeMorgan`
-(`<leader>ttd`) previews the result as dimmed text at the end of the line,
+(`<leader>ld`) previews the result as dimmed text at the end of the line,
 followed by the law that justifies it (`⇒ ¬p ∨ ¬q  | by De Morgan`), and
-`:TruthTableApply` (`<leader>tta`) replaces the expression with it. Try it on
+`:TruthTableApply` (`<leader>la`) replaces the expression with it. Try it on
 the line in the scratch pane.
 ]],
             template = [[
@@ -106,14 +106,14 @@ function showBanner({ isFreeUser, hasDismissedBanner }) {
 "Not (not free, or dismissed)": a reader has to undo the two negations in
 blue in their head to learn who sees the banner. Pushing the negation inward
 turns the reasons to reject into a *list of requirements*. Apply De Morgan
-(`<leader>ttd`, then `<leader>tta`). That leaves `¬¬isFreeUser`, and a double
+(`<leader>ld`, then `<leader>la`). That leaves `¬¬isFreeUser`, and a double
 negation cancels:
 
 ```logic
 [:red ¬¬]p  ≡  p
 ```
 
-`:TruthTableSimplify` (`<leader>ttz`) previews the cancellation. Apply it too.
+`:TruthTableSimplify` (`<leader>lz`) previews the cancellation. Apply it too.
 ]],
             template = [[
 [:blue not] ([:blue not] isFreeUser or hasDismissedBanner)

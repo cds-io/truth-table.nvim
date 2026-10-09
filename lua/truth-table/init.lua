@@ -134,7 +134,10 @@ local function cmd_karnaugh()
     vim.api.nvim_buf_set_lines(0, bounds.end_line, bounds.end_line, false, lines)
 end
 
-local PREFIX = "<leader>tt"
+-- Two prefixes, one per family: the table commands under <leader>T, the
+-- rewrite workflow (the previews, verify, apply) under <leader>l for
+-- logic, so the hot path stays three keys.
+local PREFIXES = { table = "<leader>T", rewrite = "<leader>l" }
 
 -- On a nonblank line the line is the argument, so the mapping on `A and B`
 -- builds its table in place, the same as the visual mapping on a selection.
@@ -238,34 +241,89 @@ local COMMANDS = {
         desc = "Go to the tutorial's previous step" },
 }
 
--- The default keymaps, by family: tables, then rewrites (the previews, then
--- the menu of them all), then the two ways to apply a preview. Each names
--- the command it runs, or spells its own right-hand side where it does
--- more than run one. Each description opens with its family, so the
--- grouping shows in a key-sorted popup too; the order is the one which-key
--- is given.
+-- The default keymaps, every key one deep under its family's prefix, each
+-- tagged with the context (`when`) it waits for, where a bare one is at
+-- hand everywhere. m and M are the normal forms, after their minterms and
+-- maxterms. Each entry names the command it runs, or spells its own
+-- right-hand side where it does more than run one.
 local KEYMAPS = {
-    { key = "n", rhs = new_table, desc = "Table: new", expr = true },
-    { key = "n", rhs = ":TruthTable<CR>", desc = "Table: new from selection", mode = "x" },
-    { key = "e", rhs = ":TruthTableExpand ", desc = "Table: expand with columns" },
-    { key = "t", command = "TruthTableToggle", desc = "Table: toggle 0/1 ↔ F/T" },
-    { key = "r", command = "TruthTableDropRow", desc = "Table: drop row" },
-    { key = "c", command = "TruthTableDropColumn", desc = "Table: drop column" },
-    { key = "k", command = "TruthTableKarnaugh", desc = "Table: Karnaugh map for column" },
-    { key = "d", command = "TruthTableDeMorgan", desc = "Rewrite: De Morgan" },
-    { key = "f", command = "TruthTableFactor", desc = "Rewrite: factor operand out" },
-    { key = "x", command = "TruthTableDistribute", desc = "Rewrite: distribute operand in" },
-    { key = "s", command = "TruthTableCommute", desc = "Rewrite: swap with next operand" },
-    { key = "S", rhs = "<cmd>TruthTableCommute!<CR>", desc = "Rewrite: swap with previous operand" },
-    { key = "o", command = "TruthTableXor", desc = "Rewrite: recognise ⊕ or ⇔" },
-    { key = "u", command = "TruthTableUnfold", desc = "Rewrite: unfold →, ⊕ or ⇔ by its definition" },
-    { key = "z", command = "TruthTableSimplify", desc = "Rewrite: simplify at the cursor" },
-    { key = "l", command = "TruthTableRewrites", desc = "Rewrite: list every rewrite and pick one" },
-    { key = "v", command = "TruthTableVerify", desc = "Rewrite: verify the derivation" },
-    { key = "V", rhs = "<cmd>TruthTableVerify!<CR>", desc = "Rewrite: verify the derivation and show the proof table" },
-    { key = "a", command = "TruthTableApply", desc = "Apply: in place" },
-    { key = "A", command = "TruthTableApplyStep", desc = "Apply: as a ≡ step" },
+    { family = "table", key = "n", rhs = new_table, desc = "New table", expr = true },
+    { family = "table", key = "n", rhs = ":TruthTable<CR>", desc = "New table from selection", mode = "x" },
+    { family = "table", key = "e", rhs = ":TruthTableExpand ", desc = "Expand with columns", when = "table" },
+    { family = "table", key = "t", command = "TruthTableToggle", desc = "Toggle 0/1 ↔ F/T", when = "table" },
+    { family = "table", key = "k", command = "TruthTableKarnaugh", desc = "Karnaugh map for column", when = "table" },
+    { family = "table", key = "r", command = "TruthTableDropRow", desc = "Drop row", when = "table" },
+    { family = "table", key = "c", command = "TruthTableDropColumn", desc = "Drop column", when = "table" },
+    { family = "rewrite", key = "d", command = "TruthTableDeMorgan", desc = "De Morgan", when = "expression" },
+    { family = "rewrite", key = "f", command = "TruthTableFactor", desc = "Factor operand out", when = "expression" },
+    { family = "rewrite", key = "x", command = "TruthTableDistribute", desc = "Distribute operand in",
+        when = "expression" },
+    { family = "rewrite", key = "s", command = "TruthTableCommute", desc = "Swap with next operand",
+        when = "expression" },
+    { family = "rewrite", key = "S", rhs = "<cmd>TruthTableCommute!<CR>", desc = "Swap with previous operand",
+        when = "expression" },
+    { family = "rewrite", key = "o", command = "TruthTableXor", desc = "Recognise ⊕ or ⇔", when = "expression" },
+    { family = "rewrite", key = "u", command = "TruthTableUnfold", desc = "Unfold →, ⊕ or ⇔ by its definition",
+        when = "expression" },
+    { family = "rewrite", key = "m", command = "TruthTableDNF", desc = "Disjunctive normal form",
+        when = "expression" },
+    { family = "rewrite", key = "M", command = "TruthTableCNF", desc = "Conjunctive normal form",
+        when = "expression" },
+    { family = "rewrite", key = "z", command = "TruthTableSimplify", desc = "Simplify at the cursor",
+        when = "expression" },
+    { family = "rewrite", key = "l", command = "TruthTableRewrites", desc = "List every rewrite and pick one",
+        when = "expression" },
+    { family = "rewrite", key = "v", command = "TruthTableVerify", desc = "Verify the derivation",
+        when = "derivation" },
+    { family = "rewrite", key = "V", rhs = "<cmd>TruthTableVerify!<CR>",
+        desc = "Verify the derivation and show the proof table", when = "derivation" },
+    { family = "rewrite", key = "a", command = "TruthTableApply", desc = "Apply in place", when = "preview" },
+    { family = "rewrite", key = "A", command = "TruthTableApplyStep", desc = "Apply as a ≡ step", when = "preview" },
 }
+
+-- The contexts a leaf can wait for, read fresh at the cursor: each is one
+-- pass over the buffer, cheap enough to run on every popup. An expression
+-- is whatever source.at would hand the rewrites: a parseable line, or any
+-- row of a table whose heading parses. `preview` is the pending preview
+-- itself, so the apply labels can name its law.
+local function context()
+    local buf = vim.api.nvim_get_current_buf()
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    return {
+        table = core.find_table(lines, row) ~= nil,
+        expression = require("truth-table.source").at(buf) ~= nil,
+        derivation = require("truth-table.derivation").in_derivation(lines, row),
+        preview = preview.active(buf),
+    }
+end
+
+-- The family's leaves whose context holds at the cursor, as which-key
+-- specs: the popup's legal moves. Run from the popup, a leaf feeds the
+-- keys its real mapping would, so the two paths stay one.
+local function legal_leaves(family)
+    local ctx = context()
+    local spec = {}
+    for _, map in ipairs(KEYMAPS) do
+        if map.family == family and map.when and ctx[map.when] and (map.mode or "n") == "n" then
+            local desc = map.desc
+            if map.when == "preview" then
+                desc = ("%s (%s)"):format(desc, ctx.preview.law)
+            end
+            local rhs = map.command and ("<cmd>" .. map.command .. "<CR>") or map.rhs
+            -- selene: allow(mixed_table)
+            spec[#spec + 1] = {
+                map.key,
+                function()
+                    local keys = vim.api.nvim_replace_termcodes(rhs, true, true, true)
+                    vim.api.nvim_feedkeys(keys, "n", false)
+                end,
+                desc = desc,
+            }
+        end
+    end
+    return spec
+end
 
 -- The groups a rewrite is lit with, the terms it consumed and the result it
 -- produced, as defaults the reader may define over. A colorscheme clears
@@ -307,27 +365,56 @@ function M.setup(opts)
         defined[command.name] = true
     end
 
+    local has_which_key, wk = pcall(require, "which-key")
     for _, map in ipairs(KEYMAPS) do
         local rhs = map.rhs
         if map.command then
             assert(defined[map.command], "keymap " .. map.key .. " names no command: " .. map.command)
             rhs = "<cmd>" .. map.command .. "<CR>"
         end
-        vim.keymap.set(map.mode or "n", PREFIX .. map.key, rhs, { desc = map.desc, expr = map.expr })
+        -- A context-gated leaf hides from which-key's tree: the popup gets
+        -- it from legal_leaves while its context holds, and a blind press
+        -- falls through to this mapping either way.
+        local desc = (has_which_key and map.when) and "which_key_ignore" or map.desc
+        vim.keymap.set(map.mode or "n", PREFIXES[map.family] .. map.key, rhs, { desc = desc, expr = map.expr })
     end
 
-    local ok, wk = pcall(require, "which-key")
-    if ok then
-        -- which-key lists a popup by key unless its `sort` option includes
-        -- "manual", which follows the order mappings were added in: this one.
+    if has_which_key then
+        -- Each root's expand lists its family's legal moves at the cursor;
+        -- the new table mapping, with a real description, merges in over
+        -- the table root's.
         -- selene: allow(mixed_table)
         -- which-key's spec is intentionally mixed: positional key + named fields.
-        local spec = { { PREFIX, group = "[T]ruth Table" } }
-        for _, map in ipairs(KEYMAPS) do
+        local spec = {
             -- selene: allow(mixed_table)
-            spec[#spec + 1] = { PREFIX .. map.key, desc = map.desc, mode = map.mode or "n" }
+            { PREFIXES.table, group = "Truth table", mode = "n", expand = function()
+                return legal_leaves("table")
+            end },
+            -- selene: allow(mixed_table)
+            { PREFIXES.table, group = "Truth table", mode = "x" },
+            -- selene: allow(mixed_table)
+            { PREFIXES.rewrite, group = "Logic rewrite", mode = "n", expand = function()
+                return legal_leaves("rewrite")
+            end },
+        }
+        -- which-key keeps the last spec a prefix was given, and it drains
+        -- the queue of specs added before it loaded ahead of the ones from
+        -- its own setup options. Added early, ours would lose the prefix to
+        -- any group label the reader's config declares on it, and the node,
+        -- childless by design (the real mappings hide behind
+        -- which_key_ignore), would be pruned along with the expand. So wait
+        -- for which-key to finish loading and add ours after; past ~5s add
+        -- anyway, better queued than absent.
+        local tries = 0
+        local function register()
+            tries = tries + 1
+            if require("which-key.config").loaded or tries > 50 then
+                wk.add(spec)
+            else
+                vim.defer_fn(register, 100)
+            end
         end
-        wk.add(spec)
+        register()
     end
     M.configured = true
 end

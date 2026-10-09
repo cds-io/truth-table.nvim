@@ -89,10 +89,10 @@ person would say.
             text = [[
 **Stage 3 of 5: rewrite** (first of two steps).
 
-Start by pushing the negation in. De Morgan (`<leader>ttd`) on the leading
+Start by pushing the negation in. De Morgan (`<leader>ld`) on the leading
 `not`, in yellow; De Morgan again on the `¬(` that appears; then simplify
-(`<leader>ttz`) for the double negation. Apply each as a step
-(`<leader>ttA`).
+(`<leader>lz`) for the double negation. Apply each as a step
+(`<leader>lA`).
 ]],
             template = [[
 [:yellow not] (C and (not Q or L)) and Q
@@ -134,14 +134,14 @@ from the outer `Q`. Distributing brings the two together; after idempotence
 removes the duplicate, factoring restores the compact form. The expression
 gets larger temporarily so the repeated check can be removed.
 
-Try to reach the target yourself, with `<leader>ttA` applying each move as a
+Try to reach the target yourself, with `<leader>lA` applying each move as a
 step. If you need a route, use these four moves:
 
 - Bring the outer `Q` to the front: cursor on the last `Q`, commute
-  (`<leader>tts`).
-- Distribute it into the group (`<leader>ttx`; the cursor is already on it).
-- Simplify (`<leader>ttz`), which finds the `Q` that is now said twice.
-- Factor `Q` back out: cursor on a `Q`, `<leader>ttf`.
+  (`<leader>ls`).
+- Distribute it into the group (`<leader>lx`; the cursor is already on it).
+- Simplify (`<leader>lz`), which finds the `Q` that is now said twice.
+- Factor `Q` back out: cursor on a `Q`, `<leader>lf`.
 ]],
             template = [[
 (¬C ∨ ([:red Q] ∧ ¬L)) ∧ [:yellow Q]
@@ -210,7 +210,7 @@ local string_first = quote and (not comment or comment >= quote)
 The same reading rule gives the last branch, `¬a ∧ ¬b`, which comes to
 `¬C ∧ ¬Q`: neither. So the three branches are "comment first", "string first"
 and "neither". Do they cover every case, with no overlap? The scratch pane
-holds the three conditions. Build the table (`:.TruthTable`, `<leader>ttn`).
+holds the three conditions. Build the table (`:.TruthTable`, `<leader>Tn`).
 ]],
             template = [[
 C and (not Q or L) | Q and (not C or not L) | not C and not Q

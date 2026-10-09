@@ -7,8 +7,8 @@ return {
 `⊕` can be written with the basic connectives: "exactly one of `t` and `e`" is
 "`e` without `t`, or `t` without `e`". Going the other way, spotting that
 pattern lets you replace four operands with two. `:TruthTableXor`
-(`<leader>tto`) recognises it; the cursor can be anywhere in either term, both
-in yellow. Preview, then apply with `<leader>tta`.
+(`<leader>lo`) recognises it; the cursor can be anywhere in either term, both
+in yellow. Preview, then apply with `<leader>la`.
 ]],
             template = [[
 [:yellow (not t and e)] or [:yellow (t and not e)]
@@ -41,10 +41,10 @@ function shouldRetry({ isTimeout, isServerError, hasRetries }) {
 
 Each branch that returns true is a term, so with `T`, `E`, `R` for the three
 checks the function is the expression in the scratch pane. Derive the short
-form in three steps, applying each with `<leader>ttA`: factor `R` out (cursor
-on either `R`, in yellow, `<leader>ttf`), recognise the exclusive or (cursor
-on `¬T`, `<leader>tto`), and commute `R` to the end (cursor on `R`, then
-`<leader>tts` to swap).
+form in three steps, applying each with `<leader>lA`: factor `R` out (cursor
+on either `R`, in yellow, `<leader>lf`), recognise the exclusive or (cursor
+on `¬T`, `<leader>lo`), and commute `R` to the end (cursor on `R`, then
+`<leader>ls` to swap).
 ]],
             template = [[
 (not T and E and [:yellow R]) or (T and not E and [:yellow R])
@@ -86,7 +86,7 @@ return exactlyOneFailure && hasRetries;
         },
         {
             text = [[
-A definition reads both ways. `:TruthTableUnfold` (`<leader>ttu`) goes from
+A definition reads both ways. `:TruthTableUnfold` (`<leader>lu`) goes from
 the connective back to its spelling in `and`, `or` and `not`: with the cursor
 on the `⊕` (or anywhere inside the pair it joins), preview it and apply it as
 a step. The same command unfolds `⇔` into "both or neither" and `→` into

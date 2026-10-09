@@ -112,8 +112,8 @@ A value has exactly one type, so no two of `N`, `S` and `T` are ever true
 together. This is domain knowledge supplied by Lua's type system, not a fact
 the Boolean table can discover. Identify the four rows that violate it and
 remove them, with the cursor on each in turn (`:TruthTableDropRow`,
-`<leader>ttr`). Then put the cursor in the last column and ask for the
-Karnaugh map (`:TruthTableKarnaugh`, `<leader>ttk`). Keep `0 0 0`: the value
+`<leader>Tr`). Then put the cursor in the last column and ask for the
+Karnaugh map (`:TruthTableKarnaugh`, `<leader>Tk`). Keep `0 0 0`: the value
 can have a type other than number, string or table.
 ]],
             template = [[

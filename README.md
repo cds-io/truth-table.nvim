@@ -47,7 +47,7 @@ plugin works the same without it:
 
 | Plugin | What it adds |
 |---|---|
-| [which-key.nvim](https://github.com/folke/which-key.nvim) | a group label for the `<leader>tt` keys, and the keys registered family by family, for a popup that lists them in that order (see [Keymaps](#keymaps)) |
+| [which-key.nvim](https://github.com/folke/which-key.nvim) | the `<leader>T` and `<leader>l` groups show a popup of the keys whose context holds at the cursor (see [Keymaps](#keymaps)) |
 | [vellum.nvim](https://github.com/blackhat-7/vellum.nvim) | the [tutorial](#tutorial)'s lesson pane rendered, where it otherwise shows the lesson's Markdown |
 
 The `dependencies` entry above is how the spec says "vellum, if you have it".
@@ -348,7 +348,7 @@ operand with an operator of its own: `(A ⊕ B) ∨ (A ∧ C)`.
 ### Simplify
 
 The first four rewrites rearrange an expression. `:TruthTableSimplify`
-(`<leader>ttz`) shrinks it: one run applies one *collapsing law* (a law whose
+(`<leader>lz`) shrinks it: one run applies one *collapsing law* (a law whose
 right-hand side is smaller than its left) and the preview says which.
 
 | Law, as the preview names it | Example |
@@ -423,7 +423,7 @@ line's last `≡` (or at its indentation when it has none). Type it as `equiv@`.
 spelling of `⇔`. Steps apply to expression lines; a heading takes
 `:TruthTableApply` only. Both apply commands serve De Morgan previews too.
 
-The full commands have keymaps (`<leader>tta`, `<leader>ttA`), but a pending
+The full commands have keymaps (`<leader>la`, `<leader>lA`), but a pending
 preview also puts two transient keys on its buffer: `<Space>` applies in place
 and `<CR>` writes the step, so a derivation runs as rewrite, `<CR>`, rewrite,
 `<CR>`. The keys live exactly as long as the preview; applying it, dismissing
@@ -458,7 +458,7 @@ biconditional; change its `=` to `≡` before stepping from it.
 ### Verifying a derivation
 
 Steps written by hand sit beside the ones the rewrites wrote, and nothing
-tells them apart. `:TruthTableVerify` (`<leader>ttv`) reads the derivation
+tells them apart. `:TruthTableVerify` (`<leader>lv`) reads the derivation
 under the cursor and judges every `≡` step against the side before it, over
 every assignment of the variables either side mentions (a step that drops a
 variable is still judged over it). Every step holds, and it says so with the
@@ -476,7 +476,7 @@ justification after the bar is your note and is not read: the check judges
 the equivalence, not the law. A side that holds a column reference (`:h2`)
 is refused, since a reference has a meaning inside a table only.
 
-`:TruthTableVerify!` (`<leader>ttV`) shows the proof as well: a truth table
+`:TruthTableVerify!` (`<leader>lV`) shows the proof as well: a truth table
 over the variables the chain mentions, in the order they appear, with one
 column per side, inserted below the derivation at its indentation. The sides
 are equivalent exactly when their columns are identical, row for row; when a
@@ -509,7 +509,7 @@ a ∨ b
 
 Each command above starts from a law: you choose De Morgan, or factoring, put
 the cursor where you think it applies, and the preview tells you whether you
-were right. `:TruthTableRewrites` (`<leader>ttl`) starts from the expression.
+were right. `:TruthTableRewrites` (`<leader>ll`) starts from the expression.
 It lists every rewrite the expression allows, each as its result and the law
 that gives it, and writes the one you pick. For `(a and b) or (not a and b)`:
 
@@ -542,7 +542,7 @@ and the menu shows them all. Three rules keep the list readable:
 A pick is written at once, with no preview in between. On an expression line
 it becomes the next step of the derivation, justified and aligned the way
 `:TruthTableApplyStep` writes one, and the cursor moves onto it, so the next
-`<leader>ttl` lists the rewrites of the step you just took. A table heading
+`<leader>ll` lists the rewrites of the step you just took. A table heading
 has no steps, so there the pick renames the heading in place, as
 `:TruthTableApply` does. Cancelling the menu writes nothing.
 
@@ -717,11 +717,12 @@ you have reached, is saved on every move to `truth-table/tutor.json` under
 buffers live as long as that Neovim does. `:TruthTableTutor!` starts over and
 saves the first step.
 
-Every key a lesson names starts with `<leader>tt`. With
+Every key a lesson names starts with `<leader>T` (the table family) or
+`<leader>l` (the logic family). With
 [which-key.nvim](https://github.com/folke/which-key.nvim) installed, pressing
-that much and pausing lists the rest, each with what it does, which is worth
-having while the keys are new; the first lesson says how to read a key like
-`<leader>ttn` and how to find your leader.
+that much and pausing lists the keys legal at the cursor, each with what it
+does, which is worth having while the keys are new; the first lesson says how
+to read a key like `<leader>Tn` and how to find your leader.
 
 The course is data: one Lua table per lesson in `tutor/truth-table/`, read in
 file-name order. A lesson is a `title`, an `aim`, the `part` it opens (named
@@ -755,53 +756,51 @@ without its colour. A span that closes a line writes `]]`, which also closes a
 
 ## Keymaps
 
-`setup()` registers these by default, in three families:
+`setup()` registers these by default, one family per prefix: the table
+commands under `<leader>T`, the logic rewrites under `<leader>l`. Each key
+waits for a context: a truth table around the cursor, an expression under it
+(a parseable line, or any row of a table whose heading parses), a derivation
+with at least one `≡` step, or a pending rewrite preview.
 
-| Key | Family | Action |
+| Key | Context | Action |
 |---|---|---|
-| `<leader>ttn` | Table | run `:TruthTable` on the current line, or prefill `:TruthTable ` when it is blank |
-| `<leader>ttn` (visual) | Table | run `:TruthTable` on the selected lines |
-| `<leader>tte` | Table | prefill `:TruthTableExpand ` |
-| `<leader>ttt` | Table | toggle `0/1 ↔ F/T` |
-| `<leader>ttr` | Table | drop row |
-| `<leader>ttc` | Table | drop column |
-| `<leader>ttk` | Table | Karnaugh map and formula for the column |
-| `<leader>ttd` | Rewrite | toggle De Morgan preview |
-| `<leader>ttf` | Rewrite | toggle factor preview (the operand moves out of its terms) |
-| `<leader>ttx` | Rewrite | toggle distribute preview (the operand moves into the group) |
-| `<leader>tts` | Rewrite | toggle commute preview (swap with the next operand) |
-| `<leader>ttS` | Rewrite | toggle commute preview (swap with the previous operand) |
-| `<leader>tto` | Rewrite | toggle xor-recognition preview |
-| `<leader>ttu` | Rewrite | toggle unfold preview |
-| `<leader>ttz` | Rewrite | toggle simplify preview |
-| `<leader>ttl` | Rewrite | list every rewrite and write the one picked |
-| `<leader>ttv` | Rewrite | verify the derivation under the cursor |
-| `<leader>ttV` | Rewrite | verify the derivation and insert its proof table below |
-| `<leader>tta` | Apply | apply the preview in place |
-| `<leader>ttA` | Apply | apply the preview as a `≡` step with its justification |
-| `<Space>` | Apply | while a preview is pending, apply it in place |
-| `<CR>` | Apply | while a preview is pending, apply it as a `≡` step |
+| `<leader>Tn` | anywhere | run `:TruthTable` on the current line, or prefill `:TruthTable ` when it is blank |
+| `<leader>Tn` (visual) | anywhere | run `:TruthTable` on the selected lines |
+| `<leader>Te` | table | prefill `:TruthTableExpand ` |
+| `<leader>Tt` | table | toggle `0/1 ↔ F/T` |
+| `<leader>Tr` | table | drop row |
+| `<leader>Tc` | table | drop column |
+| `<leader>Tk` | table | Karnaugh map and formula for the column |
+| `<leader>ld` | expression | toggle De Morgan preview |
+| `<leader>lf` | expression | toggle factor preview (the operand moves out of its terms) |
+| `<leader>lx` | expression | toggle distribute preview (the operand moves into the group) |
+| `<leader>ls` | expression | toggle commute preview (swap with the next operand) |
+| `<leader>lS` | expression | toggle commute preview (swap with the previous operand) |
+| `<leader>lo` | expression | toggle xor-recognition preview |
+| `<leader>lu` | expression | toggle unfold preview |
+| `<leader>lm` | expression | toggle disjunctive-normal-form preview |
+| `<leader>lM` | expression | toggle conjunctive-normal-form preview |
+| `<leader>lz` | expression | toggle simplify preview |
+| `<leader>ll` | expression | list every rewrite and write the one picked |
+| `<leader>lv` | derivation | verify the derivation under the cursor |
+| `<leader>lV` | derivation | verify the derivation and insert its proof table below |
+| `<leader>la` | preview | apply the preview in place |
+| `<leader>lA` | preview | apply the preview as a `≡` step with its justification |
+| `<Space>` | preview | apply it in place |
+| `<CR>` | preview | apply it as a `≡` step |
 
 The last two are transient, so they claim nothing from your own maps: they
 appear on the preview's buffer when a rewrite locks one and go with it (see
-[Applying a preview](#applying-a-preview)).
+[Applying a preview](#applying-a-preview)). The normal forms sit on `m` and
+`M` after the minterms a DNF is built from and the maxterms of a CNF.
 
-Each keymap's description opens with its family (`Table: new`,
-`Rewrite: factor operand out`, `Apply: in place`), so the grouping shows in a
-[which-key](https://github.com/folke/which-key.nvim) popup. By default
-which-key lists a popup by key, which interleaves the families. To list them
-in the order above, add `"manual"` to which-key's `sort` option: it follows
-the order mappings were registered in, and the plugin registers its keys
-family by family.
-
-```lua
-require("which-key").setup({
-    sort = { "local", "order", "group", "manual", "alphanum", "mod" },
-})
-```
-
-`sort` applies to every which-key popup: keys that other plugins register
-through which-key will also appear in their registration order.
+With [which-key](https://github.com/folke/which-key.nvim) installed, each
+prefix is a group (`Truth table`, `Logic rewrite`) whose popup lists the
+legal moves at the cursor: the keys whose context holds, with the apply keys
+naming the pending rewrite's law (`Apply in place (De Morgan)`). A key the
+popup hides still runs when typed: which-key feeds an unlisted key back to
+the mapping, and the command's own message says what is missing. Without
+which-key every mapping keeps its own description and nothing is hidden.
 
 Factor and Distribute are the one law used from either side, and easy to
 reach for the wrong way round. When one refuses and the other applies at the
