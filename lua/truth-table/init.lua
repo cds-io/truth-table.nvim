@@ -154,6 +154,25 @@ local function cmd_check(command)
     require("truth-table.verdict").show(0, vim.api.nvim_win_get_cursor(0)[1], command.bang)
 end
 
+-- The expressions are the argument, split as :TruthTable splits its own,
+-- or with a range and no argument the selected lines. The proof, with !,
+-- goes in below the current line, or below the selection.
+local function cmd_equiv(opts)
+    local from_range = opts.range > 0 and opts.args == ""
+    local args, below = opts.args, vim.api.nvim_win_get_cursor(0)[1]
+    if from_range then
+        args = core.args_from_lines(vim.api.nvim_buf_get_lines(0, opts.line1 - 1, opts.line2, false))
+        below = opts.line2
+    end
+    local exprs, err = core.split_expressions(args, "|,")
+    if not exprs then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+    end
+    local indent = (vim.api.nvim_buf_get_lines(0, below - 1, below, false)[1] or ""):match("^%s*")
+    require("truth-table.verdict").equiv(0, exprs, below, indent, opts.bang)
+end
+
 local function cmd_commute(command)
     preview.toggle(command.bang and "commute_back" or "commute")
 end
@@ -184,6 +203,8 @@ local COMMANDS = {
     { name = "TruthTableAlign", run = cmd_align, desc = "Align the derivation's justification bars in one column" },
     { name = "TruthTableVerify", run = cmd_check, bang = true,
         desc = "Verify every ≡ step of the derivation under the cursor, and show the first that fails (! inserts the proof table below)" },
+    { name = "TruthTableEquiv", run = cmd_equiv, nargs = "*", range = true, bang = true,
+        desc = "Are these expressions (separated by | or ,; or the selected lines) all equivalent? Name the first pair that differs (! inserts the proof table below)" },
     { name = "TruthTableKarnaugh", run = cmd_karnaugh,
         desc = "Insert a Karnaugh map and minimal formula for the current column" },
     { name = "TruthTableDeMorgan", run = toggles("de_morgan"), desc = "Toggle a whole-expression De Morgan preview" },
