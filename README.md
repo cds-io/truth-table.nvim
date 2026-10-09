@@ -748,11 +748,12 @@ built-in keys:
 | `true`                     | `⊤`                   | Truth / top            |
 | `false`                    | `⊥`                   | Falsity / bottom       |
 | `equiv`                    | `≡`                   | Derivation separator   |
+| `nequiv`                   | `≢`                   | Failed step, shown by the derivation check |
 
 The built-in symbol table supplies both default abbreviations and generated
 headings. Custom abbreviation settings affect inserted text only.
 The predicate language reads `⊤` and `⊥` (and the words `true` and `false`) as
-the constants `1` and `0`. The quantifiers and `≡` are typing aids, outside the
+the constants `1` and `0`. The quantifiers, `≡` and `≢` are typing aids, outside the
 predicate language.
 
 ## Customization

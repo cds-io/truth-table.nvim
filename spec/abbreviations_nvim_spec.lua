@@ -63,7 +63,7 @@ describe("insert-mode abbreviations", function()
     describe("abbreviation defaults", function()
         it("pair each constant's ascii word plus @ with its unicode symbol", function()
             assert.are.equal("@", defaults.trigger)
-            for _, key in ipairs({ "NOT", "AND", "OR", "XOR", "IMPLIES", "IFF", "FORALL", "EXISTS", "TOP", "BOTTOM", "EQUIV" }) do
+            for _, key in ipairs({ "NOT", "AND", "OR", "XOR", "IMPLIES", "IFF", "FORALL", "EXISTS", "TOP", "BOTTOM", "EQUIV", "NOT_EQUIV" }) do
                 assert.are.equal(symbols[key].unicode, defaults.symbols[symbols[key].ascii], key)
             end
         end)
@@ -75,6 +75,7 @@ describe("insert-mode abbreviations", function()
             assert.are.equal("⇔", abbrev("iff@"))
             assert.are.equal("→", abbrev("implies@"))
             assert.are.equal("≡", abbrev("equiv@"))
+            assert.are.equal("≢", abbrev("nequiv@"))
         end)
     end)
 

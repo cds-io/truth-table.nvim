@@ -10,6 +10,7 @@ describe("symbols", function()
             IMPLIES = { "implies", "→" }, IFF = { "iff", "⇔" },
             FORALL = { "forall", "∀" }, EXISTS = { "exists", "∃" },
             TOP = { "true", "⊤" }, BOTTOM = { "false", "⊥" }, EQUIV = { "equiv", "≡" },
+            NOT_EQUIV = { "nequiv", "≢" },
         }
         for key, pair in pairs(expected) do
             assert.are.same({ ascii = pair[1], unicode = pair[2] }, symbols[key], key)
@@ -22,11 +23,15 @@ describe("symbols", function()
         end
     end)
 
-    it("keeps ≡ out of the predicate language", function()
+    it("keeps ≡ and ≢ out of the predicate language", function()
         assert.is_nil(operators.SYMBOLS.equiv)
+        assert.is_nil(operators.SYMBOLS.nequiv)
         local ast, err = predicate.parse_expression("A ≡ B")
         assert.is_nil(ast)
         assert.is_truthy(err:find("Unexpected character: ≡", 1, true))
+        local negated, negated_err = predicate.parse_expression("A ≢ B")
+        assert.is_nil(negated)
+        assert.is_truthy(negated_err:find("Unexpected character: ≢", 1, true))
         assert.are.equal("A ∧ equiv", trees.heading(assert(predicate.parse_expression("A and equiv"))))
     end)
 

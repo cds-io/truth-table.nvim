@@ -657,7 +657,7 @@ CTRL-] explicitly expands the abbreviation without inserting an extra character.
     xor@      ⊕          true@     ⊤
     not@      ¬          false@    ⊥
     implies@  →          equiv@    ≡
-    iff@      ⇔
+    iff@      ⇔          nequiv@   ≢
 
                                                           *truth-table-symbols*
 The word and the symbol come from `require("truth-table.symbols")`, one
@@ -666,7 +666,7 @@ record per symbol with an `ascii` word and a `unicode` character: >
     IFF = { ascii = "iff", unicode = "⇔" }
 <
 The keys are NOT, AND, OR, XOR, IMPLIES, IFF, FORALL, EXISTS, TOP (`true`),
-BOTTOM (`false`) and EQUIV. The predicate language reads TOP and BOTTOM, by
+BOTTOM (`false`), EQUIV and NOT_EQUIV. The predicate language reads TOP and BOTTOM, by
 word or by symbol, as the constants 1 and 0, and renders headings from the
 same table
 (|truth-table-predicates|), so a heading you type and one the plugin generates
