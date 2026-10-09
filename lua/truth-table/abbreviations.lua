@@ -39,8 +39,16 @@ function M.resolve(option)
         if type(word) ~= "string" or not word:match("^[A-Za-z_][A-Za-z0-9_]*$") then
             return nil, "symbol keys must be ASCII identifiers"
         end
-        if unicode ~= false and (type(unicode) ~= "string" or unicode == ""
-            or unicode:find("[\r\n]") or unicode:match("^%s") or unicode:match("%s$")) then
+        if
+            unicode ~= false
+            and (
+                type(unicode) ~= "string"
+                or unicode == ""
+                or unicode:find("[\r\n]")
+                or unicode:match("^%s")
+                or unicode:match("%s$")
+            )
+        then
             return nil, "symbol values must be nonempty single-line strings without surrounding whitespace, or false"
         end
         symbols[word] = unicode or nil

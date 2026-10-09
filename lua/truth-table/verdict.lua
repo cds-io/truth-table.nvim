@@ -202,10 +202,12 @@ function M.show(buf, row, with_proof)
     local length = verdict.side[2] - verdict.side[1] + 1
     local lit = write.lit({ row = at, col = verdict.side[1] - 1 }, { { 0, length } }, write.CONSUMED_GROUP)
     remember(buf, marks.paint(buf, namespace, lit))
-    remember(buf, { vim.api.nvim_buf_set_extmark(buf, namespace, at, verdict.separator - 1, {
-        virt_text = { { SYMBOLS.NOT_EQUIV.unicode, write.CONSUMED_GROUP } },
-        virt_text_pos = "overlay",
-    }) })
+    remember(buf, {
+        vim.api.nvim_buf_set_extmark(buf, namespace, at, verdict.separator - 1, {
+            virt_text = { { SYMBOLS.NOT_EQUIV.unicode, write.CONSUMED_GROUP } },
+            virt_text_pos = "overlay",
+        }),
+    })
     vim.notify(check.message(verdict), vim.log.levels.WARN)
 end
 

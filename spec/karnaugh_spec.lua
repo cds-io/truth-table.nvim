@@ -47,7 +47,9 @@ end
 describe("karnaugh.derive", function()
     it("references stored values when input headings are expressions or reserved names", function()
         for _, heading in ipairs({ "A ∨ B", "and", "0", "rain wet", "A|B" }) do
-            local tbl = table_of({ heading, "C" }, "F", function(a) return 1 - a end)
+            local tbl = table_of({ heading, "C" }, "F", function(a)
+                return 1 - a
+            end)
             local analysis = assert(karnaugh.derive(tbl, 3))
             assert.are.equal("¬:h1", analysis.formula)
             local parsed = assert(predicate.parse_expression(analysis.formula))
@@ -59,8 +61,18 @@ describe("karnaugh.derive", function()
     end)
 
     it("minimizes literal count before breaking ties lexically", function()
-        local minterms = { [0] = true, [1] = true, [2] = true, [5] = true, [7] = true,
-            [9] = true, [10] = true, [11] = true, [12] = true, [13] = true }
+        local minterms = {
+            [0] = true,
+            [1] = true,
+            [2] = true,
+            [5] = true,
+            [7] = true,
+            [9] = true,
+            [10] = true,
+            [11] = true,
+            [12] = true,
+            [13] = true,
+        }
         local tbl = table_of({ "A", "B", "C", "D" }, "F", function(a, b, c, d)
             return minterms[a * 8 + b * 4 + c * 2 + d] and 1 or 0
         end)
@@ -103,22 +115,42 @@ describe("karnaugh.derive", function()
     end)
 
     it("derives constants for all-zero and all-one columns", function()
-        local zero = assert(karnaugh.derive(table_of({ "A", "B" }, "F", function() return 0 end), 3))
+        local zero = assert(karnaugh.derive(
+            table_of({ "A", "B" }, "F", function()
+                return 0
+            end),
+            3
+        ))
         assert.are.equal("0", zero.formula)
         assert.are.same({}, zero.cover)
-        local one = assert(karnaugh.derive(table_of({ "A", "B" }, "F", function() return 1 end), 3))
+        local one = assert(karnaugh.derive(
+            table_of({ "A", "B" }, "F", function()
+                return 1
+            end),
+            3
+        ))
         assert.are.equal("1", one.formula)
         assert.are.same({ "--" }, one.cover)
     end)
 
     it("derives a column equal to an input as that variable", function()
-        local analysis = assert(karnaugh.derive(table_of({ "A", "B" }, "F", function(a) return a end), 3))
+        local analysis = assert(karnaugh.derive(
+            table_of({ "A", "B" }, "F", function(a)
+                return a
+            end),
+            3
+        ))
         assert.are.equal("A", analysis.formula)
     end)
 
     it("rejects a column the columns before it do not determine", function()
         -- B is not a function of A alone: rows 1 and 2 share A = 0.
-        local analysis, err = karnaugh.derive(table_of({ "A", "B" }, "F", function(a) return a end), 2)
+        local analysis, err = karnaugh.derive(
+            table_of({ "A", "B" }, "F", function(a)
+                return a
+            end),
+            2
+        )
         assert.is_nil(analysis)
         assert.matches("disagree", err)
     end)
@@ -131,7 +163,9 @@ describe("karnaugh.derive", function()
 
     it("stops the inputs at the first column that breaks the enumeration", function()
         -- A computed column between the variables and the target is not an input.
-        local tbl = table_of({ "A", "B" }, "F", function(a, b) return a == 1 and b == 1 and 1 or 0 end)
+        local tbl = table_of({ "A", "B" }, "F", function(a, b)
+            return a == 1 and b == 1 and 1 or 0
+        end)
         local extended = assert(model.append_columns(tbl, {
             { heading = "G", values = { 0, 1, 1, 1 } },
         }))
@@ -171,11 +205,21 @@ describe("karnaugh.derive", function()
 
     it("reproduces the column for every input on a spread of functions", function()
         local functions = {
-            function(a, b, c, d) return (a == 1 and b == 0) or (c == d) end,
-            function(a, b, c, d) return (a ~= b) and (c == 1 or d == 0) end,
-            function(a, b, c, d) return (a == 1 and c == 1) or (b == 1 and d == 1) or (a == 0 and b == 0) end,
-            function(a, b, c) return (a + b + c) % 2 == 1 end,
-            function(a, b, c, d, e) return (a == 1 and b == 1) or (c == 1 and d == 1 and e == 0) or (b == 0 and e == 1) end,
+            function(a, b, c, d)
+                return (a == 1 and b == 0) or (c == d)
+            end,
+            function(a, b, c, d)
+                return (a ~= b) and (c == 1 or d == 0)
+            end,
+            function(a, b, c, d)
+                return (a == 1 and c == 1) or (b == 1 and d == 1) or (a == 0 and b == 0)
+            end,
+            function(a, b, c)
+                return (a + b + c) % 2 == 1
+            end,
+            function(a, b, c, d, e)
+                return (a == 1 and b == 1) or (c == 1 and d == 1 and e == 0) or (b == 0 and e == 1)
+            end,
         }
         local widths = { 4, 4, 4, 3, 5 }
         for i, fn in ipairs(functions) do
@@ -236,7 +280,9 @@ describe("karnaugh.render", function()
     end)
 
     it("lays out a 2-variable map with one variable per axis", function()
-        local tbl = table_of({ "A", "B" }, "F", function(a, b) return a == 1 and b == 1 and 1 or 0 end)
+        local tbl = table_of({ "A", "B" }, "F", function(a, b)
+            return a == 1 and b == 1 and 1 or 0
+        end)
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 3))))
         assert.are.same({
             "|     |     |  B  |     |",
@@ -273,14 +319,18 @@ describe("karnaugh.render", function()
     end)
 
     it("keeps the table's F/T encoding in the cells", function()
-        local tbl = table_of({ "A", "B" }, "F", function(a, b) return a == 1 and b == 1 and 1 or 0 end)
+        local tbl = table_of({ "A", "B" }, "F", function(a, b)
+            return a == 1 and b == 1 and 1 or 0
+        end)
         tbl.encoding = "tf"
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 3))))
         assert.are.equal("|     |  1  |  F  |  T  |", lines[7])
     end)
 
     it("joins multi-character names with spaces in the axis labels", function()
-        local tbl = table_of({ "p", "rain", "wet" }, "F", function(p) return p end)
+        local tbl = table_of({ "p", "rain", "wet" }, "F", function(p)
+            return p
+        end)
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 4))))
         assert.are.equal("|     |     |     | rain wet |     |     |", lines[3])
         assert.are.equal("|  p  |  0  |  0  |    0     |  0  |  0  |", lines[6])
@@ -288,7 +338,9 @@ describe("karnaugh.render", function()
 
     it("omits the map above four variables and keeps the formula", function()
         local names = { "A", "B", "C", "D", "E" }
-        local tbl = table_of(names, "F", function(a) return a end)
+        local tbl = table_of(names, "F", function(a)
+            return a
+        end)
         local lines = assert(karnaugh.render(assert(karnaugh.derive(tbl, 6))))
         assert.are.same({ "F ≡ A" }, lines)
     end)

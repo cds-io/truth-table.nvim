@@ -39,7 +39,11 @@ local function chain(lines)
     for row, line in ipairs(lines) do
         for _, side in ipairs(derivation.sides(line)) do
             sides[#sides + 1] = {
-                row = row, first = side.first, last = side.last, separator = side.separator, text = side.text,
+                row = row,
+                first = side.first,
+                last = side.last,
+                separator = side.separator,
+                text = side.text,
             }
         end
     end
@@ -136,10 +140,16 @@ function M.check(lines)
         local found = differ(premise.ast, conclusion.ast, names)
         if found then
             return {
-                ok = false, step = k - 1, row = conclusion.row,
-                side = { conclusion.first, conclusion.last }, separator = conclusion.separator,
-                assignment = found.assignment, premise = found.premise, conclusion = found.conclusion,
-                texts = texts, variables = order,
+                ok = false,
+                step = k - 1,
+                row = conclusion.row,
+                side = { conclusion.first, conclusion.last },
+                separator = conclusion.separator,
+                assignment = found.assignment,
+                premise = found.premise,
+                conclusion = found.conclusion,
+                texts = texts,
+                variables = order,
             }
         end
     end

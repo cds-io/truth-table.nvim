@@ -151,10 +151,14 @@ describe("core.build", function()
         local tbl = assert(core.build("(m ∧ (a ⊕ b) ∨ (¬m ∧ (a=b))) | m ⊕ (a=b)"))
         assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b)) ∨ (¬m ∧ (a ⇔ b))", "m ⊕ (a ⇔ b)" }, tbl.headers)
         assert.are.same({
-            { 0, 0, 0, 1, 1 }, { 0, 0, 1, 0, 0 },
-            { 0, 1, 0, 0, 0 }, { 0, 1, 1, 1, 1 },
-            { 1, 0, 0, 0, 0 }, { 1, 0, 1, 1, 1 },
-            { 1, 1, 0, 1, 1 }, { 1, 1, 1, 0, 0 },
+            { 0, 0, 0, 1, 1 },
+            { 0, 0, 1, 0, 0 },
+            { 0, 1, 0, 0, 0 },
+            { 0, 1, 1, 1, 1 },
+            { 1, 0, 0, 0, 0 },
+            { 1, 0, 1, 1, 1 },
+            { 1, 1, 0, 1, 1 },
+            { 1, 1, 1, 0, 0 },
         }, tbl.rows)
     end)
 
@@ -168,8 +172,11 @@ describe("core.build", function()
         for _, case in ipairs({
             { input = "2", headers = { "A", "B" }, rows = two_variables },
             { input = "p q", headers = { "p", "q" }, rows = two_variables },
-            { input = "B | A | A implies B", headers = { "B", "A", "A → B" },
-                rows = { { 0, 0, 1 }, { 0, 1, 0 }, { 1, 0, 1 }, { 1, 1, 1 } } },
+            {
+                input = "B | A | A implies B",
+                headers = { "B", "A", "A → B" },
+                rows = { { 0, 0, 1 }, { 0, 1, 0 }, { 1, 0, 1 }, { 1, 1, 1 } },
+            },
         }) do
             assert.are.same({ headers = case.headers, rows = case.rows, encoding = "bits" }, core.build(case.input))
         end
@@ -183,11 +190,15 @@ end)
 
 describe("core.args_from_lines", function()
     it("joins lines with the column delimiter, skipping blank ones", function()
-        assert.are.equal("m | a  | b | m xor a | a and b", core.args_from_lines({ "m | a  | b", "  m xor a ", "", "a and b" }))
+        assert.are.equal(
+            "m | a  | b | m xor a | a and b",
+            core.args_from_lines({ "m | a  | b", "  m xor a ", "", "a and b" })
+        )
     end)
 
     it("feeds build: a first line of bare variables pins the order", function()
-        local args = core.args_from_lines({ "m | a  | b", "(m ∧  (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) ", "m ⊕ (a ∧ b)" })
+        local args =
+            core.args_from_lines({ "m | a  | b", "(m ∧  (a ⊕ b) ∨ (¬m ∧ (a ∧ b))) ", "m ⊕ (a ∧ b)" })
         local tbl = assert(core.build(args))
         assert.are.same({ "m", "a", "b", "(m ∧ (a ⊕ b)) ∨ (¬m ∧ a ∧ b)", "m ⊕ (a ∧ b)" }, tbl.headers)
         assert.are.equal(8, #tbl.rows)
@@ -229,8 +240,10 @@ describe("table pipeline", function()
         local expanded = assert(core.expand(toggled, { "not A", "A iff B" }))
         assert.are.equal("tf", expanded.encoding)
         assert.are.same({
-            { "F", "F", "T", "T" }, { "F", "T", "T", "F" },
-            { "T", "F", "F", "F" }, { "T", "T", "F", "T" },
+            { "F", "F", "T", "T" },
+            { "F", "T", "T", "F" },
+            { "T", "F", "F", "F" },
+            { "T", "T", "F", "T" },
         }, model.render_rows(expanded))
         assert.are.equal("bits", tbl.encoding)
         assert.are.same(tbl, core.toggle(toggled))
@@ -280,8 +293,10 @@ describe("table pipeline", function()
         local tbl = assert(core.build("A and B | not A"))
         assert.are.same({ "A", "B", "A ∧ B", "¬A" }, tbl.headers)
         assert.are.same({
-            { 0, 0, 0, 1 }, { 0, 1, 0, 1 },
-            { 1, 0, 0, 0 }, { 1, 1, 1, 0 },
+            { 0, 0, 0, 1 },
+            { 0, 1, 0, 1 },
+            { 1, 0, 0, 0 },
+            { 1, 1, 1, 0 },
         }, tbl.rows)
         assert.are.equal(2, calls)
     end)
@@ -379,7 +394,8 @@ describe("semantic core pipeline", function()
         local edited = assert(core.drop_row(expanded, 1))
         assert.are.same({
             headers = { "B", "A ∧ B", "¬“A ∧ B”" },
-            rows = { { 1, 0, 1 }, { 0, 0, 1 }, { 1, 1, 0 } }, encoding = "tf",
+            rows = { { 1, 0, 1 }, { 0, 0, 1 }, { 1, 1, 0 } },
+            encoding = "tf",
         }, edited)
         assert.are.same(edited, core.parse(assert(core.format(edited))))
         assert.are.equal("bits", tbl.encoding)
@@ -407,15 +423,17 @@ end)
 
 describe("references to reference-generated headings", function()
     it("chains stored-column operations after source columns are dropped", function()
-        local tbl = { headers = { 'A' }, rows = { { 0 }, { 1 } }, encoding = 'bits' }
-        local first = assert(core.expand(tbl, { 'not :h1' }))
+        local tbl = { headers = { "A" }, rows = { { 0 }, { 1 } }, encoding = "bits" }
+        local first = assert(core.expand(tbl, { "not :h1" }))
         local dropped = assert(core.drop_column(first, 1))
-        local second = assert(core.expand(dropped, { 'not :h1' }))
+        local second = assert(core.expand(dropped, { "not :h1" }))
         assert.are.same({
-            headers = { '¬“A”', '¬“¬“A””' }, rows = { { 1, 0 }, { 0, 1 } }, encoding = 'bits',
+            headers = { "¬“A”", "¬“¬“A””" },
+            rows = { { 1, 0 }, { 0, 1 } },
+            encoding = "bits",
         }, second)
         local reparsed = assert(core.parse(assert(core.format(second))))
-        local third = assert(core.expand(reparsed, { 'not :h2' }))
+        local third = assert(core.expand(reparsed, { "not :h2" }))
         assert.are.same({ { 1, 0, 1 }, { 0, 1, 0 } }, third.rows)
     end)
 end)

@@ -14,7 +14,8 @@ local HELP = "doc/truth-table.txt"
 
 -- The commands the help describes in prose only: a picker, and the three
 -- that move the tutor.
-local EXEMPT = { TruthTableRewrites = true, TruthTableTutor = true, TruthTableTutorNext = true, TruthTableTutorPrev = true }
+local EXEMPT =
+    { TruthTableRewrites = true, TruthTableTutor = true, TruthTableTutorNext = true, TruthTableTutorPrev = true }
 
 -- Every fenced block of the help, dedented, with the line it starts on.
 local function fences()

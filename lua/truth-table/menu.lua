@@ -53,7 +53,10 @@ function M.choose()
             write.step(win, plan)
         else
             write.in_place(buf, plan)
-            vim.notify("Renamed the heading; update explicit references to its old label if needed", vim.log.levels.INFO)
+            vim.notify(
+                "Renamed the heading; update explicit references to its old label if needed",
+                vim.log.levels.INFO
+            )
         end
     end)
 end

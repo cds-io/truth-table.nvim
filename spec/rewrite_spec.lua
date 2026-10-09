@@ -316,7 +316,10 @@ describe("rewrite.unfold", function()
             assert.are.equal(case[1], run("xor", assert(unfold(case[1], case[2])), "¬"))
         end
         -- Back from ⊕, the terms come in the definition's order.
-        assert.are.equal("(T ∧ ¬E) ∨ (¬T ∧ E)", (unfold(assert(run("xor", "(T ∧ ¬E) ∨ (¬T ∧ E)", "¬T")), "⊕")))
+        assert.are.equal(
+            "(T ∧ ¬E) ∨ (¬T ∧ E)",
+            (unfold(assert(run("xor", "(T ∧ ¬E) ∨ (¬T ∧ E)", "¬T")), "⊕"))
+        )
     end)
 
     it("refuses an expression with nothing to unfold", function()
@@ -340,7 +343,10 @@ describe("rewrite.dnf and rewrite.cnf", function()
 
     it("rewrite the whole expression to the form, naming it, from any cursor or none", function()
         assert.are.same({ "(a ∧ c) ∨ (b ∧ c)", "disjunctive normal form" }, { form("dnf", "(a ∨ b) ∧ c", 1) })
-        assert.are.same({ "(a ∧ c) ∨ (b ∧ c)", "disjunctive normal form" }, { form("dnf", "(a ∨ b) ∧ c", nil) })
+        assert.are.same(
+            { "(a ∧ c) ∨ (b ∧ c)", "disjunctive normal form" },
+            { form("dnf", "(a ∨ b) ∧ c", nil) }
+        )
         assert.are.same({ "(a ∨ c) ∧ (b ∨ c)", "conjunctive normal form" }, { form("cnf", "(a ∧ b) ∨ c", 9) })
     end)
 
@@ -366,7 +372,10 @@ end)
 
 describe("rewrite.de_morgan", function()
     it("contracts the nearest enclosing pair of negations", function()
-        assert.are.equal("R ∧ (T ∨ E) ∧ ¬(T ∧ E)", run("de_morgan", "R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)", "¬T"))
+        assert.are.equal(
+            "R ∧ (T ∨ E) ∧ ¬(T ∧ E)",
+            run("de_morgan", "R ∧ (T ∨ E) ∧ (¬T ∨ ¬E)", "¬T")
+        )
         assert.are.equal("¬(A ∧ B) ∨ C", run("de_morgan", "¬A ∨ ¬B ∨ C", "¬A"))
     end)
 
@@ -405,11 +414,18 @@ describe("rewrite.de_morgan", function()
 
     it("contracts the run of adjacent negations around the cursor inside a longer chain", function()
         assert.are.equal("¬(A ∧ B) ∨ C ∨ ¬D", run("de_morgan", "¬A ∨ ¬B ∨ C ∨ ¬D", "¬B"))
-        assert.are.equal("¬A ∨ X ∨ ¬(B ∧ C ∧ D) ∨ E", run("de_morgan", "¬A ∨ X ∨ (¬B ∨ ¬C) ∨ ¬D ∨ E", "¬C"))
+        assert.are.equal(
+            "¬A ∨ X ∨ ¬(B ∧ C ∧ D) ∨ E",
+            run("de_morgan", "¬A ∨ X ∨ (¬B ∨ ¬C) ∨ ¬D ∨ E", "¬C")
+        )
     end)
 
     it("declines a negation with no negated neighbour, and does not reorder to find one", function()
-        for _, case in ipairs({ { "¬A ∨ ¬B ∨ C ∨ ¬D", "¬D" }, { "¬A ∨ C ∨ ¬B", "¬A" }, { "¬A ∨ ¬B ∨ C", "C" } }) do
+        for _, case in ipairs({
+            { "¬A ∨ ¬B ∨ C ∨ ¬D", "¬D" },
+            { "¬A ∨ C ∨ ¬B", "¬A" },
+            { "¬A ∨ ¬B ∨ C", "C" },
+        }) do
             local out, err = run("de_morgan", case[1], case[2])
             assert.is_nil(out, case[1])
             assert.are.equal("No De Morgan rewrite applies under the cursor or to the whole expression", err)
@@ -536,8 +552,16 @@ describe("rewrite.simplify", function()
     end)
 
     it("refuses when no collapsing law applies", function()
-        for _, source in ipairs({ "a", "a ∨ b", "a ∧ (b ∨ c)", "a ⊕ a", "a → a", "(a ∧ b) ∨ (¬a ∧ c)",
-            "(a ∧ b) ∨ (a ∧ c) ∨ (b ∧ c)", "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ d)" }) do
+        for _, source in ipairs({
+            "a",
+            "a ∨ b",
+            "a ∧ (b ∨ c)",
+            "a ⊕ a",
+            "a → a",
+            "(a ∧ b) ∨ (¬a ∧ c)",
+            "(a ∧ b) ∨ (a ∧ c) ∨ (b ∧ c)",
+            "(a ∧ b) ∨ (¬a ∧ c) ∨ (b ∧ d)",
+        }) do
             local text, err = simplify(source, "a")
             assert.is_nil(text, source)
             assert.are.equal("No simplification applies to this expression", err)
@@ -605,27 +629,38 @@ describe("rewrite.moves", function()
 
     it("lists every complementary pair, including later repeated operands", function()
         assert.are.same({
-            "1 ∨ A ∨ ¬A", "1 ∨ ¬A ∨ A", "A ∨ 1 ∨ ¬A", "A ∨ ¬A ∨ 1",
+            "1 ∨ A ∨ ¬A",
+            "1 ∨ ¬A ∨ A",
+            "A ∨ 1 ∨ ¬A",
+            "A ∨ ¬A ∨ 1",
         }, results("A ∨ ¬A ∨ A ∨ ¬A", "complement"))
     end)
 
     it("lists every duplicate and reduction partner", function()
         assert.are.same({ "A ∨ B ∨ A", "A ∨ A ∨ B" }, results("A ∨ A ∨ B ∨ A", "idempotence"))
         assert.are.same({
-            "B ∨ C ∨ (¬A ∧ B)", "B ∨ (¬A ∧ B) ∨ C",
+            "B ∨ C ∨ (¬A ∧ B)",
+            "B ∨ (¬A ∧ B) ∨ C",
         }, results("(A ∧ B) ∨ (¬A ∧ B) ∨ C ∨ (¬A ∧ B)", "reduction"))
     end)
 
     it("lists the consensus term's removal once, whichever pair covers it", function()
-        assert.are.same({ "(A ∧ B) ∨ (¬A ∧ C)" }, results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C)", "consensus"))
-        assert.are.same({ "(A ∧ B) ∨ (¬A ∧ C) ∨ (A ∧ D)" }, results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C) ∨ (A ∧ D)", "consensus"))
+        assert.are.same(
+            { "(A ∧ B) ∨ (¬A ∧ C)" },
+            results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C)", "consensus")
+        )
+        assert.are.same(
+            { "(A ∧ B) ∨ (¬A ∧ C) ∨ (A ∧ D)" },
+            results("(A ∧ B) ∨ (¬A ∧ C) ∨ (B ∧ C) ∨ (A ∧ D)", "consensus")
+        )
         -- A pair with nothing besides the split operand is complement's.
         assert.are.same({}, results("A ∨ ¬A ∨ B", "consensus"))
     end)
 
     it("recognises each complementary partner, without changing the input", function()
         assert.are.same({
-            "(A ⇔ B) ∨ C ∨ (¬A ∧ ¬B)", "(A ⇔ B) ∨ (¬A ∧ ¬B) ∨ C",
+            "(A ⇔ B) ∨ C ∨ (¬A ∧ ¬B)",
+            "(A ⇔ B) ∨ (¬A ∧ ¬B) ∨ C",
         }, results("(A ∧ B) ∨ (¬A ∧ ¬B) ∨ C ∨ (¬A ∧ ¬B)", "definition of ⇔"))
     end)
 
@@ -704,7 +739,10 @@ describe("rewrite.moves", function()
             end
             return found
         end
-        assert.are.same({ "¬(A ∧ B) ∨ C ∨ ¬D ∨ ¬E", "¬A ∨ ¬B ∨ C ∨ ¬(D ∧ E)" }, de_morgans("¬A ∨ ¬B ∨ C ∨ ¬D ∨ ¬E"))
+        assert.are.same(
+            { "¬(A ∧ B) ∨ C ∨ ¬D ∨ ¬E", "¬A ∨ ¬B ∨ C ∨ ¬(D ∧ E)" },
+            de_morgans("¬A ∨ ¬B ∨ C ∨ ¬D ∨ ¬E")
+        )
         assert.are.same({ "¬(A ∧ B ∧ C)" }, de_morgans("¬A ∨ ¬B ∨ ¬C"))
     end)
 
@@ -755,16 +793,36 @@ describe("rewrite soundness", function()
         "(A → B) ⊕ (C ⇔ (D → ¬A)) ∨ ¬(B ⇔ C)",
     }
     local rewrites = {
-        factor = function(ast, byte) return rewrite.factor(ast, byte) end,
-        distribute = function(ast, byte) return rewrite.distribute(ast, byte) end,
-        commute = function(ast, byte) return rewrite.commute(ast, byte, false) end,
-        commute_back = function(ast, byte) return rewrite.commute(ast, byte, true) end,
-        xor = function(ast, byte) return rewrite.xor(ast, byte) end,
-        de_morgan = function(ast, byte) return rewrite.de_morgan(ast, byte) end,
-        simplify = function(ast, byte) return rewrite.simplify(ast, byte) end,
-        unfold = function(ast, byte) return rewrite.unfold(ast, byte) end,
-        dnf = function(ast, byte) return rewrite.dnf(ast, byte) end,
-        cnf = function(ast, byte) return rewrite.cnf(ast, byte) end,
+        factor = function(ast, byte)
+            return rewrite.factor(ast, byte)
+        end,
+        distribute = function(ast, byte)
+            return rewrite.distribute(ast, byte)
+        end,
+        commute = function(ast, byte)
+            return rewrite.commute(ast, byte, false)
+        end,
+        commute_back = function(ast, byte)
+            return rewrite.commute(ast, byte, true)
+        end,
+        xor = function(ast, byte)
+            return rewrite.xor(ast, byte)
+        end,
+        de_morgan = function(ast, byte)
+            return rewrite.de_morgan(ast, byte)
+        end,
+        simplify = function(ast, byte)
+            return rewrite.simplify(ast, byte)
+        end,
+        unfold = function(ast, byte)
+            return rewrite.unfold(ast, byte)
+        end,
+        dnf = function(ast, byte)
+            return rewrite.dnf(ast, byte)
+        end,
+        cnf = function(ast, byte)
+            return rewrite.cnf(ast, byte)
+        end,
     }
 
     -- Every input a tree reads: variable names and :hN indices. eval_ast looks
@@ -865,7 +923,10 @@ describe("rewrite soundness", function()
                     local tree = tx and tx.value
                     if tree then
                         local text = trees.heading(tree)
-                        assert.is_true(listed[text], name .. " at byte " .. byte .. " of " .. source .. " gave " .. text)
+                        assert.is_true(
+                            listed[text],
+                            name .. " at byte " .. byte .. " of " .. source .. " gave " .. text
+                        )
                     end
                 end
             end
@@ -1012,7 +1073,10 @@ describe("the terms a rewrite consumed", function()
         local moves = rewrite.moves(ast)
         assert.is_true(#moves > 0)
         for _, move in ipairs(moves) do
-            assert.is_truthy(move.rewritten.change.consumed and #move.rewritten.change.consumed > 0, move.law .. ": " .. move.text)
+            assert.is_truthy(
+                move.rewritten.change.consumed and #move.rewritten.change.consumed > 0,
+                move.law .. ": " .. move.text
+            )
             for _, node in ipairs(move.rewritten.change.consumed) do
                 assert.is_truthy(node.span, move.law .. ": " .. move.text)
             end
@@ -1031,7 +1095,10 @@ describe("a rewrite's record", function()
         assert.are.equal(text, change.text)
         assert.are.equal("¬s ∧ ¬t", text:sub(regions[1][1] + 1, regions[1][2]))
         assert.are.same(change.produced_ranges, regions)
-        assert.are.equal("¬(s ∨ t)", ("r ∧ ¬(s ∨ t)"):sub(change.consumed_ranges[1][1] + 1, change.consumed_ranges[1][2]))
+        assert.are.equal(
+            "¬(s ∨ t)",
+            ("r ∧ ¬(s ∨ t)"):sub(change.consumed_ranges[1][1] + 1, change.consumed_ranges[1][2])
+        )
         assert.is_nil(before.changed)
         assert.is_nil(rewritten.value.changed)
     end)
@@ -1045,7 +1112,8 @@ describe("a rewrite's record", function()
         assert.are.equal(first.value, second.change.before)
         assert.are.same({ { 0, #"¬A" }, { #"¬A ∧ ", #"¬A ∧ ¬B" } }, second.change.consumed_ranges)
         assert.are.same({ { 0, #"¬B ∧ ¬A" } }, second.change.produced_ranges)
-        local collapsed = assert(rewrite.simplify(assert(rewrite.commute(assert(predicate.parse_located("A ∧ 1")), 1)).value, 1))
+        local collapsed =
+            assert(rewrite.simplify(assert(rewrite.commute(assert(predicate.parse_located("A ∧ 1")), 1)).value, 1))
         assert.are.equal("A", trees.heading(collapsed.value))
     end)
 end)

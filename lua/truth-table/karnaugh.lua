@@ -43,8 +43,8 @@ local function input_count(tbl, column)
     if first[column] == second[column] then
         return nil, string.format("Rows %d and %d repeat the same inputs", collision[1], collision[2])
     end
-    return nil, string.format("Rows %d and %d agree on every input but disagree on %s",
-        collision[1], collision[2], heading)
+    return nil,
+        string.format("Rows %d and %d agree on every input but disagree on %s", collision[1], collision[2], heading)
 end
 
 local function pattern_index(pattern)
@@ -347,9 +347,12 @@ local function cover_ast(cover, inputs)
         return trees.literal(0)
     end
     local variable = variables(inputs)
-    return trees.fold("or", fp.map(cover, function(term)
-        return term_ast(term, inputs, variable)
-    end))
+    return trees.fold(
+        "or",
+        fp.map(cover, function(term)
+            return term_ast(term, inputs, variable)
+        end)
+    )
 end
 
 -- Analyse column `column` of a table model. Returns:

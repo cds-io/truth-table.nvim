@@ -33,8 +33,10 @@ local function anchored(block, page)
             return false
         end
     end
-    return block[1] >= 0 and block[1] + block[2] <= #page.markdown
-        and block[3] >= 0 and block[3] + block[4] <= #page.lines
+    return block[1] >= 0
+        and block[1] + block[2] <= #page.markdown
+        and block[3] >= 0
+        and block[3] + block[4] <= #page.lines
 end
 
 -- `markdown` through vellum, `toolkit`, at `width`, with the lesson's spans `marked`:

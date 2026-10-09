@@ -80,8 +80,11 @@ local function extmarks(buf)
     local found = {}
     for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })) do
         found[#found + 1] = {
-            row = mark[2], col = mark[3], end_col = mark[4].end_col,
-            hl_group = mark[4].hl_group, priority = mark[4].priority,
+            row = mark[2],
+            col = mark[3],
+            end_col = mark[4].end_col,
+            hl_group = mark[4].hl_group,
+            priority = mark[4].priority,
         }
     end
     return found
@@ -91,7 +94,13 @@ end
 local function expected_marks(marked)
     local marks = {}
     for i, span in ipairs(marked) do
-        marks[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, hl_group = span.group, priority = spans.PRIORITY }
+        marks[i] = {
+            row = span.row - 1,
+            col = span.col,
+            end_col = span.end_col,
+            hl_group = span.group,
+            priority = spans.PRIORITY,
+        }
     end
     return marks
 end
@@ -119,7 +128,11 @@ local function at(lesson, step, furthest)
     local markdown, marked = page.render(course, { lesson = lesson, step = step })
     assert.are.same(markdown, text("lesson"), label .. ": lesson pane text")
     local place = { lesson = lesson, step = step }
-    assert.are.equal(page.progress(course, place, furthest or lesson), vim.wo[lesson_win].winbar, label .. ": lesson winbar")
+    assert.are.equal(
+        page.progress(course, place, furthest or lesson),
+        vim.wo[lesson_win].winbar,
+        label .. ": lesson winbar"
+    )
     assert.are.equal("", vim.wo[scratch_win].winbar, label .. ": scratch winbar")
     assert.are.same(expected_marks(marked), extmarks(lesson_buf), label .. ": lesson pane marks")
     assert.are.equal("nofile", vim.bo[lesson_buf].buftype, label .. ": lesson buftype")
@@ -260,7 +273,11 @@ describe("the course", function()
                             end
                         end
                         local _, written = line:gsub("≡", "")
-                        assert.are.equal(written, read, ("lesson %d step %d: laws read from: %s"):format(number, index, line))
+                        assert.are.equal(
+                            written,
+                            read,
+                            ("lesson %d step %d: laws read from: %s"):format(number, index, line)
+                        )
                         laws = laws + read
                     end
                 end
@@ -285,18 +302,21 @@ describe(":TruthTableTutor", function()
         warnings = {}
     end)
 
-    it("opens a new tab holding the two panes, on the first step, with its starting text in the scratch pane", function()
-        vim.cmd("tabclose")
-        vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.getcwd() .. "/README.md"))
-        tabs = tab_count()
-        vim.cmd("TruthTableTutor")
-        assert.are.equal(tabs + 1, tab_count())
-        at(1, 1)
-        assert.are.same(starting_text(1, 1), text("scratch"))
-        assert.are.equal(1, vim.api.nvim_win_get_cursor(0)[1])
-        local shown = table.concat(text("lesson"), "\n")
-        assert.is_truthy(shown:find("**Aim:** " .. course[1].aim, 1, true), shown)
-    end)
+    it(
+        "opens a new tab holding the two panes, on the first step, with its starting text in the scratch pane",
+        function()
+            vim.cmd("tabclose")
+            vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.getcwd() .. "/README.md"))
+            tabs = tab_count()
+            vim.cmd("TruthTableTutor")
+            assert.are.equal(tabs + 1, tab_count())
+            at(1, 1)
+            assert.are.same(starting_text(1, 1), text("scratch"))
+            assert.are.equal(1, vim.api.nvim_win_get_cursor(0)[1])
+            local shown = table.concat(text("lesson"), "\n")
+            assert.is_truthy(shown:find("**Aim:** " .. course[1].aim, 1, true), shown)
+        end
+    )
 
     -- The scratch never existed as an empty buffer.
     it("leaves undo nothing to take back", function()
@@ -448,7 +468,9 @@ describe("a lesson with colour spans", function()
 
     local function lesson(body, template)
         local file = directory .. "/tutor/truth-table/01-spans.lua"
-        vim.fn.writefile(vim.split(([[
+        vim.fn.writefile(
+            vim.split(
+                ([[
 return {
     part = "Spans",
     title = "Spans",
@@ -459,7 +481,11 @@ return {
             template = "%s\n",
         },
     },
-}]]):format(body, template), "\n"), file)
+}]]):format(body, template),
+                "\n"
+            ),
+            file
+        )
     end
 
     before_each(function()
@@ -508,31 +534,34 @@ return {
         assert.are.equal(tabs, tab_count())
     end)
 
-    it("defines the palette as default links, the cursor's colour underlined, and leaves a group the reader set alone", function()
-        vim.api.nvim_set_hl(0, red, { fg = "#ff0000" })
-        finally(function()
-            vim.cmd("highlight clear " .. red)
-            vim.api.nvim_set_hl(0, red, { default = true, link = "DiagnosticError" })
-            assert.are.equal("DiagnosticError", vim.api.nvim_get_hl(0, { name = red }).link)
-        end)
-        vim.cmd("TruthTableTutor!")
-        local groups = vim.list_extend(vim.deepcopy(spans.PALETTE), vim.tbl_values(page.STATES))
-        assert.are.equal(#spans.PALETTE + 3, #groups)
-        for _, entry in ipairs(groups) do
-            local hl = vim.api.nvim_get_hl(0, { name = entry.group })
-            if entry.group == red then
-                assert.are.equal(0xff0000, hl.fg)
-            elseif entry.underline then
-                local linked = vim.api.nvim_get_hl(0, { name = entry.link, link = false })
-                assert.is_true(hl.underline, entry.group)
-                assert.are.equal(linked.fg, hl.fg, entry.group)
-                assert.is_true(hl.default, entry.group)
-            else
-                assert.are.equal(entry.link, hl.link, entry.group)
-                assert.is_true(hl.default, entry.group)
+    it(
+        "defines the palette as default links, the cursor's colour underlined, and leaves a group the reader set alone",
+        function()
+            vim.api.nvim_set_hl(0, red, { fg = "#ff0000" })
+            finally(function()
+                vim.cmd("highlight clear " .. red)
+                vim.api.nvim_set_hl(0, red, { default = true, link = "DiagnosticError" })
+                assert.are.equal("DiagnosticError", vim.api.nvim_get_hl(0, { name = red }).link)
+            end)
+            vim.cmd("TruthTableTutor!")
+            local groups = vim.list_extend(vim.deepcopy(spans.PALETTE), vim.tbl_values(page.STATES))
+            assert.are.equal(#spans.PALETTE + 3, #groups)
+            for _, entry in ipairs(groups) do
+                local hl = vim.api.nvim_get_hl(0, { name = entry.group })
+                if entry.group == red then
+                    assert.are.equal(0xff0000, hl.fg)
+                elseif entry.underline then
+                    local linked = vim.api.nvim_get_hl(0, { name = entry.link, link = false })
+                    assert.is_true(hl.underline, entry.group)
+                    assert.are.equal(linked.fg, hl.fg, entry.group)
+                    assert.is_true(hl.default, entry.group)
+                else
+                    assert.are.equal(entry.link, hl.link, entry.group)
+                    assert.is_true(hl.default, entry.group)
+                end
             end
         end
-    end)
+    )
 end)
 
 -- One case per lesson, with a fresh session so any lesson can run on its own.
@@ -567,7 +596,11 @@ describe("working through the course", function()
                 local label = ("lesson %d step %d"):format(number, index)
                 at(number, index)
                 assert.are.same(starting_text(number, index), text("scratch"), label)
-                assert.are.same(starting_marks(number, index), extmarks(select(2, pane("scratch"))), label .. ": scratch marks")
+                assert.are.same(
+                    starting_marks(number, index),
+                    extmarks(select(2, pane("scratch"))),
+                    label .. ": scratch marks"
+                )
                 for _, move in ipairs(step.solution or {}) do
                     local row = 1
                     if move.on then
@@ -680,7 +713,10 @@ describe("the reader's place", function()
 
     it("falls to the nearest step the course has, for a place it no longer has", function()
         vim.fn.mkdir(vim.fs.dirname(tutor.state_file), "p")
-        vim.fn.writefile({ vim.json.encode({ at = { lesson = 3, step = 9 }, furthest = { lesson = 99, step = 1 } }) }, tutor.state_file)
+        vim.fn.writefile(
+            { vim.json.encode({ at = { lesson = 3, step = 9 }, furthest = { lesson = 99, step = 1 } }) },
+            tutor.state_file
+        )
         vim.cmd("TruthTableTutor")
         at(3, #course[3].steps, #course)
     end)

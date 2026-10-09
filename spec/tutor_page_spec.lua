@@ -127,7 +127,8 @@ describe("tutor_page.render", function()
     end)
 
     it("shows a one-line expectation as a sentence", function()
-        local one = { { part = "P", title = "T", aim = "A.", steps = { { text = "Apply.\n", expect = "¬p ∨ ¬q\n" } } } }
+        local one =
+            { { part = "P", title = "T", aim = "A.", steps = { { text = "Apply.\n", expect = "¬p ∨ ¬q\n" } } } }
         local lines = page.render(one, { lesson = 1, step = 1 })
         assert.are.same({ "Apply.", "", "You should see `¬p ∨ ¬q`.", "", "---" }, slice(lines, 5, 9))
     end)
@@ -151,8 +152,12 @@ describe("tutor_page.body", function()
     local blue = "TruthTableTutorBlue"
 
     it("takes the markers out of a ```logic block and says which row each span is on", function()
-        local lines, spans = page.body("Watch `a`:\n\n```logic\n[:blue a] ∨ (a ∧ b)  ≡  a\na ∧ [:blue (a ∨ b)]  ≡  a\n```\n")
-        assert.are.same({ "Watch `a`:", "", "```logic", "a ∨ (a ∧ b)  ≡  a", "a ∧ (a ∨ b)  ≡  a", "```" }, lines)
+        local lines, spans =
+            page.body("Watch `a`:\n\n```logic\n[:blue a] ∨ (a ∧ b)  ≡  a\na ∧ [:blue (a ∨ b)]  ≡  a\n```\n")
+        assert.are.same(
+            { "Watch `a`:", "", "```logic", "a ∨ (a ∧ b)  ≡  a", "a ∧ (a ∨ b)  ≡  a", "```" },
+            lines
+        )
         assert.are.same({
             { row = 4, col = 0, end_col = 1, group = blue },
             { row = 5, col = 6, end_col = 15, group = blue },
@@ -274,7 +279,12 @@ describe("tutor_page.progress", function()
             page.progress(course, { lesson = 1, step = 1 }, 1)
         )
         assert.are.equal(
-            visited .. "█" .. current .. "█" .. visited .. "█%* lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
+            visited
+                .. "█"
+                .. current
+                .. "█"
+                .. visited
+                .. "█%* lesson 2 of 3, step 1 of 1 %<%=Part 1 of 2: Tables",
             page.progress(course, { lesson = 2, step = 1 }, 3)
         )
         assert.are.equal(
@@ -301,7 +311,14 @@ end)
 
 describe("tutor_page.check", function()
     it("is nil for a course whose markers are all right", function()
-        local course = { { part = "P", title = "T", aim = "A.", steps = { { text = "```logic\n[:blue a]\n```\n", template = "[:red a]\n" } } } }
+        local course = {
+            {
+                part = "P",
+                title = "T",
+                aim = "A.",
+                steps = { { text = "```logic\n[:blue a]\n```\n", template = "[:red a]\n" } },
+            },
+        }
         assert.is_nil(page.check(course))
     end)
 
@@ -313,7 +330,11 @@ describe("tutor_page.check", function()
     it("names the lesson, step and field of the first wrong marker", function()
         local course = {
             { part = "P", title = "T", aim = "A.", steps = { { text = "Fine.\n" } } },
-            { title = "U", aim = "B.", steps = { { text = "Fine.\n" }, { text = "Fine.\n", template = "[:blue a\n" } } },
+            {
+                title = "U",
+                aim = "B.",
+                steps = { { text = "Fine.\n" }, { text = "Fine.\n", template = "[:blue a\n" } },
+            },
         }
         assert.are.equal("lesson 2 step 2: template: no closing ] for the span at byte 1: [:blue a", page.check(course))
         course[1].steps[1].note = "```logic\na [:purple b]\n```\n"

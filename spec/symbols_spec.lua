@@ -6,10 +6,17 @@ local operators = require("truth-table.operators")
 describe("symbols", function()
     it("pairs an ascii word with a unicode symbol for every constant", function()
         local expected = {
-            NOT = { "not", "¬" }, AND = { "and", "∧" }, OR = { "or", "∨" }, XOR = { "xor", "⊕" },
-            IMPLIES = { "implies", "→" }, IFF = { "iff", "⇔" },
-            FORALL = { "forall", "∀" }, EXISTS = { "exists", "∃" },
-            TOP = { "true", "⊤" }, BOTTOM = { "false", "⊥" }, EQUIV = { "equiv", "≡" },
+            NOT = { "not", "¬" },
+            AND = { "and", "∧" },
+            OR = { "or", "∨" },
+            XOR = { "xor", "⊕" },
+            IMPLIES = { "implies", "→" },
+            IFF = { "iff", "⇔" },
+            FORALL = { "forall", "∀" },
+            EXISTS = { "exists", "∃" },
+            TOP = { "true", "⊤" },
+            BOTTOM = { "false", "⊥" },
+            EQUIV = { "equiv", "≡" },
             NOT_EQUIV = { "nequiv", "≢" },
         }
         for key, pair in pairs(expected) do

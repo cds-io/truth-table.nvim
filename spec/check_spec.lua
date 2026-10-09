@@ -10,14 +10,27 @@ describe("check.check", function()
             "≡ b ∧ 1           | by complement",
             "≡ b               | by identity",
         }))
-        assert.are.same({ ok = true, steps = 3, texts = { "(a ∧ b) ∨ (¬a ∧ b)", "b ∧ (a ∨ ¬a)", "b ∧ 1", "b" }, variables = { "a", "b" } }, verdict)
+        assert.are.same({
+            ok = true,
+            steps = 3,
+            texts = { "(a ∧ b) ∨ (¬a ∧ b)", "b ∧ (a ∨ ¬a)", "b ∧ 1", "b" },
+            variables = { "a", "b" },
+        }, verdict)
     end)
 
     it("reads several sides on one line as several steps", function()
-        assert.are.same({ ok = true, steps = 3, texts = { "a → b", "¬a ∨ b", "b ∨ ¬a", "¬(¬b ∧ a)" }, variables = { "a", "b" } }, assert(check.check({
-            "a → b ≡ ¬a ∨ b ≡ b ∨ ¬a",
-            "≡ ¬(¬b ∧ a)",
-        })))
+        assert.are.same(
+            {
+                ok = true,
+                steps = 3,
+                texts = { "a → b", "¬a ∨ b", "b ∨ ¬a", "¬(¬b ∧ a)" },
+                variables = { "a", "b" },
+            },
+            assert(check.check({
+                "a → b ≡ ¬a ∨ b ≡ b ∨ ¬a",
+                "≡ ¬(¬b ∧ a)",
+            }))
+        )
     end)
 
     it("is zero steps for a block of one side, and for a line with no side", function()
@@ -97,7 +110,10 @@ describe("check.check", function()
     end)
 
     it("leaves a trailing blank side out", function()
-        assert.are.same({ ok = true, steps = 1, texts = { "a ∧ b", "b ∧ a" }, variables = { "a", "b" } }, assert(check.check({ "a ∧ b ≡ b ∧ a ≡ " })))
+        assert.are.same(
+            { ok = true, steps = 1, texts = { "a ∧ b", "b ∧ a" }, variables = { "a", "b" } },
+            assert(check.check({ "a ∧ b ≡ b ∧ a ≡ " }))
+        )
     end)
 
     it("ignores the justification", function()

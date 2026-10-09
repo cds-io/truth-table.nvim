@@ -113,7 +113,10 @@ describe("tutor_spans.place", function()
     it("does not take a longer line that merely contains the clean one", function()
         local page = { "```logic", "a", "a ∨ b", "```" }
         local rendered = { "", "  logic", "    a ∨ b    ", "    a        ", "  " }
-        local found = spans.place({ { row = 2, col = 0, end_col = 1, group = blue } }, { markdown = page, lines = rendered, blocks = blocks })
+        local found = spans.place(
+            { { row = 2, col = 0, end_col = 1, group = blue } },
+            { markdown = page, lines = rendered, blocks = blocks }
+        )
         assert.are.same({ mark(3, 4, 5) }, found)
     end)
 
@@ -130,7 +133,10 @@ describe("tutor_spans.place", function()
     it("keeps a line's leading spaces, and finds the line by all of them", function()
         local page = { "```logic", "a", "  ∧ b", "```" }
         local rendered = { "", "  logic", "    a    ", "      ∧ b    ", "  " }
-        local found = spans.place({ { row = 3, col = 4, end_col = 5, group = blue } }, { markdown = page, lines = rendered, blocks = blocks })
+        local found = spans.place(
+            { { row = 3, col = 4, end_col = 5, group = blue } },
+            { markdown = page, lines = rendered, blocks = blocks }
+        )
         assert.are.same({ mark(3, 8, 9) }, found)
     end)
 

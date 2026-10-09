@@ -154,7 +154,13 @@ end
 local function marks_of(marked)
     local out = {}
     for i, span in ipairs(marked) do
-        out[i] = { row = span.row - 1, col = span.col, end_col = span.end_col, group = span.group, priority = spans.PRIORITY }
+        out[i] = {
+            row = span.row - 1,
+            col = span.col,
+            end_col = span.end_col,
+            group = span.group,
+            priority = spans.PRIORITY,
+        }
     end
     return out
 end

@@ -7,10 +7,14 @@ local result = require("truth-table.result")
 local trees = require("truth-table.trees")
 
 describe("tree helpers", function()
-    local function parse(source) return assert(predicate.parse_expression(source)) end
+    local function parse(source)
+        return assert(predicate.parse_expression(source))
+    end
     local function headings(nodes)
         local out = {}
-        for i, node in ipairs(nodes) do out[i] = trees.heading(node) end
+        for i, node in ipairs(nodes) do
+            out[i] = trees.heading(node)
+        end
         return out
     end
 
@@ -38,7 +42,9 @@ describe("tree helpers", function()
 end)
 
 describe("node constructors", function()
-    local function parse(source) return assert(predicate.parse_expression(source)) end
+    local function parse(source)
+        return assert(predicate.parse_expression(source))
+    end
 
     it("build the nodes the parser builds", function()
         local a, b = trees.var("a"), trees.var("b")
@@ -69,7 +75,9 @@ describe("trees.transform", function()
         local visited = {}
         local transformed = assert(trees.transform(ast, function(node)
             visited[#visited + 1] = node.name or node.type
-            if node.type == "var" then node.name = node.name .. "_copy" end
+            if node.type == "var" then
+                node.name = node.name .. "_copy"
+            end
             return node
         end))
         assert.are.same({ "A", "not", "B", "literal", "or", "paren", "and" }, visited)
@@ -87,7 +95,9 @@ describe("trees.transform", function()
         assert.is_nil(value)
         assert.are.equal("stop", err)
         assert.are.same({ "A" }, visited)
-        assert.is_nil(trees.transform({ type = "unknown" }, function(node) return node end))
+        assert.is_nil(trees.transform({ type = "unknown" }, function(node)
+            return node
+        end))
     end)
 end)
 
@@ -99,8 +109,11 @@ describe("operator-driven rendering", function()
         -- Independent truth tables, indexed by 00, 01, 10, 11. Neither parser
         -- nor evaluator supplies the oracle for rendering correctness.
         local truth = {
-            ["and"] = { 0, 0, 0, 1 }, ["or"] = { 0, 1, 1, 1 },
-            xor = { 0, 1, 1, 0 }, implies = { 1, 1, 0, 1 }, iff = { 1, 0, 0, 1 },
+            ["and"] = { 0, 0, 0, 1 },
+            ["or"] = { 0, 1, 1, 1 },
+            xor = { 0, 1, 1, 0 },
+            implies = { 1, 1, 0, 1 },
+            iff = { 1, 0, 0, 1 },
         }
         for _, outer in ipairs(operators) do
             for _, inner in ipairs(operators) do
@@ -188,9 +201,14 @@ describe("operator-driven rendering", function()
         local tree = assert(trees.canonical(assert(predicate.parse_expression("((a)) and b or not (c)"))))
         assert.are.same({
             type = "or",
-            left = { type = "paren", expr = {
-                type = "and", left = { type = "var", name = "a" }, right = { type = "var", name = "b" },
-            } },
+            left = {
+                type = "paren",
+                expr = {
+                    type = "and",
+                    left = { type = "var", name = "a" },
+                    right = { type = "var", name = "b" },
+                },
+            },
             right = { type = "not", operand = { type = "var", name = "c" } },
         }, tree)
         local again = assert(trees.canonical(tree))
@@ -199,8 +217,11 @@ describe("operator-driven rendering", function()
 
     it("renders its own output back to itself", function()
         for _, source in ipairs({
-            "a and b or c", "not (not a or b) and (c implies d implies e)", "a or (b or c) or d and e xor f",
-            "((a and (b))) iff not ((c)) or :h3 and 1", "a ∧ ⊤ ∨ ⊥",
+            "a and b or c",
+            "not (not a or b) and (c implies d implies e)",
+            "a or (b or c) or d and e xor f",
+            "((a and (b))) iff not ((c)) or :h3 and 1",
+            "a ∧ ⊤ ∨ ⊥",
         }) do
             local heading = trees.heading(assert(predicate.parse_expression(source)))
             assert.are.equal(heading, trees.heading(assert(predicate.parse_expression(heading))), source)
@@ -247,10 +268,10 @@ describe("whole-expression De Morgan rewrites", function()
 
     it("rewrites both directions and agrees with independent Boolean outcomes", function()
         for _, case in ipairs({
-            { source = 'not (A and B)', heading = '¬A ∨ ¬B', values = { 1, 1, 1, 0 } },
-            { source = 'not (A or B)', heading = '¬A ∧ ¬B', values = { 1, 0, 0, 0 } },
-            { source = 'not A or not B', heading = '¬(A ∧ B)', values = { 1, 1, 1, 0 } },
-            { source = '(not A) and (not B)', heading = '¬(A ∨ B)', values = { 1, 0, 0, 0 } },
+            { source = "not (A and B)", heading = "¬A ∨ ¬B", values = { 1, 1, 1, 0 } },
+            { source = "not (A or B)", heading = "¬A ∧ ¬B", values = { 1, 0, 0, 0 } },
+            { source = "not A or not B", heading = "¬(A ∧ B)", values = { 1, 1, 1, 0 } },
+            { source = "(not A) and (not B)", heading = "¬(A ∨ B)", values = { 1, 0, 0, 0 } },
         }) do
             local ast = assert(predicate.parse_expression(case.source))
             local before = trees.heading(ast)
@@ -263,30 +284,30 @@ describe("whole-expression De Morgan rewrites", function()
                     assert.are.equal(expected, predicate.eval_ast(rewritten, { A = a, B = b }))
                 end
             end
-            rewritten.type = 'literal'
+            rewritten.type = "literal"
             assert.are.equal(before, trees.heading(ast))
         end
     end)
 
     it("reads a chain as one run: every operand negated, the operator flipped", function()
-        assert.are.equal('¬A ∨ ¬B ∨ ¬C', de_morgan_expression('not (A and B and C)'))
-        assert.are.equal('¬A ∨ ¬B ∨ ¬C', de_morgan_expression('not (A and (B and C))'))
-        assert.are.equal('¬(A ∧ B ∧ C)', de_morgan_expression('not A or not B or not C'))
-        assert.are.equal('¬(A ∧ B ∧ C)', de_morgan_expression('(not A or not B) or not C'))
-        assert.are.equal('¬(A ∨ B ∨ (C ∧ D))', de_morgan_expression('not A and not B and not (C and D)'))
-        local ast, err = de_morgan_expression('not A or not B or C')
+        assert.are.equal("¬A ∨ ¬B ∨ ¬C", de_morgan_expression("not (A and B and C)"))
+        assert.are.equal("¬A ∨ ¬B ∨ ¬C", de_morgan_expression("not (A and (B and C))"))
+        assert.are.equal("¬(A ∧ B ∧ C)", de_morgan_expression("not A or not B or not C"))
+        assert.are.equal("¬(A ∧ B ∧ C)", de_morgan_expression("(not A or not B) or not C"))
+        assert.are.equal("¬(A ∨ B ∨ (C ∧ D))", de_morgan_expression("not A and not B and not (C and D)"))
+        local ast, err = de_morgan_expression("not A or not B or C")
         assert.is_nil(ast)
-        assert.are.equal('No De Morgan rewrite applies to the whole expression', err)
+        assert.are.equal("No De Morgan rewrite applies to the whole expression", err)
     end)
 
     it("treats root parentheses transparently and preserves necessary nested grouping", function()
-        assert.are.equal('¬A ∨ ¬B', de_morgan_expression('(not (A and B))'))
-        assert.are.equal('¬(A ∨ B) ∨ ¬C', de_morgan_expression('not ((A or B) and C)'))
-        assert.are.equal('¬:h2 ∧ ¬B', de_morgan_expression('not (:h2 or B)'))
-        local ast, err = de_morgan_expression('A or not (B and C)')
+        assert.are.equal("¬A ∨ ¬B", de_morgan_expression("(not (A and B))"))
+        assert.are.equal("¬(A ∨ B) ∨ ¬C", de_morgan_expression("not ((A or B) and C)"))
+        assert.are.equal("¬:h2 ∧ ¬B", de_morgan_expression("not (:h2 or B)"))
+        local ast, err = de_morgan_expression("A or not (B and C)")
         assert.is_nil(ast)
-        assert.are.equal('No De Morgan rewrite applies to the whole expression', err)
-        assert.is_nil(de_morgan_expression('A and'))
+        assert.are.equal("No De Morgan rewrite applies to the whole expression", err)
+        assert.is_nil(de_morgan_expression("A and"))
     end)
 end)
 
@@ -314,7 +335,9 @@ describe("trees.unfold", function()
 end)
 
 describe("trees.rendered", function()
-    local function parse(source) return assert(predicate.parse_expression(source)) end
+    local function parse(source)
+        return assert(predicate.parse_expression(source))
+    end
     local function lit(tree, selected)
         local text, regions = trees.rendered(tree, selected)
         local region = regions[1]
