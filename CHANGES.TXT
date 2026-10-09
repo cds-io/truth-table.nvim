@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- Help: every command entry shows a before and an after: the command line,
+  the text as it stands with a line of ^ under every place the cursor may
+  be, a blank line, and what the screen shows afterwards (the buffer, a
+  preview's virtual text, and after » what is notified). The help spec
+  replays every block with the cursor at each end of each range, and
+  requires a block for every command but the picker and the tutor's.
+  doc/tags lists the five command tags added since it was last built.
 - Tutor: the reference lists the derivation commands (:TruthTableAlign,
   :TruthTableVerify[!] with its keys, :TruthTableEquiv[!]) and names
   :TruthTableDeMorganApply as the alias of :TruthTableApply; the tutor spec
