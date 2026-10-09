@@ -6,6 +6,7 @@
 local core = require("truth-table.core")
 local result = require("truth-table.result")
 local fp = require("truth-table.fp")
+local preview = require("truth-table.preview")
 
 local M = {}
 
@@ -145,33 +146,91 @@ local function new_table()
     return ":.TruthTable<CR>"
 end
 
+local function cmd_align()
+    require("truth-table.align").derivation(0, vim.api.nvim_win_get_cursor(0)[1], false)
+end
+
+local function cmd_commute(command)
+    preview.toggle(command.bang and "commute_back" or "commute")
+end
+
+local function cmd_tutor(command)
+    require("truth-table.tutor").open({
+        fresh = command.bang,
+        lesson = command.args ~= "" and command.args or nil,
+    })
+end
+
+local function toggles(name)
+    return function()
+        preview.toggle(name)
+    end
+end
+
+-- The user commands: each its name, what it runs, and the options the
+-- command takes (nargs, range, bang) with its description. The tables
+-- first, then the rewrites (the previews, the menu of them all, the two
+-- ways to apply one), then the tutor.
+local COMMANDS = {
+    { name = "TruthTable", run = cmd_truth_table, nargs = "*", range = true, desc = "Generate a truth table" },
+    { name = "TruthTableExpand", run = cmd_expand, nargs = "+", desc = "Expand truth table with computed columns" },
+    { name = "TruthTableDropRow", run = cmd_drop_row, desc = "Drop the current truth table row" },
+    { name = "TruthTableDropColumn", run = cmd_drop_column, desc = "Drop the current truth table column" },
+    { name = "TruthTableToggle", run = cmd_toggle, desc = "Toggle truth table between 0/1 and F/T" },
+    { name = "TruthTableAlign", run = cmd_align, desc = "Align the derivation's justification bars in one column" },
+    { name = "TruthTableKarnaugh", run = cmd_karnaugh,
+        desc = "Insert a Karnaugh map and minimal formula for the current column" },
+    { name = "TruthTableDeMorgan", run = toggles("de_morgan"), desc = "Toggle a whole-expression De Morgan preview" },
+    { name = "TruthTableFactor", run = toggles("factor"),
+        desc = "Toggle a preview factoring the operand under the cursor out of its terms" },
+    { name = "TruthTableDistribute", run = toggles("distribute"),
+        desc = "Toggle a preview distributing the operand under the cursor into the group beside it" },
+    { name = "TruthTableXor", run = toggles("xor"),
+        desc = "Toggle a preview recognising an exclusive or (or an equivalence) in the terms under the cursor" },
+    { name = "TruthTableSimplify", run = toggles("simplify"),
+        desc = "Toggle a preview applying the collapsing law nearest the cursor (complement, identity, absorption, reduction, ...)" },
+    { name = "TruthTableCommute", run = cmd_commute, bang = true,
+        desc = "Toggle a preview swapping the operand under the cursor with the next one (! for the previous)" },
+    { name = "TruthTableRewrites", run = preview.choose,
+        desc = "List every rewrite of the expression under the cursor and write the one picked as a ≡ step" },
+    { name = "TruthTableApply", run = preview.apply, desc = "Apply the current rewrite preview in place" },
+    { name = "TruthTableDeMorganApply", run = preview.apply, desc = "Alias of :TruthTableApply" },
+    { name = "TruthTableApplyStep", run = preview.apply_step,
+        desc = "Insert the current rewrite preview below as a ≡ derivation step" },
+    { name = "TruthTableTutor", run = cmd_tutor, bang = true, nargs = "?",
+        desc = "Open the tutorial at your place (! to start over, a number to jump to that lesson)" },
+    { name = "TruthTableTutorNext", run = function() require("truth-table.tutor").step(1) end,
+        desc = "Go to the tutorial's next step" },
+    { name = "TruthTableTutorPrev", run = function() require("truth-table.tutor").step(-1) end,
+        desc = "Go to the tutorial's previous step" },
+}
+
 -- The default keymaps, by family: tables, then rewrites (the previews, then
--- the menu of them all), then the two ways to apply a preview. Each description opens with its family, so the grouping
--- shows in a key-sorted popup too; the order is the one which-key is given.
+-- the menu of them all), then the two ways to apply a preview. Each names
+-- the command it runs, or spells its own right-hand side where it does
+-- more than run one. Each description opens with its family, so the
+-- grouping shows in a key-sorted popup too; the order is the one which-key
+-- is given.
 local KEYMAPS = {
     { key = "n", rhs = new_table, desc = "Table: new", expr = true },
     { key = "n", rhs = ":TruthTable<CR>", desc = "Table: new from selection", mode = "x" },
     { key = "e", rhs = ":TruthTableExpand ", desc = "Table: expand with columns" },
-    { key = "t", rhs = "<cmd>TruthTableToggle<CR>", desc = "Table: toggle 0/1 ↔ F/T" },
-    { key = "r", rhs = "<cmd>TruthTableDropRow<CR>", desc = "Table: drop row" },
-    { key = "c", rhs = "<cmd>TruthTableDropColumn<CR>", desc = "Table: drop column" },
-    { key = "k", rhs = "<cmd>TruthTableKarnaugh<CR>", desc = "Table: Karnaugh map for column" },
-    { key = "d", rhs = "<cmd>TruthTableDeMorgan<CR>", desc = "Rewrite: De Morgan" },
-    { key = "f", rhs = "<cmd>TruthTableFactor<CR>", desc = "Rewrite: factor operand out" },
-    { key = "x", rhs = "<cmd>TruthTableDistribute<CR>", desc = "Rewrite: distribute operand in" },
-    { key = "s", rhs = "<cmd>TruthTableCommute<CR>", desc = "Rewrite: swap with next operand" },
+    { key = "t", command = "TruthTableToggle", desc = "Table: toggle 0/1 ↔ F/T" },
+    { key = "r", command = "TruthTableDropRow", desc = "Table: drop row" },
+    { key = "c", command = "TruthTableDropColumn", desc = "Table: drop column" },
+    { key = "k", command = "TruthTableKarnaugh", desc = "Table: Karnaugh map for column" },
+    { key = "d", command = "TruthTableDeMorgan", desc = "Rewrite: De Morgan" },
+    { key = "f", command = "TruthTableFactor", desc = "Rewrite: factor operand out" },
+    { key = "x", command = "TruthTableDistribute", desc = "Rewrite: distribute operand in" },
+    { key = "s", command = "TruthTableCommute", desc = "Rewrite: swap with next operand" },
     { key = "S", rhs = "<cmd>TruthTableCommute!<CR>", desc = "Rewrite: swap with previous operand" },
-    { key = "o", rhs = "<cmd>TruthTableXor<CR>", desc = "Rewrite: recognise ⊕ or ⇔" },
-    { key = "z", rhs = "<cmd>TruthTableSimplify<CR>", desc = "Rewrite: simplify at the cursor" },
-    { key = "l", rhs = "<cmd>TruthTableRewrites<CR>", desc = "Rewrite: list every rewrite and pick one" },
-    { key = "a", rhs = "<cmd>TruthTableApply<CR>", desc = "Apply: in place" },
-    { key = "A", rhs = "<cmd>TruthTableApplyStep<CR>", desc = "Apply: as a ≡ step" },
+    { key = "o", command = "TruthTableXor", desc = "Rewrite: recognise ⊕ or ⇔" },
+    { key = "z", command = "TruthTableSimplify", desc = "Rewrite: simplify at the cursor" },
+    { key = "l", command = "TruthTableRewrites", desc = "Rewrite: list every rewrite and pick one" },
+    { key = "a", command = "TruthTableApply", desc = "Apply: in place" },
+    { key = "A", command = "TruthTableApplyStep", desc = "Apply: as a ≡ step" },
 }
 
--- Register commands, keymaps, insert-mode abbreviations, and (if present)
--- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
--- terminal-accurate. Idempotent: the last call wins, including for the
--- abbreviations. Automatic loading preserves an earlier explicit setup call.
 -- The groups a rewrite is lit with, the terms it consumed and the result it
 -- produced, as defaults the reader may define over. A colorscheme clears
 -- them, so they are defined again after one.
@@ -180,6 +239,10 @@ local function highlights()
     vim.api.nvim_set_hl(0, "TruthTableConsumed", { default = true, link = "DiagnosticWarn" })
 end
 
+-- Register commands, keymaps, insert-mode abbreviations, and (if present)
+-- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
+-- terminal-accurate. Idempotent: the last call wins, including for the
+-- abbreviations. Automatic loading preserves an earlier explicit setup call.
 function M.setup(opts)
     if opts ~= nil and type(opts) ~= "table" then
         error("truth-table setup options must be a table", 0)
@@ -200,96 +263,21 @@ function M.setup(opts)
         end,
     })
 
-    vim.api.nvim_create_user_command("TruthTable", cmd_truth_table, {
-        nargs = "*",
-        range = true,
-        desc = "Generate a truth table",
-    })
-    vim.api.nvim_create_user_command("TruthTableExpand", cmd_expand, {
-        nargs = "+",
-        desc = "Expand truth table with computed columns",
-    })
-    vim.api.nvim_create_user_command("TruthTableDropRow", cmd_drop_row, {
-        desc = "Drop the current truth table row",
-    })
-    vim.api.nvim_create_user_command("TruthTableDropColumn", cmd_drop_column, {
-        desc = "Drop the current truth table column",
-    })
-    vim.api.nvim_create_user_command("TruthTableToggle", cmd_toggle, {
-        desc = "Toggle truth table between 0/1 and F/T",
-    })
-    vim.api.nvim_create_user_command("TruthTableAlign", function()
-        require("truth-table.align").derivation(0, vim.api.nvim_win_get_cursor(0)[1], false)
-    end, {
-        desc = "Align the derivation's justification bars in one column",
-    })
-    vim.api.nvim_create_user_command("TruthTableKarnaugh", cmd_karnaugh, {
-        desc = "Insert a Karnaugh map and minimal formula for the current column",
-    })
-
-    local preview = require("truth-table.preview")
-    local function toggles(name)
-        return function()
-            preview.toggle(name)
-        end
-    end
-    vim.api.nvim_create_user_command("TruthTableDeMorgan", toggles("de_morgan"), {
-        desc = "Toggle a whole-expression De Morgan preview",
-    })
-    vim.api.nvim_create_user_command("TruthTableFactor", toggles("factor"), {
-        desc = "Toggle a preview factoring the operand under the cursor out of its terms",
-    })
-    vim.api.nvim_create_user_command("TruthTableDistribute", toggles("distribute"), {
-        desc = "Toggle a preview distributing the operand under the cursor into the group beside it",
-    })
-    vim.api.nvim_create_user_command("TruthTableXor", toggles("xor"), {
-        desc = "Toggle a preview recognising an exclusive or (or an equivalence) in the terms under the cursor",
-    })
-    vim.api.nvim_create_user_command("TruthTableSimplify", toggles("simplify"), {
-        desc = "Toggle a preview applying the collapsing law nearest the cursor (complement, identity, absorption, reduction, ...)",
-    })
-    vim.api.nvim_create_user_command("TruthTableCommute", function(command)
-        preview.toggle(command.bang and "commute_back" or "commute")
-    end, {
-        bang = true,
-        desc = "Toggle a preview swapping the operand under the cursor with the next one (! for the previous)",
-    })
-    vim.api.nvim_create_user_command("TruthTableRewrites", preview.choose, {
-        desc = "List every rewrite of the expression under the cursor and write the one picked as a ≡ step",
-    })
-    vim.api.nvim_create_user_command("TruthTableApply", preview.apply, {
-        desc = "Apply the current rewrite preview in place",
-    })
-    vim.api.nvim_create_user_command("TruthTableDeMorganApply", preview.apply, {
-        desc = "Alias of :TruthTableApply",
-    })
-    vim.api.nvim_create_user_command("TruthTableApplyStep", preview.apply_step, {
-        desc = "Insert the current rewrite preview below as a ≡ derivation step",
-    })
-
-    vim.api.nvim_create_user_command("TruthTableTutor", function(command)
-        require("truth-table.tutor").open({
-            fresh = command.bang,
-            lesson = command.args ~= "" and command.args or nil,
+    local defined = {}
+    for _, command in ipairs(COMMANDS) do
+        vim.api.nvim_create_user_command(command.name, command.run, {
+            nargs = command.nargs, range = command.range, bang = command.bang, desc = command.desc,
         })
-    end, {
-        bang = true,
-        nargs = "?",
-        desc = "Open the tutorial at your place (! to start over, a number to jump to that lesson)",
-    })
-    vim.api.nvim_create_user_command("TruthTableTutorNext", function()
-        require("truth-table.tutor").step(1)
-    end, {
-        desc = "Go to the tutorial's next step",
-    })
-    vim.api.nvim_create_user_command("TruthTableTutorPrev", function()
-        require("truth-table.tutor").step(-1)
-    end, {
-        desc = "Go to the tutorial's previous step",
-    })
+        defined[command.name] = true
+    end
 
     for _, map in ipairs(KEYMAPS) do
-        vim.keymap.set(map.mode or "n", PREFIX .. map.key, map.rhs, { desc = map.desc, expr = map.expr })
+        local rhs = map.rhs
+        if map.command then
+            assert(defined[map.command], "keymap " .. map.key .. " names no command: " .. map.command)
+            rhs = "<cmd>" .. map.command .. "<CR>"
+        end
+        vim.keymap.set(map.mode or "n", PREFIX .. map.key, rhs, { desc = map.desc, expr = map.expr })
     end
 
     local ok, wk = pcall(require, "which-key")

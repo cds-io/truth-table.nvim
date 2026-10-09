@@ -1,6 +1,13 @@
 truth-table.nvim changes
 ========================
 
+- init.lua: the user commands are one table, COMMANDS, each entry its
+  name, what it runs and its options (nargs, range, bang, desc), beside
+  KEYMAPS; a keymap names the command it runs, and setup() checks the name
+  is one COMMANDS defines, so a key cannot point at a command that is not
+  there. A keymap that does more than run one command (the new-table
+  mapping, the expand prefill, the backward swap) spells its own right-hand
+  side. preview.lua is required with the other modules.
 - marks.lua: a highlight mark is one record, { row, col, end_col, group,
   priority }, painted and read back through `paint` and `read`; edit.lua's
   undo-tracked marks, preview.lua's lit terms and the tutor's colour spans
