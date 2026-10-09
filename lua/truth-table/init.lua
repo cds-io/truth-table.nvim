@@ -191,7 +191,7 @@ local COMMANDS = {
         desc = "Toggle a preview applying the collapsing law nearest the cursor (complement, identity, absorption, reduction, ...)" },
     { name = "TruthTableCommute", run = cmd_commute, bang = true,
         desc = "Toggle a preview swapping the operand under the cursor with the next one (! for the previous)" },
-    { name = "TruthTableRewrites", run = preview.choose,
+    { name = "TruthTableRewrites", run = require("truth-table.menu").choose,
         desc = "List every rewrite of the expression under the cursor and write the one picked as a ≡ step" },
     { name = "TruthTableApply", run = preview.apply, desc = "Apply the current rewrite preview in place" },
     { name = "TruthTableDeMorganApply", run = preview.apply, desc = "Alias of :TruthTableApply" },

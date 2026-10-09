@@ -747,10 +747,15 @@ All pure modules support Lua 5.1 and have no vim dependency:
   pending preview's, and the tutor's colour spans are all this record.
 - derivation.lua splits a line into sides at ≡, sets its `| by` justification
   apart, replaces one side, and builds an aligned, justified step line.
-- preview.lua resolves the expression under the cursor (a side of a line, or
-  a heading), runs a rewrite on it, and manages per-buffer extmarks,
-  invalidation, and applying in place or as a step. It also shows the menu
-  of every rewrite and writes the pick through the same two paths.
+- source.lua resolves the expression under the cursor as a source (a side of
+  a line, or a heading), with the ways to write a rewrite back.
+- write.lua writes a rewrite where its source is, in place or as a ≡ step,
+  with the consumed and produced terms lit; prepare plans one write first.
+- preview.lua runs a rewrite on the source under the cursor and manages the
+  per-buffer pending preview: extmarks, invalidation, and applying in place
+  or as a step; transient.lua holds the <Space> and <CR> keys meanwhile.
+- menu.lua shows the menu of every rewrite and writes the pick through the
+  same two paths.
 - tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
   panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
   turns a step into the lesson pane's Markdown, tutor_spans.lua (pure) reads

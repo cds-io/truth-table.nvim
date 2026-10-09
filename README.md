@@ -923,11 +923,18 @@ and of a pending preview, and the tutor's colour spans, are all this record.
 - `derivation.lua` splits a line into sides at `≡`, sets its `| by`
 justification apart, replaces one side, and builds an aligned, justified step
 line.
-- `preview.lua` resolves the expression under the cursor (one side of a line,
-or a heading), runs a rewrite on it, and manages per-buffer previews,
-extmarks, invalidation, and applying in place or as a step. It also shows the
-menu of every rewrite (`vim.ui.select`) and writes the pick through the same
-two paths.
+- `source.lua` resolves the expression under the cursor as a source: one side
+of a derivation line, or a heading read from anywhere in its column, with the
+ways to write a rewrite back (in place, or as a step below).
+- `write.lua` writes a rewrite where its source is, in place or as a ≡ step,
+with the consumed and produced terms lit: `prepare` plans one write, which a
+preview shows first; `in_place` and `step` carry it out through `edit.lua`.
+- `preview.lua` runs a rewrite on the source under the cursor and manages the
+per-buffer pending preview: its extmarks, invalidation on edit, and applying
+in place or as a step. `transient.lua` holds the `<Space>` and `<CR>` keys
+while one is pending, putting back any buffer-local map they shadow.
+- `menu.lua` shows the menu of every rewrite (`vim.ui.select`) and writes the
+pick through the same two paths.
 - `tutor.lua` reads the lessons in `tutor/truth-table/` and shows them in two
 panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
 turns a step into the lesson pane's Markdown, `tutor_spans.lua` (pure) reads
