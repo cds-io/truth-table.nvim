@@ -55,7 +55,9 @@ The scratch pane holds the table from the last step.
 - `:TruthTableDropColumn` (`<leader>Tc`) removes the column under the cursor.
   Put the cursor in the `a ⇔ b` column, in yellow, and run it.
 - `:TruthTableDropRow` (`<leader>Tr`) removes the row under the cursor in the
-  same way. Put the cursor on the last row and run it.
+  same way. Put the cursor on the last row and run it. Either drop is a
+  change like any other, so `.` runs it again on whatever the cursor is on
+  then: a few rows go with `<leader>Tr` and a few dots.
 ]],
             template = [[
 |  a  |  b  | a ⊕ b | a → b | [:yellow a ⇔ b] |
