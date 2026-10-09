@@ -32,20 +32,13 @@ describe("operator aliases", function()
 end)
 
 describe("predicate source diagnostics", function()
-    it("retains byte spans without changing legacy token records", function()
-        local tokens, err, locations = predicate.tokenize('  A ∧ :h2')
-        assert.is_nil(err)
+    it("gives each token the bytes it was read from", function()
+        local tokens = assert(predicate.tokenize('  A ∧ :h2'))
         assert.are.same({
-            { type = 'ident', value = 'A' },
-            { type = 'op', value = 'and' },
-            { type = 'reference', value = 2 },
+            { type = 'ident', value = 'A', span = { start_byte = 3, end_byte = 3 } },
+            { type = 'op', value = 'and', span = { start_byte = 5, end_byte = 7 } },
+            { type = 'reference', value = 2, span = { start_byte = 9, end_byte = 11 } },
         }, tokens)
-        assert.are.same({
-            { start_byte = 3, end_byte = 3 },
-            { start_byte = 5, end_byte = 7 },
-            { start_byte = 9, end_byte = 11 },
-        }, locations.spans)
-        assert.are.equal(12, locations.end_byte)
     end)
 
     it("points to unexpected tokens and end-of-input after multibyte symbols", function()
@@ -69,11 +62,14 @@ describe("predicate source diagnostics", function()
         assert.is_truthy(reference_err:find('Invalid column reference at byte 3', 1, true))
     end)
 
-    it("falls back to token indices for manually supplied tokens", function()
+    it("places an error by its token's bytes when given tokens alone, and runs out after the last", function()
         local tokens = assert(predicate.tokenize('A B'))
         local ast, err = predicate.parse_predicate(tokens)
         assert.is_nil(ast)
-        assert.are.equal('Unexpected token after expression: B at token 2', err)
+        assert.are.equal('Unexpected token after expression: B at byte 3', err)
+        local open, open_err = predicate.parse_predicate(assert(predicate.tokenize('A ∧  ')))
+        assert.is_nil(open)
+        assert.are.equal('Unexpected end of expression at byte 6', open_err)
     end)
 end)
 
@@ -101,8 +97,8 @@ describe("truth constants", function()
 
     it("leaves a digit's token and node as they were", function()
         local tokens = assert(predicate.tokenize("1 or ⊤"))
-        assert.are.same({ type = "literal", value = "1" }, tokens[1])
-        assert.are.same({ type = "literal", value = "⊤" }, tokens[3])
+        assert.are.same({ "literal", "1" }, { tokens[1].type, tokens[1].value })
+        assert.are.same({ "literal", "⊤" }, { tokens[3].type, tokens[3].value })
         assert.are.same({ type = "literal", value = 1 }, assert(predicate.parse_expression("1")))
     end)
 
@@ -196,17 +192,26 @@ describe("located parsing", function()
 end)
 
 describe("predicate.tokenize", function()
+    -- The tokens' types and values, without their spans.
+    local function kinds(toks)
+        local out = {}
+        for i, tok in ipairs(toks) do
+            out[i] = { type = tok.type, value = tok.value }
+        end
+        return out
+    end
+
     it("recognizes idents, operators, parens, and literals", function()
-        local toks = assert(predicate.tokenize("A and !B"))
-        assert.are.same({ type = "ident", value = "A" }, toks[1])
-        assert.are.same({ type = "op", value = "and" }, toks[2])
-        assert.are.same({ type = "op", value = "!" }, toks[3])
-        assert.are.same({ type = "ident", value = "B" }, toks[4])
+        assert.are.same({
+            { type = "ident", value = "A" },
+            { type = "op", value = "and" },
+            { type = "op", value = "!" },
+            { type = "ident", value = "B" },
+        }, kinds(assert(predicate.tokenize("A and !B"))))
     end)
 
     it("maps -> to implies", function()
-        local toks = assert(predicate.tokenize("A -> B"))
-        assert.are.same({ type = "op", value = "implies" }, toks[2])
+        assert.are.same({ type = "op", value = "implies" }, kinds(assert(predicate.tokenize("A -> B")))[2])
     end)
 
     it("errors on an unexpected character", function()
@@ -227,8 +232,7 @@ describe("predicate.tokenize", function()
     end)
 
     it("maps ⇒ to implies", function()
-        local toks = assert(predicate.tokenize("A ⇒ B"))
-        assert.are.same({ type = "op", value = "implies" }, toks[2])
+        assert.are.same({ type = "op", value = "implies" }, kinds(assert(predicate.tokenize("A ⇒ B")))[2])
     end)
 end)
 

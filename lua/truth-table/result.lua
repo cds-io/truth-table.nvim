@@ -13,13 +13,9 @@ function M.bind(value, err, fn)
     return fn(value)
 end
 
--- The value through `fn`, which always answers; the error untouched.
-function M.map(value, err, fn)
-    if value == nil then
-        return nil, err
-    end
-    return fn(value)
-end
+-- The value through `fn`, which always answers; the error untouched. The
+-- same step as bind: the name says at the call whether `fn` can refuse.
+M.map = M.bind
 
 -- The value untouched; the error with `prefix` in front, so a failure deep in
 -- a pipeline says where it was met ('Parse error in "A and": ...').

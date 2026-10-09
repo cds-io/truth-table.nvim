@@ -24,8 +24,11 @@ local function symbol_op_at(input, pos)
     end
 end
 
+-- The tokens of `input`, each { type, value, span }, the span the one-based,
+-- inclusive bytes it was read from; or nil and the reason at the first
+-- character that is no token.
 function M.tokenize(input)
-    local tokens, spans = {}, {}
+    local tokens = {}
     local pos = 1
     local len = #input
 
@@ -77,15 +80,21 @@ function M.tokenize(input)
             tokens[#tokens + 1] = { type = "literal", value = character }
             pos = pos + #character
         end
-        spans[#tokens] = { start_byte = token_start, end_byte = pos - 1 }
+        tokens[#tokens].span = { start_byte = token_start, end_byte = pos - 1 }
     end
-
-    -- Optional third return keeps token records and value/error callers intact.
-    return tokens, nil, { spans = spans, end_byte = len + 1 }
+    return tokens
 end
 
-function M.parse_predicate(tokens, locations)
+-- The tree of `tokens`, or nil and the reason at the byte of the token the
+-- parser stopped on. `options.end_byte` is the byte after the source, for
+-- a parser that runs out of tokens (the byte after the last token without
+-- it); with `options.node_spans`, every node records the bytes it was read
+-- from, first token through last, as `span`. Evaluation and rendering
+-- ignore the field.
+function M.parse_predicate(tokens, options)
     local pos = 1
+    local last = tokens[#tokens]
+    local end_byte = options and options.end_byte or (last and last.span.end_byte + 1 or 1)
 
     local function peek()
         return tokens[pos]
@@ -98,12 +107,8 @@ function M.parse_predicate(tokens, locations)
     end
 
     local function failure(message)
-        if locations then
-            local span = locations.spans[pos]
-            local byte = span and span.start_byte or locations.end_byte
-            return nil, message .. " at byte " .. byte
-        end
-        return nil, message .. " at token " .. pos
+        local token = tokens[pos]
+        return nil, message .. " at byte " .. (token and token.span.start_byte or end_byte)
     end
 
     local function expect(type, value)
@@ -114,14 +119,11 @@ function M.parse_predicate(tokens, locations)
         return consume()
     end
 
-    -- When the locations ask for it (node_spans), every node records the bytes
-    -- it was read from: first token through last. Evaluation and rendering
-    -- ignore the field.
     local function located(node, first)
-        if locations and locations.node_spans then
+        if options and options.node_spans then
             node.span = {
-                start_byte = locations.spans[first].start_byte,
-                end_byte = locations.spans[pos - 1].end_byte,
+                start_byte = tokens[first].span.start_byte,
+                end_byte = tokens[pos - 1].span.end_byte,
             }
         end
         return node
@@ -242,10 +244,9 @@ end
 
 -- Parse source through the tokenizer/parser Result pipeline.
 local function parse_source(input, node_spans)
-    local tokens, err, locations = M.tokenize(input)
+    local tokens, err = M.tokenize(input)
     local ast, parse_err = result.bind(tokens, err, function(values)
-        locations.node_spans = node_spans
-        return M.parse_predicate(values, locations)
+        return M.parse_predicate(values, { node_spans = node_spans, end_byte = #input + 1 })
     end)
     return result.context(ast, parse_err, 'Parse error in "' .. input .. '": ')
 end
