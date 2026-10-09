@@ -578,7 +578,7 @@ not a function of those inputs.
 The map follows the textbook layout: the last two inputs run across the
 columns in Gray order (`00 01 11 10`), the rest down the rows. Maps are drawn
 for two to four inputs; with one input or more than four, only the formula is
-inserted. The minimizer uses Quine–McCluskey prime implicants, selects essential primes,
+inserted. The minimizer uses Quine-McCluskey prime implicants, selects essential primes,
 and searches for a cover with the fewest terms, then the fewest literals. Exact
 cover search has a budget; beyond it, a greedy fallback produces a valid cover
 without guaranteeing minimality.
@@ -794,9 +794,9 @@ Abbreviations are global across buffers and filetypes. The default trigger is
 `@`: type `and@` followed by a space to insert `∧`. `Ctrl-]` expands without
 adding a character. Plain words such as `and` in prose stay unchanged.
 
-`abbreviations.symbols` is keyed by the ASCII word you type, using lowercase
-names—not constants such as `IMPLIES` or Unicode characters. These are all the
-built-in keys:
+`abbreviations.symbols` is keyed by the ASCII word you type, in lowercase
+(`implies`, the `ascii` field of symbols.lua's `IMPLIES`; `→` is the text
+that word inserts). These are all the built-in keys:
 
 | Configuration key (symbol) | Default inserted text | Meaning                |
 |----------------------------|-----------------------|------------------------|
