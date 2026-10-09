@@ -19,33 +19,28 @@ local PENDING = 4098
 local pending, attached = {}, {}
 
 -- Each rewrite maps a located tree and a cursor byte to a new tree and the
--- name of the law that justifies it. `command` groups the names one user
--- command toggles; `whole` marks a rewrite that also works without a cursor
--- in the expression, on the whole of it. `opposite` names the rewrite a
+-- name of the law that justifies it. `whole` marks a rewrite that also
+-- works without a cursor in the expression, on the whole of it. `opposite` names the rewrite a
 -- reader is likely to have meant when this one refuses, with the words that
 -- point to it.
 local REWRITES = {
-    de_morgan = { command = "de_morgan", whole = true, run = rewrite.de_morgan },
-    simplify = { command = "simplify", whole = true, run = rewrite.simplify },
+    de_morgan = { whole = true, run = rewrite.de_morgan },
+    simplify = { whole = true, run = rewrite.simplify },
     factor = {
-        command = "factor",
         run = rewrite.factor,
         opposite = { name = "distribute", hint = "to move it into the group beside it, use :TruthTableDistribute" },
     },
     distribute = {
-        command = "distribute",
         run = rewrite.distribute,
         opposite = { name = "factor", hint = "to pull it out of the terms that share it, use :TruthTableFactor" },
     },
-    xor = { command = "xor", run = rewrite.xor },
+    xor = { run = rewrite.xor },
     commute = {
-        command = "commute",
         run = function(ast, byte)
             return rewrite.commute(ast, byte, false)
         end,
     },
     commute_back = {
-        command = "commute",
         run = function(ast, byte)
             return rewrite.commute(ast, byte, true)
         end,
@@ -111,8 +106,8 @@ local function watch(buf)
     })
 end
 
--- The preview of `kind` at the cursor in `buf`: the plan of the write, with
--- the command that toggles it; or nil and the reason.
+-- The preview of `kind` at the cursor in `buf`: the plan of the write; or
+-- nil and the reason.
 local function resolve(buf, kind)
     local selected, ast = source.at(buf)
     if not selected then
@@ -136,7 +131,6 @@ local function resolve(buf, kind)
     if not preview then
         return nil, err
     end
-    preview.command = kind.command
     return preview
 end
 
@@ -160,23 +154,25 @@ local function chunks(preview)
     return out
 end
 
--- Running the pending preview's own command dismisses it; any other rewrite
--- replaces it.
+-- A rewrite command resolves its preview at the cursor first. The same
+-- preview as the pending one (the same text on the same line) dismisses
+-- it; any other replaces it. A refusal leaves the pending preview as it
+-- was.
 function M.toggle(name)
     -- Without a name this is the De Morgan toggle it was before rewrites had names.
     local kind = REWRITES[name or "de_morgan"]
     local buf = vim.api.nvim_get_current_buf()
-    local shown = pending[buf]
-    if shown then
-        M.dismiss(buf)
-        if shown.command == kind.command then
-            return
-        end
-    end
     local preview, err = resolve(buf, kind)
     if not preview then
         vim.notify(err, vim.log.levels.WARN)
         return
+    end
+    local shown = pending[buf]
+    if shown then
+        M.dismiss(buf)
+        if shown.row == preview.row and shown.replacement == preview.replacement then
+            return
+        end
     end
     watch(buf)
     preview.mark = vim.api.nvim_buf_set_extmark(buf, namespace, preview.row, 0, {
