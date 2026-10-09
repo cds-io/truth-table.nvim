@@ -86,6 +86,39 @@ return exactlyOneFailure && hasRetries;
         },
         {
             text = [[
+A definition reads both ways. `:TruthTableUnfold` (`<leader>ttu`) goes from
+the connective back to its spelling in `and`, `or` and `not`: with the cursor
+on the `⊕` (or anywhere inside the pair it joins), preview it and apply it as
+a step. The same command unfolds `⇔` into "both or neither" and `→` into
+"not the first, or the second":
+
+```logic
+a → b  ≡  ¬a ∨ b
+a ⇔ b  ≡  (a ∧ b) ∨ (¬a ∧ ¬b)
+```
+
+A derivation that has to reach `and`, `or` and `not` only, say for a De
+Morgan step or for the sum-of-products form the Karnaugh lesson reads off a
+table, starts by unfolding every other connective.
+]],
+            template = [[
+(T [:yellow xor] E) and R
+]],
+            expect = [[
+(T xor E) and R
+≡ ((T ∧ ¬E) ∨ (¬T ∧ E)) ∧ R    | by definition of ⊕
+]],
+            note = [[
+The two terms come back in the definition's order, `T` without `E` first,
+so this is the spelling from the first step with its terms swapped: the
+same expression, as a table or `:TruthTableVerify` would confirm.
+]],
+            solution = {
+                { on = "(T xor E) and R", at = "xor", run = { "TruthTableUnfold", "TruthTableApplyStep" } },
+            },
+        },
+        {
+            text = [[
 One more proposal arrives in review: "`!==` on booleans is odd; `||` will
 do." That is `(T ∨ E) ∧ R` in place of `(T ⊕ E) ∧ R`. The two sound alike,
 and the table says what the difference is. Build it.

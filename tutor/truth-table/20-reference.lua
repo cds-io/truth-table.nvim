@@ -77,6 +77,8 @@ Rewrites, each a preview at the cursor that names its law:
 - `:TruthTableDistribute` (`<leader>ttx`): distribute an operand into a group.
 - `:TruthTableFactor` (`<leader>ttf`): factor an operand out of its terms.
 - `:TruthTableXor` (`<leader>tto`): recognise `⊕` or `⇔`.
+- `:TruthTableUnfold` (`<leader>ttu`): replace `→`, `⊕` or `⇔` by its
+  definition.
 - `:TruthTableSimplify` (`<leader>ttz`): apply the nearest shrinking law:
   complement, identity, domination, idempotence, absorption or reduction.
 - `:TruthTableApply` (`<leader>tta`): replace the expression with the preview.

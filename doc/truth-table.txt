@@ -257,6 +257,23 @@ lists or blockquotes are not supported.
     share a third operand. Beside other terms the result is parenthesised,
     like any operand with an operator of its own (|truth-table-canonical|).
 
+                                                           *:TruthTableUnfold*
+:TruthTableUnfold
+    Toggle a preview that replaces a connective by its definition in ∧, ∨
+    and ¬, the other way round from |:TruthTableXor|. The connective is the
+    nearest →, ⊕ or ⇔ enclosing the cursor (the one under the cursor when
+    it is on the symbol), or without a cursor in the expression the
+    outermost one: >
+
+        R ∧ (T → E)   ⇒   R ∧ (¬T ∨ E)
+        a ⇔ b         ⇒   (a ∧ b) ∨ (¬a ∧ ¬b)
+        a ⊕ b         ⇒   (a ∧ ¬b) ∨ (¬a ∧ b)
+<
+    A compound operand is negated whole: (p ∧ q) → r gives ¬(p ∧ q) ∨ r. A
+    chain of ⊕ is nested pairs in the tree, so one step unfolds one pair,
+    the one nearest the cursor. The law is named "definition of" the
+    connective, as the recognition names it.
+
                                                           *:TruthTableCommute*
 :TruthTableCommute[!]
     Toggle a preview that swaps the operand under the cursor with the operand
@@ -395,7 +412,8 @@ and `distributivity (distributing)` (the one law used from either side: one
 moves a shared operand out of its terms, the other moves an operand into a
 group; the side is named so that a step says which command wrote it),
 `commutativity`,
-`De Morgan`, and `definition of ⊕` or `definition of ⇔`. On an expression
+`De Morgan`, and `definition of →`, `definition of ⊕` or `definition of ⇔`
+(the definition read in either direction). On an expression
 line everything from the first | on is a remark: a rewrite reads the
 expression before it, and a cursor in the remark means the line's last side.
 
@@ -619,6 +637,7 @@ Examples: >
     <leader>tts   |:TruthTableCommute|
     <leader>ttS   |:TruthTableCommute| with !
     <leader>tto   |:TruthTableXor|
+    <leader>ttu   |:TruthTableUnfold|
     <leader>ttz   |:TruthTableSimplify|
     <leader>ttl   |:TruthTableRewrites|  (list)
     <leader>ttv   |:TruthTableVerify|  (verify)

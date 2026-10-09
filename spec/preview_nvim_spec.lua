@@ -237,7 +237,61 @@ describe("a rewrite at the cursor", function()
     end)
 end)
 
+describe("an unfold preview", function()
+    it("shows the connective's definition beside the line, from the symbol or an operand", function()
+        set({ "  R and (T implies E)" })
+        on("implies")
+        vim.cmd("TruthTableUnfold")
+        assert.are.equal("  R and (T implies E)", vim.api.nvim_get_current_line())
+        assert.are.equal(1, #marks())
+        assert.are.equal(" ⇒ R ∧ (¬T ∨ E)  | by definition of →", text())
+        vim.cmd("TruthTableUnfold")
+        assert.are.equal(0, #marks())
+        on("E")
+        vim.cmd("TruthTableUnfold")
+        assert.are.equal(" ⇒ R ∧ (¬T ∨ E)  | by definition of →", text())
+    end)
+
+    it("takes the outermost connective from a column heading", function()
+        set({ "| a | b | a ⊕ b |", "|:-:|:-:|:-----:|", "| 0 | 0 |   0   |" })
+        on("a ⊕ b")
+        vim.cmd("TruthTableUnfold")
+        assert.are.equal(1, #marks())
+        assert.are.equal(" [column 3] ⇒ (a ∧ ¬b) ∨ (¬a ∧ b)  | by definition of ⊕", text())
+    end)
+
+    it("is written as a step by :TruthTableApplyStep", function()
+        set({ "a ⇔ b" })
+        on("⇔")
+        vim.cmd("TruthTableUnfold")
+        vim.cmd("TruthTableApplyStep")
+        assert.are.same({ "a ⇔ b", "≡ (a ∧ b) ∨ (¬a ∧ ¬b)    | by definition of ⇔" }, lines())
+    end)
+end)
+
 describe("a refusal", function()
+    it("from Unfold names Xor when Xor applies at this cursor", function()
+        set({ "(not T and E) or (T and not E)" })
+        on("T")
+        vim.cmd("TruthTableUnfold")
+        assert.are.equal(0, #marks())
+        assert.are.equal(
+            "No →, ⊕ or ⇔ under the cursor or in the expression; to recognise ⊕ or ⇔ in the terms, use :TruthTableXor",
+            notified
+        )
+    end)
+
+    it("from Xor names Unfold when Unfold applies at this cursor", function()
+        set({ "T xor E" })
+        on("T")
+        vim.cmd("TruthTableXor")
+        assert.are.equal(0, #marks())
+        assert.are.equal(
+            "No pair of terms under the cursor forms ⊕ or ⇔; to replace a connective by its definition, use :TruthTableUnfold",
+            notified
+        )
+    end)
+
     it("warns, shows no preview and leaves the buffer alone when the cursor is on an operator", function()
         set({ "  S ∨ (¬C ∧ (A ∨ G))" })
         on("∨")
