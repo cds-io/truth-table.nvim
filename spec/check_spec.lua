@@ -26,6 +26,17 @@ describe("check.check", function()
         assert.are.same({ ok = true, steps = 0 }, assert(check.check({})))
     end)
 
+    it("is zero steps for a line that is no expression at all, without parsing it", function()
+        assert.are.same({ ok = true, steps = 0 }, assert(check.check({ "This is a proof of the claim." })))
+        assert.are.same({ ok = true, steps = 0 }, assert(check.check({ "## Proof" })))
+    end)
+
+    it("orders the assignment as the chain first mentions the variables", function()
+        local verdict = assert(check.check({ "a ∧ b", "≡ b ∧ a", "≡ b" }))
+        assert.are.equal(2, verdict.step)
+        assert.are.same({ { name = "a", value = 0 }, { name = "b", value = 1 } }, verdict.assignment)
+    end)
+
     it("reports the first failing step with the assignment that breaks it", function()
         local verdict = assert(check.check({
             "a ∨ b",

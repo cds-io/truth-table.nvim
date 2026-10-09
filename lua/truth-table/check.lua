@@ -33,38 +33,51 @@ local function reference(node)
 end
 
 -- Every side of `lines` in order, each with the row (from one) it is on,
--- its bytes, its tree and its variables; or nil and the reason a side
--- cannot be judged.
+-- its bytes and its text.
 local function chain(lines)
     local sides = {}
     for row, line in ipairs(lines) do
         for _, side in ipairs(derivation.sides(line)) do
-            local ast, err = predicate.parse_expression(side.text)
-            if not ast then
-                return nil, err
-            end
-            local found = reference(ast)
-            if found then
-                return nil, found .. " has no meaning outside a table"
-            end
             sides[#sides + 1] = {
-                row = row, first = side.first, last = side.last, separator = side.separator,
-                ast = ast, variables = assert(predicate.variables(ast)),
+                row = row, first = side.first, last = side.last, separator = side.separator, text = side.text,
             }
         end
     end
     return sides
 end
 
--- The variables of both sides, in order of first appearance.
-local function union(first, second)
-    local names, seen = {}, {}
-    for _, list in ipairs({ first, second }) do
-        for _, name in ipairs(list) do
+-- Give each side its tree and the set of variables it mentions, and
+-- answer the chain's variables in order of first appearance; or nil and
+-- the reason a side cannot be judged.
+local function parsed(sides)
+    local order, seen = {}, {}
+    for _, side in ipairs(sides) do
+        local ast, err = predicate.parse_expression(side.text)
+        if not ast then
+            return nil, err
+        end
+        local found = reference(ast)
+        if found then
+            return nil, found .. " has no meaning outside a table"
+        end
+        side.ast, side.mentions = ast, {}
+        for _, name in ipairs(assert(predicate.variables(ast))) do
+            side.mentions[name] = true
             if not seen[name] then
                 seen[name] = true
-                names[#names + 1] = name
+                order[#order + 1] = name
             end
+        end
+    end
+    return order
+end
+
+-- The variables either side mentions, in the chain's order.
+local function names_of(order, premise, conclusion)
+    local names = {}
+    for _, name in ipairs(order) do
+        if premise.mentions[name] or conclusion.mentions[name] then
+            names[#names + 1] = name
         end
     end
     return names
@@ -93,17 +106,24 @@ end
 -- when every step holds, or for the first step that fails { ok = false,
 -- step, row, side = { first, last }, separator, assignment, premise,
 -- conclusion }, with `row` the index into `lines` of the line holding the
--- conclusion, `side` and `separator` one-based bytes in it, `assignment` a
--- list of { name, value } and the two values the sides take under it. Nil
--- and a reason when a side cannot be judged.
+-- conclusion, `side` and `separator` one-based bytes in it (a conclusion
+-- always follows a ≡ in a block derivation.block found, so `separator` is
+-- set there), `assignment` a list of { name, value } in the order the chain
+-- first mentions the variables, and the two values the sides take under
+-- it. Nil and a reason when a side cannot be judged; a block of fewer than
+-- two sides has no step and is not parsed.
 function M.check(lines)
-    local sides, err = chain(lines)
-    if not sides then
+    local sides = chain(lines)
+    if #sides < 2 then
+        return { ok = true, steps = 0 }
+    end
+    local order, err = parsed(sides)
+    if not order then
         return nil, err
     end
     for k = 2, #sides do
         local premise, conclusion = sides[k - 1], sides[k]
-        local names = union(premise.variables, conclusion.variables)
+        local names = names_of(order, premise, conclusion)
         if #names > MAX_VARIABLES then
             return nil, "Too many variables (max " .. MAX_VARIABLES .. ")"
         end
@@ -116,7 +136,7 @@ function M.check(lines)
             }
         end
     end
-    return { ok = true, steps = math.max(#sides - 1, 0) }
+    return { ok = true, steps = #sides - 1 }
 end
 
 -- A failing verdict as one line: the step, the assignment in order of
