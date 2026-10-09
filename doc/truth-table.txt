@@ -188,6 +188,17 @@ lists or blockquotes are not supported.
     with `data = { buf, row, kind }` (`kind` is "step" or "in_place"); the
     aligner is its own listener.
 
+                                                            *:TruthTableCheck*
+:TruthTableCheck
+    Judge every ≡ step of the derivation under the cursor against the side
+    before it, over every assignment of the variables either side mentions.
+    When every step holds, say so with the count. Otherwise show the first
+    step that fails: its right-hand side lit in TruthTableConsumed, the ≡
+    that opens it overlaid with ≢ (the text is not changed), and the
+    breaking assignment notified as `step 2: a=0, b=1 gives 0 ≢ 1`. The
+    marks go on the next edit. The `| by` justification is not read; a side
+    with a column reference (:h2) is refused.
+
                                                            *:TruthTableFactor*
 :TruthTableFactor
     Toggle a preview that pulls the operand under the cursor out of every term
@@ -584,6 +595,7 @@ Examples: >
     <leader>tto   |:TruthTableXor|
     <leader>ttz   |:TruthTableSimplify|
     <leader>ttl   |:TruthTableRewrites|  (list)
+    <leader>ttv   |:TruthTableCheck|  (check)
   Apply ~
     <leader>tta   |:TruthTableApply|
     <leader>ttA   |:TruthTableApplyStep|
@@ -750,6 +762,9 @@ All pure modules support Lua 5.1 and have no vim dependency:
   pending preview's, and the tutor's colour spans are all this record.
 - derivation.lua splits a line into sides at ≡, sets its `| by` justification
   apart, replaces one side, and builds an aligned, justified step line.
+- check.lua judges a derivation, side against the side before it over every
+  assignment, and answers the first failing step as a record; verdict.lua
+  shows it in the buffer, lit and overlaid, until the next edit.
 - source.lua resolves the expression under the cursor as a source (a side of
   a line, or a heading), with the ways to write a rewrite back.
 - write.lua writes a rewrite where its source is, in place or as a ≡ step,
