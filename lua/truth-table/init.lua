@@ -150,6 +150,10 @@ local function cmd_align()
     require("truth-table.align").derivation(0, vim.api.nvim_win_get_cursor(0)[1], false)
 end
 
+local function cmd_check()
+    require("truth-table.verdict").show(0, vim.api.nvim_win_get_cursor(0)[1])
+end
+
 local function cmd_commute(command)
     preview.toggle(command.bang and "commute_back" or "commute")
 end
@@ -168,8 +172,8 @@ local function toggles(name)
 end
 
 -- The user commands: each its name, what it runs, and the options the
--- command takes (nargs, range, bang) with its description. The tables
--- first, then the rewrites (the previews, the menu of them all, the two
+-- command takes (nargs, range, bang) with its description. The tables and
+-- the derivation check first, then the rewrites (the previews, the menu of them all, the two
 -- ways to apply one), then the tutor.
 local COMMANDS = {
     { name = "TruthTable", run = cmd_truth_table, nargs = "*", range = true, desc = "Generate a truth table" },
@@ -178,6 +182,8 @@ local COMMANDS = {
     { name = "TruthTableDropColumn", run = cmd_drop_column, desc = "Drop the current truth table column" },
     { name = "TruthTableToggle", run = cmd_toggle, desc = "Toggle truth table between 0/1 and F/T" },
     { name = "TruthTableAlign", run = cmd_align, desc = "Align the derivation's justification bars in one column" },
+    { name = "TruthTableCheck", run = cmd_check,
+        desc = "Check every ≡ step of the derivation under the cursor, and show the first that fails" },
     { name = "TruthTableKarnaugh", run = cmd_karnaugh,
         desc = "Insert a Karnaugh map and minimal formula for the current column" },
     { name = "TruthTableDeMorgan", run = toggles("de_morgan"), desc = "Toggle a whole-expression De Morgan preview" },
@@ -227,6 +233,7 @@ local KEYMAPS = {
     { key = "o", command = "TruthTableXor", desc = "Rewrite: recognise ⊕ or ⇔" },
     { key = "z", command = "TruthTableSimplify", desc = "Rewrite: simplify at the cursor" },
     { key = "l", command = "TruthTableRewrites", desc = "Rewrite: list every rewrite and pick one" },
+    { key = "v", command = "TruthTableCheck", desc = "Rewrite: check the derivation" },
     { key = "a", command = "TruthTableApply", desc = "Apply: in place" },
     { key = "A", command = "TruthTableApplyStep", desc = "Apply: as a ≡ step" },
 }
