@@ -18,15 +18,15 @@ local GRAY = { { "0", "1" }, { "00", "01", "11", "10" } }
 -- distinguishes every row. The data decides, so a computed column after the
 -- variables is never an input, and a table with dropped rows still works
 -- (missing patterns become don't-cares).
-local function input_count(valid, column)
+local function input_count(tbl, column)
     if column == 1 then
-        return nil, "No input columns before " .. valid.headers[1]
+        return nil, "No input columns before " .. tbl.headers[1]
     end
     local collision
     for width = 1, column - 1 do
         local seen = {}
         collision = nil
-        for index, row in ipairs(valid.rows) do
+        for index, row in ipairs(tbl.rows) do
             local key = table.concat(row, "", 1, width)
             if seen[key] then
                 collision = { seen[key], index }
@@ -38,8 +38,8 @@ local function input_count(valid, column)
             return width
         end
     end
-    local first, second = valid.rows[collision[1]], valid.rows[collision[2]]
-    local heading = valid.headers[column]
+    local first, second = tbl.rows[collision[1]], tbl.rows[collision[2]]
+    local heading = tbl.headers[column]
     if first[column] == second[column] then
         return nil, string.format("Rows %d and %d repeat the same inputs", collision[1], collision[2])
     end
@@ -360,23 +360,19 @@ end
 --   formula     the AST rendered in the predicate language
 --   encoding    the table's "bits" or "tf"
 function M.derive(tbl, column)
-    local valid, err = model.normalize(tbl)
-    if not valid then
-        return nil, err
-    end
-    if type(column) ~= "number" or column ~= math.floor(column) or column < 1 or column > #valid.headers then
+    if type(column) ~= "number" or column ~= math.floor(column) or column < 1 or column > #tbl.headers then
         return nil, "Invalid column index: " .. tostring(column)
     end
-    local width, width_err = input_count(valid, column)
+    local width, width_err = input_count(tbl, column)
     if not width then
         return nil, width_err
     end
     local inputs = {}
     for i = 1, width do
-        inputs[i] = valid.headers[i]
+        inputs[i] = tbl.headers[i]
     end
     local values, minterms, terms = {}, {}, {}
-    for _, row in ipairs(valid.rows) do
+    for _, row in ipairs(tbl.rows) do
         local pattern = table.concat(row, "", 1, width)
         values[pattern] = row[column]
         if row[column] == 1 then
@@ -401,7 +397,7 @@ function M.derive(tbl, column)
     local ast = cover_ast(cover, inputs)
     return {
         inputs = inputs,
-        target = valid.headers[column],
+        target = tbl.headers[column],
         values = values,
         minterms = minterms,
         dont_cares = dont_cares,
@@ -409,7 +405,7 @@ function M.derive(tbl, column)
         cover = cover,
         ast = ast,
         formula = trees.heading(ast),
-        encoding = valid.encoding,
+        encoding = tbl.encoding,
     }
 end
 
@@ -441,7 +437,7 @@ function M.map_cells(analysis)
         column_names[i] = analysis.inputs[row_count + i]
     end
     local row_codes, column_codes = GRAY[row_count], GRAY[column_count]
-    local symbols = analysis.encoding == "tf" and { [0] = "F", [1] = "T" } or { [0] = "0", [1] = "1" }
+    local symbols = model.ENCODINGS[analysis.encoding]
 
     local headers = { "", "" }
     for i = 1, #column_codes do

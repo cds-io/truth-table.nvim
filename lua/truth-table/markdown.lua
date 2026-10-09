@@ -158,7 +158,7 @@ function M.parse_table_lines(lines)
         end
         rows[#rows + 1] = row
     end
-    return model.normalize({ headers = headers, rows = rows })
+    return model.parse(headers, rows)
 end
 
 -- Discovery is separate from Boolean validation: malformed data must be found
@@ -252,7 +252,7 @@ function M.replace_heading(line, index, heading)
         return nil, "Invalid column index"
     end
     headers[index] = heading
-    local valid, validation_err = model.normalize({ headers = headers, rows = {} })
+    local valid, validation_err = model.headings(headers)
     return result.map(valid, validation_err, function()
         local pipes = {}
         scan(line, function(pos)
@@ -263,11 +263,8 @@ function M.replace_heading(line, index, heading)
 end
 
 function M.format(tbl, display_width)
-    local normalized, err = model.normalize(tbl)
-    return result.map(normalized, err, function(valid)
-        local headers = fp.map(valid.headers, M.escape_heading)
-        return format_valid(headers, model.render_rows(valid), display_width or M.display_width)
-    end)
+    local headers = fp.map(tbl.headers, M.escape_heading)
+    return format_valid(headers, model.render_rows(tbl), display_width or M.display_width)
 end
 
 return M

@@ -9,8 +9,8 @@ describe("Markdown codec", function()
         -- making the round-trip assertion pass together.
         assert.are.equal("| p \\| q | path\\\\name | slash\\\\\\|pipe |", lines[1])
         assert.are.same(tbl, markdown.parse_table_lines(lines))
-        local expanded = assert(core.expand({ headers = tbl.headers, rows = { { "F", "T", "F" } } }, { "not :h1" }))
-        assert.are.same(expanded, markdown.parse_table_lines(assert(markdown.format(expanded))))
+        local expanded = assert(core.expand(tbl, { "not :h1" }))
+        assert.are.same(expanded, markdown.parse_table_lines(markdown.format(expanded)))
     end)
 
     it("does not count escaped pipes as cursor column boundaries", function()
@@ -21,25 +21,20 @@ describe("Markdown codec", function()
     end)
 
     it("injects display width without changing global defaults", function()
-        local lines = assert(markdown.format({ headers = { "界" }, rows = { { 1 } } }, function(s)
+        local lines = markdown.format({ headers = { "界" }, rows = { { 1 } }, encoding = "bits" }, function(s)
             return s == "界" and 4 or #s
-        end))
+        end)
         assert.are.same({ "| 界 |", "|:----:|", "|  1   |" }, lines)
         assert.are.equal(1, markdown.display_width("界"))
     end)
 
-    it("returns errors instead of crashing or emitting malformed tables", function()
-        for _, tbl in ipairs({
-            { headers = { "A" }, rows = { { "0", "1" } } },
-            { headers = { "A" }, rows = { { "invalid" } } },
-            { headers = { "A\nB" }, rows = {} },
-            { headers = { " A" }, rows = {} },
-            { headers = { 1 }, rows = {} },
-        }) do
-            local lines, err = markdown.format(tbl)
-            assert.is_nil(lines)
-            assert.is_string(err)
-        end
+    it("refuses a heading that cannot head a column, whether read or written", function()
+        assert.is_nil(markdown.parse_table_lines({ "| A | A |", "|---|---|", "| 0 | 1 |" }))
+        assert.is_nil(markdown.parse_table_lines({ "| A |  |", "|---|---|", "| 0 | 1 |" }))
+        assert.is_nil(markdown.replace_heading("| A | B |", 2, "A"))
+        assert.is_nil(markdown.replace_heading("| A | B |", 2, "A\nB"))
+        assert.is_nil(markdown.replace_heading("| A | B |", 3, "C"))
+        assert.are.equal("| A | C |", markdown.replace_heading("| A | B |", 2, "C"))
     end)
 end)
 

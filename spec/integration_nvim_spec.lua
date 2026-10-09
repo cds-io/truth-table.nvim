@@ -108,7 +108,7 @@ describe("the table commands", function()
     end)
 
     it("drop the column of a heading that holds an escaped pipe", function()
-        set(assert(core.format({ headers = { "p | q", "B" }, rows = { { 0, 1 } } })))
+        set(core.format({ headers = { "p | q", "B" }, rows = { { 0, 1 } }, encoding = "bits" }))
         local q = assert(buffer()[1]:find("q", 1, true))
         vim.api.nvim_win_set_cursor(0, { 1, q - 1 })
         vim.cmd("TruthTableDropColumn")

@@ -881,8 +881,11 @@ parser, the evaluator and the renderer alike.
 chain apart and put one together (`unparen`, `operands`, `fold`), the copying
 `transform`, the canonical form of a tree and its text as a heading, and the
 whole-expression De Morgan rewrite.
-- `table_model.lua` owns numeric Boolean cells, display encoding, validation, and
-immutable row/column transformations. Column appending centralizes deduplication.
+- `table_model.lua` owns numeric Boolean cells and the spelling of each encoding
+(`ENCODINGS`, the one place a cell is spelled). `parse` is the one validator,
+run by the Markdown codec on the cells it reads; the edits after it (append,
+drop, toggle) take a valid table and return one, leaving the input as it was.
+Column appending centralizes deduplication.
 - `markdown.lua` parses and renders tables. It accepts display-width measurement
 explicitly; `core.display_width` retains the existing injection API.
 - `karnaugh.lua` finds a column's input variables, minimizes it (Quine-McCluskey

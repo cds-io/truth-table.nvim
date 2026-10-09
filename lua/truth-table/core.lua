@@ -5,8 +5,10 @@
 -- truth-table.predicate, the table model in truth-table.table_model and the
 -- Markdown codec in truth-table.markdown; this module composes them into the
 -- table pipeline used by init.lua. Cells are the integers 0 and 1 throughout
--- and a table carries its encoding ("bits" or "tf") as a field; the codec is
--- the one place that spells them. The one thing that wants Neovim
+-- and a table carries its encoding ("bits" or "tf") as a field; the model's
+-- ENCODINGS is the one place that spells them. A table is validated where
+-- it comes in, the Markdown parse, or valid as built here; the operations
+-- after that trust it. The one thing that wants Neovim
 -- (display-width measurement) is injectable: M.display_width has a pure
 -- default, and setup() swaps in vim.fn.strdisplaywidth.
 
@@ -23,7 +25,7 @@ local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
--- Every fallible operation returns one table, or nil and an error.
+-- An operation that can refuse returns one table, or nil and the reason.
 M.parse = markdown.parse_table_lines
 M.find_table = markdown.find_table
 M.column_index = markdown.column_index
@@ -88,26 +90,23 @@ function M.parse_truth_table_args(args)
 end
 
 local function expand_asts(tbl, asts)
-    local normalized, err = model.normalize(tbl)
-    return result.bind(normalized, err, function(valid)
-        local indices = {}
-        for i, heading in ipairs(valid.headers) do
-            indices[heading] = i
-        end
-        local columns, column_err = result.traverse(asts, function(ast)
-            local bound, bind_err = predicate.bind_columns(ast, indices, valid.headers)
-            return result.map(bound, bind_err, function(expression)
-                return {
-                    heading = trees.heading(expression),
-                    values = fp.map(valid.rows, function(row)
-                        return predicate.eval_ast(expression, row)
-                    end),
-                }
-            end)
+    local indices = {}
+    for i, heading in ipairs(tbl.headers) do
+        indices[heading] = i
+    end
+    local columns, column_err = result.traverse(asts, function(ast)
+        local bound, bind_err = predicate.bind_columns(ast, indices, tbl.headers)
+        return result.map(bound, bind_err, function(expression)
+            return {
+                heading = trees.heading(expression),
+                values = fp.map(tbl.rows, function(row)
+                    return predicate.eval_ast(expression, row)
+                end),
+            }
         end)
-        return result.bind(columns, column_err, function(computed)
-            return model.append_columns(valid, computed)
-        end)
+    end)
+    return result.map(columns, column_err, function(computed)
+        return model.append_columns(tbl, computed)
     end)
 end
 
@@ -156,7 +155,7 @@ local function table_from_expressions(input)
         return nil, "Too many variables (max 10)"
     end
 
-    return expand_asts({ headers = vars, rows = model.generate_rows(#vars) }, compound)
+    return expand_asts({ headers = vars, rows = model.generate_rows(#vars), encoding = "bits" }, compound)
 end
 
 -- The :TruthTable argument spelled out over several lines (a visual selection):

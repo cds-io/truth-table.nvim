@@ -1,6 +1,17 @@
 truth-table.nvim changes
 ========================
 
+- table_model.lua: `ENCODINGS` spells the cells of each encoding, the one
+  place they are spelled: `parse` reads them, render_rows and the Karnaugh
+  map write them. `parse(headers, rows)` is the one validator, run by the
+  Markdown codec on the cells it reads, and `headings` is its check on the
+  headings alone, which replace_heading runs on a renamed one. The edits
+  after it (append_columns, drop_row, drop_column, toggle) take a valid
+  table and return one, leaving the input as it was; a table core builds
+  carries its encoding from the start. append_columns, toggle and
+  markdown.format always answer.
+- trees.lua: the glue between two operands, and the set of every glue text
+  that joins two lit regions, come from the operator table.
 - rewrite.lua: a rewrite's `change` record carries `text`, the text of
   `after`, which preview.lua and `moves` read. Inside the module every
   rewrite drafts what it finds as `{ tree, law, consumed, produced }`, each
