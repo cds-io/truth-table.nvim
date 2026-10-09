@@ -10,6 +10,7 @@
 local check = require("truth-table.check")
 local core = require("truth-table.core")
 local derivation = require("truth-table.derivation")
+local fp = require("truth-table.fp")
 local markdown = require("truth-table.markdown")
 local marks = require("truth-table.marks")
 local model = require("truth-table.table_model")
@@ -69,11 +70,10 @@ local function proof(verdict)
 end
 
 local function column_of(tbl, heading)
-    for index, header in ipairs(tbl.headers) do
-        if header == heading then
-            return index
-        end
-    end
+    local _, index = fp.find(tbl.headers, function(header)
+        return header == heading
+    end)
+    return index
 end
 
 -- The row of `tbl` (from one) on which the failing step's two columns
@@ -81,10 +81,11 @@ end
 local function breaking_row(tbl, verdict)
     local premise = column_of(tbl, verdict.texts[verdict.step])
     local conclusion = column_of(tbl, verdict.texts[verdict.step + 1])
-    for index, row in ipairs(tbl.rows) do
-        if row[premise] ~= row[conclusion] then
-            return index, conclusion
-        end
+    local _, index = fp.find(tbl.rows, function(row)
+        return row[premise] ~= row[conclusion]
+    end)
+    if index then
+        return index, conclusion
     end
 end
 

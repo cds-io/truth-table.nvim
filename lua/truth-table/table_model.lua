@@ -114,16 +114,17 @@ end
 -- the table has already is skipped, so an expansion asked for twice adds
 -- nothing.
 function M.append_columns(tbl, columns)
-    local headers, seen, appended = {}, {}, {}
-    for i, header in ipairs(tbl.headers) do
-        headers[i], seen[header] = header, true
-    end
-    for _, column in ipairs(columns) do
-        if not seen[column.heading] then
-            seen[column.heading] = true
-            headers[#headers + 1] = column.heading
-            appended[#appended + 1] = column
-        end
+    local present = fp.set(tbl.headers)
+    local appended = fp.unique(fp.filter(columns, function(column)
+        return not present[column.heading]
+    end), function(column)
+        return column.heading
+    end)
+    local headers = fp.map(tbl.headers, function(header)
+        return header
+    end)
+    for _, column in ipairs(appended) do
+        headers[#headers + 1] = column.heading
     end
     local rows = fp.map(tbl.rows, function(row, index)
         local extended = {}

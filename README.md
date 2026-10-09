@@ -961,11 +961,14 @@ budget, greedy beyond it) and renders the map and the formula.
 for a step that can refuse, `map` for one that cannot, and `context` to say
 where an error was met.
 Only `nil` means failure; zero and false remain successful values.
-- `fp.lua` is `map`, `filter` and `reduce` over lists, for the pure modules:
-plain Lua 5.1 has none of the three, and `vim.iter` needs the editor. Map and
-filter return fresh arrays; reduce returns the final accumulator. Each takes
-its function last; `map` refuses a `nil` result,
-which would leave a hole that `ipairs` stops at.
+- `fp.lua` is the list vocabulary: `map`, `filter`, `reduce`, `find`, `any`,
+`all`, `set` and `unique`. Plain Lua 5.1 has none of them and `vim.iter` needs
+the editor, so the pure modules and the editor ones share these. Map, filter
+and unique return fresh lists, set a fresh table of key to true, reduce the
+final accumulator, find the first item a test accepts with its index, any and
+all a boolean. Each takes its function last; `map` refuses a `nil` result,
+which would leave a hole that `ipairs` stops at, and `set` and `unique` refuse
+a `nil` key, naming the item.
 - `text.lua` is `trim`, the one string helper the pure modules share.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
