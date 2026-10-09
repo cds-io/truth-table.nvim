@@ -132,6 +132,35 @@ recognise `⊕`, and you are back at `(T ⊕ E) ∧ R`.
         },
         {
             text = [[
+The map read the sum of products off the column. The same form can be
+reached by rewriting instead, with no table: unfold the `⊕`, push each `¬`
+onto a variable, distribute `∧` over `∨`, and drop what collapses. That is a
+*disjunctive normal form* (an `or` of `and` terms of variables and negated
+variables), and `:TruthTableDNF` writes it in one step. With the cursor
+anywhere on the line, preview it and apply it as a step (`<leader>ttA`).
+`:TruthTableCNF` gives the dual, an `and` of `or` clauses.
+]],
+            template = [[
+(T xor E) and R
+]],
+            expect = [[
+(T xor E) and R
+≡ (T ∧ ¬E ∧ R) ∨ (¬T ∧ E ∧ R)    | by disjunctive normal form
+]],
+            note = [[
+The same two terms as the map found, in the order the unfolding met them.
+The two routes do not always agree: the rewrite keeps a term that two others
+cover (the consensus law from the lesson on the arithmetic spelling), and the
+map leaves it out, since a map looks for the fewest groups. When they differ,
+the map's answer is the shorter one, and `:TruthTableSimplify` on the
+rewrite's answer finds the term to drop.
+]],
+            solution = {
+                { on = "(T xor E) and R", run = { "TruthTableDNF", "TruthTableApplyStep" } },
+            },
+        },
+        {
+            text = [[
 Rows can be missing, and that is useful. Suppose a door only ever reports
 "open" when its key is present, so the state "no key, door open" never occurs.
 

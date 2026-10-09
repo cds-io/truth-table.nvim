@@ -274,6 +274,29 @@ lists or blockquotes are not supported.
     the one nearest the cursor. The law is named "definition of" the
     connective, as the recognition names it.
 
+                                                              *:TruthTableDNF*
+                                                              *:TruthTableCNF*
+:TruthTableDNF
+:TruthTableCNF
+    Toggle a preview of the whole expression, wherever the cursor is, in
+    disjunctive normal form (an ∨ of ∧ terms of literals, a literal being a
+    variable or its negation) or in conjunctive normal form (an ∧ of ∨
+    clauses): >
+
+        (a ∨ b) ∧ (¬a ∨ c)   ⇒   (a ∧ c) ∨ (b ∧ ¬a) ∨ (b ∧ c)      DNF
+        (a ∧ b) ∨ (¬a ∧ c)   ⇒   (a ∨ c) ∧ (b ∨ ¬a) ∧ (b ∨ c)      CNF
+        a ⇔ b                ⇒   (a ∧ b) ∨ (¬a ∧ ¬b)               DNF
+<
+    Three passes: →, ⊕ and ⇔ unfolded and every ¬ pushed onto a variable;
+    the chains distributed; the terms tidied. Tidying keeps the result a
+    normal form and no more: a term holding a literal and its negation goes,
+    a repeated literal or term collapses, a term whose literals include
+    another's goes, and constants fold. Terms come in the order distribution
+    meets them. Minimising past that is |:TruthTableKarnaugh|'s job, so
+    a ∨ ¬a stays as it is in a DNF. An expression already in the form is
+    refused, as is one whose form would pass 256 terms before tidying. The
+    law is named "disjunctive normal form" or "conjunctive normal form".
+
                                                           *:TruthTableCommute*
 :TruthTableCommute[!]
     Toggle a preview that swaps the operand under the cursor with the operand
@@ -412,8 +435,9 @@ and `distributivity (distributing)` (the one law used from either side: one
 moves a shared operand out of its terms, the other moves an operand into a
 group; the side is named so that a step says which command wrote it),
 `commutativity`,
-`De Morgan`, and `definition of →`, `definition of ⊕` or `definition of ⇔`
-(the definition read in either direction). On an expression
+`De Morgan`, `definition of →`, `definition of ⊕` or `definition of ⇔`
+(the definition read in either direction), and `disjunctive normal form` or
+`conjunctive normal form`. On an expression
 line everything from the first | on is a remark: a rewrite reads the
 expression before it, and a cursor in the remark means the line's last side.
 
@@ -798,6 +822,8 @@ All pure modules support Lua 5.1 and have no vim dependency:
   find the first item a test accepts with its index, any and all a
   boolean. Each takes its function last.
 - text.lua is trim, the one string helper the pure modules share.
+- normal.lua is the two normal forms of a tree: unfolded, negations pushed
+  to the atoms, distributed as lists of terms, tidied, and rendered back.
 - rewrite.lua finds the chain operand under a cursor byte and factors,
   distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, applies
   De Morgan at the nearest match, and applies the nearest collapsing law,

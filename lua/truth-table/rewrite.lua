@@ -17,6 +17,7 @@ local trees = require("truth-table.trees")
 local operators = require("truth-table.operators")
 local SYMBOLS = require("truth-table.symbols")
 local fp = require("truth-table.fp")
+local normal = require("truth-table.normal")
 local M = {}
 
 -- A chain is a maximal run of one of these operators, read as a flat operand
@@ -525,33 +526,22 @@ M.de_morgan = operation(de_morgan)
 -- rewrite read the other way.
 -- ---------------------------------------------------------------------------
 
-local UNFOLDS = {
-    implies = function(a, b)
-        return trees.binary("or", trees.negation(a), b)
-    end,
-    iff = function(a, b)
-        return trees.binary("or", trees.binary("and", a, b), trees.binary("and", trees.negation(a), trees.negation(b)))
-    end,
-    xor = function(a, b)
-        return trees.binary("or", trees.binary("and", a, trees.negation(b)), trees.binary("and", trees.negation(a), b))
-    end,
-}
-
 -- The draft unfolding path[index] of `ast`, or nil when it is no →, ⊕ or ⇔.
 -- A connective in parentheses is taken with them, so the consumed term is
 -- the parenthesised one: the node whose parent is a parenthesis waits for
 -- that parent's turn.
 local function unfold_at(ast, path, index)
     local node = path[index]
-    local make = UNFOLDS[unparen(node).type]
-    if not make or (path[index - 1] and path[index - 1].type == "paren") then
+    if path[index - 1] and path[index - 1].type == "paren" then
         return nil
     end
-    local inner = unparen(node)
-    local rewritten = make(inner.left, inner.right)
+    local rewritten = trees.unfold(node)
+    if not rewritten then
+        return nil
+    end
     return {
         tree = substitute(ast, node, rewritten),
-        law = "definition of " .. operators.SYMBOLS[inner.type],
+        law = "definition of " .. operators.SYMBOLS[unparen(node).type],
         consumed = { node },
         produced = { rewritten },
     }
@@ -579,6 +569,44 @@ local function unfold(ast, byte)
 end
 
 M.unfold = operation(unfold)
+
+-- ---------------------------------------------------------------------------
+-- Normal forms: the whole expression as a DNF or a CNF in one step, the
+-- forms themselves from normal.lua.
+-- ---------------------------------------------------------------------------
+
+local FORMS = {
+    dnf = { build = normal.dnf, law = "disjunctive normal form" },
+    cnf = { build = normal.cnf, law = "conjunctive normal form" },
+}
+
+-- The draft of `ast` in the form `name`, or nil and the reason: the
+-- expression is in the form already (its canonical text is the form's), or
+-- the form is past the cap. The cursor plays no part.
+local function form_draft(ast, name)
+    local which = FORMS[name]
+    local built, err = which.build(ast)
+    if not built then
+        return nil, err
+    end
+    if trees.heading(built) == trees.heading(ast) then
+        return nil, "Already in " .. which.law
+    end
+    return { tree = built, law = which.law, consumed = { ast }, produced = { built } }
+end
+
+local function normal_form(name)
+    return function(ast)
+        local draft, err = form_draft(ast, name)
+        if not draft then
+            return {}, err
+        end
+        return { draft }
+    end
+end
+
+M.dnf = operation(normal_form("dnf"))
+M.cnf = operation(normal_form("cnf"))
 
 -- ---------------------------------------------------------------------------
 -- Simplify: the laws that shrink an expression. Each takes the operands of
@@ -956,11 +984,10 @@ M.simplify = operation(simplify)
 -- what all of them give from every position.
 -- ---------------------------------------------------------------------------
 
--- The operand rewrites, in the order their results are listed.
-local OPERAND_REWRITES = {
-    xor_at,
-    factor_at,
-    distribute_at,
+-- The operand rewrites, in the order their results are listed; the swaps
+-- come after the normal forms.
+local OPERAND_REWRITES = { xor_at, factor_at, distribute_at }
+local SWAPS = {
     commute_at,
     function(path, index)
         return commute_at(path, index, true)
@@ -970,8 +997,8 @@ local OPERAND_REWRITES = {
 -- Every rewrite the expression allows, as { law, rewritten, text }: one
 -- entry per distinct result, `rewritten` its { value, change }. The laws that shrink
 -- the expression come first, then De Morgan, the unfolding of →, ⊕ and ⇔, the
--- recognition of ⊕ and ⇔, factoring, distributing and, the most numerous,
--- the swaps. The shrinking laws go
+-- recognition of ⊕ and ⇔, factoring, distributing, the two normal forms
+-- and, the most numerous, the swaps. The shrinking laws go
 -- innermost site first, as simplify tries them, and the rest outermost
 -- first; all of them left to right. A result reached twice keeps its first
 -- law, and one that reads the same as the expression is left out.
@@ -1018,13 +1045,25 @@ function M.moves(ast)
         end
     end
 
-    for _, rewrite_at in ipairs(OPERAND_REWRITES) do
-        for _, path in ipairs(operand_paths) do
-            for _, draft in ipairs((rewrite_at(path, #path))) do
-                add(draft)
+    local function operand_rewrites(list)
+        for _, rewrite_at in ipairs(list) do
+            for _, path in ipairs(operand_paths) do
+                for _, draft in ipairs((rewrite_at(path, #path))) do
+                    add(draft)
+                end
             end
         end
     end
+    operand_rewrites(OPERAND_REWRITES)
+
+    for _, name in ipairs({ "dnf", "cnf" }) do
+        local draft = form_draft(ast, name)
+        if draft then
+            add(draft)
+        end
+    end
+
+    operand_rewrites(SWAPS)
     return found
 end
 

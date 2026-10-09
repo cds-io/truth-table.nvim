@@ -138,6 +138,8 @@ Start with small expressions.
 | `:TruthTableDistribute` | Toggle a preview that distributes the operand under the cursor into the group beside it |
 | `:TruthTableXor` | Toggle a preview that recognises an exclusive or (or an equivalence) spelled out as the two terms under the cursor |
 | `:TruthTableUnfold` | Toggle a preview that replaces the `→`, `⊕` or `⇔` nearest the cursor by its definition in `∧`, `∨` and `¬` |
+| `:TruthTableDNF` | Toggle a preview of the whole expression in disjunctive normal form: an `∨` of `∧` terms of literals, tidied |
+| `:TruthTableCNF` | Toggle a preview of the whole expression in conjunctive normal form: an `∧` of `∨` clauses of literals, tidied |
 | `:TruthTableCommute[!]` | Toggle a preview that swaps the operand under the cursor with the next one (`!`: the previous one) |
 | `:TruthTableSimplify` | Toggle a preview that applies the collapsing law nearest the cursor (complement, identity, domination, idempotence, absorption, reduction, consensus) |
 | `:TruthTableApply` | Apply the pending preview in place (`:TruthTableDeMorganApply` is an alias) |
@@ -307,6 +309,18 @@ applies:
 | `:TruthTableCommute` | any operand | `S ∨ (¬C ∧ (A ∨ G))` ⇒ `(¬C ∧ (A ∨ G)) ∨ S` |
 | `:TruthTableXor` | either of two complementary terms | `R ∧ ((¬T ∧ E) ∨ (T ∧ ¬E))` ⇒ `R ∧ (T ⊕ E)` |
 | `:TruthTableUnfold` | the connective, or inside the pair it joins | `R ∧ (T → E)` ⇒ `R ∧ (¬T ∨ E)`, `a ⇔ b` ⇒ `(a ∧ b) ∨ (¬a ∧ ¬b)`, `a ⊕ b` ⇒ `(a ∧ ¬b) ∨ (¬a ∧ b)` |
+| `:TruthTableDNF` | anywhere | `(a ∨ b) ∧ (¬a ∨ c)` ⇒ `(a ∧ c) ∨ (b ∧ ¬a) ∨ (b ∧ c)`, `a ⇔ b` ⇒ `(a ∧ b) ∨ (¬a ∧ ¬b)` |
+| `:TruthTableCNF` | anywhere | `(a ∧ b) ∨ (¬a ∧ c)` ⇒ `(a ∨ c) ∧ (b ∨ ¬a) ∧ (b ∨ c)`, `a → b` ⇒ `¬a ∨ b` |
+
+A normal form is reached in three passes: `→`, `⊕` and `⇔` unfolded and
+every `¬` pushed onto a variable, the chains distributed, and the terms
+tidied. Tidying keeps the result a normal form and no more: a term holding a
+literal and its negation goes, a repeated literal or term collapses, a term
+whose literals include another's goes (absorption), and constants fold. Terms
+come in the order distribution meets them, so the form reads against its
+source. Minimising past that (reduction, consensus) is `:TruthTableKarnaugh`'s
+job, so `a ∨ ¬a` stays as it is in a DNF. Distributing doubles the terms per
+clause crossed, so a form of more than 256 terms before tidying is refused.
 | `:TruthTableSimplify` | anywhere; the nearest match wins | `(A ∧ B) ∨ (¬A ∧ B)` ⇒ `B` |
 
 So, which operand does the cursor pick? A run of one operator out of `∧`, `∨`,
@@ -423,8 +437,9 @@ above to this one. The laws are named as in the table above, plus
 moves a shared operand out of its terms and distributing moves one into a
 group: the one law, used from either side, with the side named so that a step
 says which command wrote it), `commutativity`,
-`De Morgan`, and `definition of →`, `⊕` or `⇔` (a definition read in either
-direction). The bar sits four columns clear of
+`De Morgan`, `definition of →`, `⊕` or `⇔` (a definition read in either
+direction), and `disjunctive normal form` or `conjunctive normal form`. The
+bar sits four columns clear of
 the wider of the two lines, or under the bar of the line above when that is
 further right, so the justifications of a
 derivation form a column. Everything from the first `|` of an expression line
@@ -974,6 +989,8 @@ all a boolean. Each takes its function last; `map` refuses a `nil` result,
 which would leave a hole that `ipairs` stops at, and `set` and `unique` refuse
 a `nil` key, naming the item.
 - `text.lua` is `trim`, the one string helper the pure modules share.
+- `normal.lua` is the two normal forms of a tree: unfolded, negations pushed
+to the atoms, distributed as lists of terms, tidied, and rendered back.
 - `rewrite.lua` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law

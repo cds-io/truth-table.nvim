@@ -1,6 +1,17 @@
 truth-table.nvim changes
 ========================
 
+- :TruthTableDNF and :TruthTableCNF preview the whole expression in
+  disjunctive or conjunctive normal form, in one step named "disjunctive
+  normal form" or "conjunctive normal form": →, ⊕ and ⇔ unfolded, every
+  ¬ pushed onto a variable, the chains distributed, the terms tidied (a
+  term holding a literal and its negation goes, repeats collapse, an
+  absorbed term goes, constants fold), in the order distribution meets
+  them. An expression already in the form is refused, as is one whose
+  form would pass 256 terms. :TruthTableRewrites lists both before the
+  swaps. normal.lua holds the forms; trees.unfold holds the definitions
+  of →, ⊕ and ⇔ that the unfold rewrite and the forms share. The tutor's
+  Karnaugh lesson reaches the sum of products by rewriting as well.
 - :TruthTableUnfold (<leader>ttu) previews a connective replaced by its
   definition in ∧, ∨ and ¬: a → b ⇒ ¬a ∨ b, a ⇔ b ⇒ (a ∧ b) ∨ (¬a ∧ ¬b),
   a ⊕ b ⇒ (a ∧ ¬b) ∨ (¬a ∧ b), the nearest such connective enclosing the
