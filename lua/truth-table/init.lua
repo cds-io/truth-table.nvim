@@ -233,6 +233,8 @@ local COMMANDS = {
         desc = "Are these expressions (separated by | or ,; or the selected lines) all equivalent? Name the first pair that differs (! inserts the proof table below)" },
     { name = "TruthTableKarnaugh", run = cmd_karnaugh,
         desc = "Insert a Karnaugh map and minimal formula for the current column" },
+    { name = "TruthTableEquivalents", run = function() require("truth-table.equivalence").toggle() end,
+        desc = "Toggle the live ≡/≢ column equivalence marks, everywhere (on by default)" },
     { name = "TruthTableDeMorgan", run = toggles("de_morgan"), desc = "Toggle a whole-expression De Morgan preview" },
     { name = "TruthTableFactor", run = toggles("factor"),
         desc = "Toggle a preview factoring the operand under the cursor out of its terms" },
@@ -277,6 +279,8 @@ local KEYMAPS = {
     { family = "table", key = "k", command = "TruthTableKarnaugh", desc = "Karnaugh map for column", when = "table" },
     { family = "table", key = "r", command = "TruthTableDropRow", desc = "Drop row", when = "table" },
     { family = "table", key = "c", command = "TruthTableDropColumn", desc = "Drop column", when = "table" },
+    { family = "table", key = "=", command = "TruthTableEquivalents", desc = "Mark equivalent columns",
+        when = "table" },
     { family = "rewrite", key = "d", command = "TruthTableDeMorgan", desc = "De Morgan", when = "expression" },
     { family = "rewrite", key = "f", command = "TruthTableFactor", desc = "Factor operand out", when = "expression" },
     { family = "rewrite", key = "x", command = "TruthTableDistribute", desc = "Distribute operand in",
@@ -350,17 +354,22 @@ local function legal_leaves(family)
 end
 
 -- The groups a rewrite is lit with, the terms it consumed and the result it
--- produced, as defaults the reader may define over. A colorscheme clears
--- them, so they are defined again after one.
+-- produced, and the ≡/≢ marks the equivalence toggle paints, as defaults
+-- the reader may define over. A colorscheme clears them, so they are
+-- defined again after one.
 local function highlights()
     vim.api.nvim_set_hl(0, "TruthTableChanged", { default = true, link = "DiagnosticOk" })
     vim.api.nvim_set_hl(0, "TruthTableConsumed", { default = true, link = "DiagnosticWarn" })
+    vim.api.nvim_set_hl(0, "TruthTableEquivalent", { default = true, link = "DiagnosticInfo" })
+    vim.api.nvim_set_hl(0, "TruthTableInequivalent", { default = true, link = "Comment" })
 end
 
 -- Register commands, keymaps, insert-mode abbreviations, and (if present)
 -- which-key labels. Also injects vim.fn.strdisplaywidth so column widths are
--- terminal-accurate. Idempotent: the last call wins, including for the
--- abbreviations. Automatic loading preserves an earlier explicit setup call.
+-- terminal-accurate, and states the equivalence-mark switch (on unless
+-- opts.equivalence == false). Idempotent: the last call wins, including for
+-- the abbreviations. Automatic loading preserves an earlier explicit setup
+-- call.
 function M.setup(opts)
     if opts ~= nil and type(opts) ~= "table" then
         error("truth-table setup options must be a table", 0)
@@ -368,6 +377,7 @@ function M.setup(opts)
     opts = opts or {}
     core.display_width = vim.fn.strdisplaywidth
     require("truth-table.abbreviations").register(opts.abbreviations)
+    require("truth-table.equivalence").set(opts.equivalence ~= false)
     highlights()
     local group = vim.api.nvim_create_augroup("truth_table", { clear = true })
     vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = highlights })

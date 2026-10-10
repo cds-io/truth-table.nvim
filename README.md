@@ -152,6 +152,7 @@ Start with small expressions.
 | `:TruthTableDropRow` | Drop the row under the cursor (`.` runs it again, on the row then under the cursor) |
 | `:TruthTableDropColumn` | Drop the column under the cursor (`.` runs it again, on the column then under the cursor) |
 | `:TruthTableKarnaugh` | Insert, below the table, a Karnaugh map and a simplified sum-of-products formula for the column under the cursor |
+| `:TruthTableEquivalents` | Toggle the live equivalence marks, everywhere (on by default): a virtual line under the separator, following the cursor, `≡` under the columns equivalent to the one at the cursor and `≢` under the rest |
 | `:TruthTableTutor[!] [lesson]` | Open the tutorial at your place: a lesson pane beside a scratch pane, in a new tab (`!` starts over, a number jumps to that lesson) |
 | `:TruthTableTutorNext` | Go to the tutorial's next step (`]]` inside the tutor) |
 | `:TruthTableTutorPrev` | Go to the tutorial's previous step (`[[` inside the tutor) |
@@ -771,6 +772,7 @@ with at least one `≡` step, or a pending rewrite preview.
 | `<leader>Tr` | table | drop row (`.` repeats) |
 | `<leader>Tc` | table | drop column (`.` repeats) |
 | `<leader>Tk` | table | Karnaugh map and formula for the column |
+| `<leader>T=` | table | toggle the global `≡`/`≢` equivalence marks (on by default) |
 | `<leader>ld` | expression | toggle De Morgan preview |
 | `<leader>lf` | expression | toggle factor preview (the operand moves out of its terms) |
 | `<leader>lx` | expression | toggle distribute preview (the operand moves into the group) |
@@ -839,6 +841,11 @@ the constants `1` and `0`. The quantifiers, `≡` and `≢` are typing aids, out
 predicate language.
 
 ## Customization
+
+`setup()` takes two options: `abbreviations` below, and `equivalence`, the
+global `≡`/`≢` column-mark switch (`:TruthTableEquivalents`), on unless you
+pass `equivalence = false`. The command toggles the same switch, so the
+option is the state each `setup()` call starts from.
 
 Configure abbreviations through `setup()`. With lazy.nvim, specify the module
 explicitly and pass options:

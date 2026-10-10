@@ -41,6 +41,7 @@ describe("the plugin entry point", function()
             "TruthTableDropRow",
             "TruthTableDropColumn",
             "TruthTableKarnaugh",
+            "TruthTableEquivalents",
             "TruthTableDeMorgan",
             "TruthTableDeMorganApply",
             "TruthTableFactor",
@@ -63,6 +64,7 @@ describe("the plugin entry point", function()
             k = "TruthTableKarnaugh",
             r = "TruthTableDropRow",
             c = "TruthTableDropColumn",
+            ["="] = "TruthTableEquivalents",
         }) do
             assert.are.equal("<Cmd>" .. command .. "<CR>", vim.fn.maparg("<leader>T" .. key, "n"), key)
         end
