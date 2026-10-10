@@ -1,6 +1,24 @@
 truth-table.nvim changes
 ========================
 
+- Live equivalence marks, on by default: a virtual line under the
+  separator of the table at the cursor, with ≡ centred below each column
+  whose cells match the cursor column's on every row, the cursor's own
+  among them, and ≢ below the rest, so the line keeps its height while
+  the cursor crosses columns. :TruthTableEquivalents (<leader>T=) toggles
+  the one global switch and setup({ equivalence = false }) starts it off.
+  While on, the marks follow the cursor (CursorMoved, TextChanged,
+  InsertLeave, BufEnter; BufLeave clears, so only the cursor's buffer is
+  marked) and show nothing where there is no table, the table is
+  mid-edit, or it has no data rows; the buffer itself never changes, and
+  a move outside a table costs one line read and one match. ≡ is painted
+  in TruthTableEquivalent (a default link to DiagnosticInfo) and ≢ in
+  TruthTableInequivalent (a default link to Comment). The class is
+  table_model.equivalent_columns, the geometry markdown.column_centres
+  (each cell's centre, where the formatter puts a one-wide value), and
+  the editor glue truth-table.equivalence; the help example is replayed,
+  with the help spec's shown() rendering the mark line below the line its
+  extmark sits on, each replay starting from the switch off.
 - stylua formats lua/ and spec/, with stylua.toml matched to the house
   style (4-space indent, double quotes, width 120, calls always
   parenthesised). The packed data tables keep their hand layout behind

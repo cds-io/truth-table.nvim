@@ -699,6 +699,40 @@ nothing at the cursor says so and leaves the pending preview as it was.
         |  1  |  1  |  0  |      0      |
         |  1  |  1  |  1  |      1      |
 <
+                                                      *:TruthTableEquivalents*
+:TruthTableEquivalents
+    Toggle the live equivalence marks, everywhere: a virtual line under
+    the separator of the table at the cursor, with ≡ centred below each
+    column whose cells match the cursor column's on every row, the
+    cursor's own among them, and ≢ below the rest, so the line keeps its
+    height while the cursor crosses columns. The switch is global and on
+    by default; `setup({ equivalence = false })` starts it off (see
+    |truth-table.setup()|). While on, the marks follow the cursor, sit
+    only in the current buffer, and show nothing where there is no table,
+    the table is mid-edit, or it has no data rows. The line is virtual
+    text, ≡ in TruthTableEquivalent (a default link to DiagnosticInfo) and
+    ≢ in TruthTableInequivalent (a default link to Comment); the buffer
+    itself never changes. From the marks switched off, the cursor anywhere
+    in the column: >
+
+        :TruthTableEquivalents
+        |  p  |  q  | p → q | ¬p ∨ q |
+        |:---:|:---:|:-----:|:------:|
+        |  0  |  0  |   1   |   1    |
+                     ^^^^^^^
+        |  0  |  1  |   1   |   1    |
+        |  1  |  0  |   0   |   0    |
+        |  1  |  1  |   1   |   1    |
+
+        |  p  |  q  | p → q | ¬p ∨ q |
+        |:---:|:---:|:-----:|:------:|
+           ≢     ≢      ≡       ≡
+        |  0  |  0  |   1   |   1    |
+        |  0  |  1  |   1   |   1    |
+        |  1  |  0  |   0   |   0    |
+        |  1  |  1  |   1   |   1    |
+        » Equivalence marks on
+<
                                                          *:TruthTableKarnaugh*
 :TruthTableKarnaugh
     Insert, below the table, a Karnaugh map of the column under the cursor and
@@ -977,12 +1011,17 @@ require("truth-table").setup({opts})
     yourself to pass {opts}, or if you load the module manually. It is
     idempotent: the last call wins.
 
-    {opts} is a table with one recognised key:
+    {opts} is a table with two recognised keys:
 
     abbreviations
         The insert-mode abbreviations to register. See
         |truth-table-abbreviations| for the default set and the shapes this
         option accepts.
+
+    equivalence
+        The live ≡/≢ column marks (|:TruthTableEquivalents|): on unless
+        this is `false`. The command toggles the same global switch, so
+        the option is the state each setup() call starts from.
 
 The commands and mappings have no options. To customize keys, remove unwanted
 mappings after setup() and add replacements, for example: >

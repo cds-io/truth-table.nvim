@@ -4,7 +4,8 @@
 -- first, then the before, with a line of ^ runs under the line the cursor
 -- sits on marking every range it may be in, a blank line, and the after:
 -- the buffer as it reads afterwards, a pending preview's virtual text at
--- the end of its line, and a final `» message` line for what is notified.
+-- the end of its line, the equivalence toggle's mark line below its own,
+-- and a final `» message` line for what is notified.
 -- Each range is tried at both ends. Runs inside Neovim (make test-nvim).
 vim.opt.rtp:append(vim.fn.getcwd())
 require("truth-table").setup()
@@ -107,7 +108,9 @@ local function examples()
 end
 
 -- The buffer as the help shows it: its lines, with a pending preview's
--- virtual text at the end of the line it belongs to.
+-- virtual text at the end of the line it belongs to, and the equivalence
+-- toggle's mark line below the line its extmark sits on. The equivalence
+-- namespace exists once the toggle has run, so it is looked up per call.
 local function shown()
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local mark = vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })[1]
@@ -118,6 +121,20 @@ local function shown()
         end
         lines[mark[2] + 1] = lines[mark[2] + 1] .. table.concat(parts)
     end
+    local equivalence = vim.api.nvim_get_namespaces()["truth-table.equivalence"]
+    if equivalence then
+        local marks = vim.api.nvim_buf_get_extmarks(0, equivalence, 0, -1, { details = true })
+        for i = #marks, 1, -1 do
+            local below = marks[i]
+            for j = #below[4].virt_lines, 1, -1 do
+                local parts = {}
+                for _, chunk in ipairs(below[4].virt_lines[j]) do
+                    parts[#parts + 1] = chunk[1]
+                end
+                table.insert(lines, below[2] + 2, table.concat(parts))
+            end
+        end
+    end
     return lines
 end
 
@@ -127,6 +144,12 @@ vim.notify = function(message)
 end
 
 local function replay(example, column)
+    -- The equivalence switch is global and on by default, and a toggle in
+    -- one replay would carry into the next; every example starts from
+    -- off, so the toggle example enables the marks and no other example
+    -- paints them. (Autocmds do not fire here anyway: the marks an
+    -- example shows come from the command's own refresh.)
+    require("truth-table.equivalence").set(false)
     vim.cmd("enew!")
     notified = nil
     vim.api.nvim_buf_set_lines(0, 0, -1, false, example.before)

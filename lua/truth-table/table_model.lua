@@ -142,6 +142,26 @@ function M.append_columns(tbl, columns)
     return { headers = headers, rows = rows, encoding = tbl.encoding }
 end
 
+-- The indices of the columns that match column `index` cell for cell on
+-- every row, in order, the column itself among them. A table with no data
+-- rows matches every column, vacuously; the caller decides what that is
+-- worth showing.
+function M.equivalent_columns(tbl, index)
+    if not valid_index(index, #tbl.headers) then
+        return nil, "Invalid column index: " .. tostring(index)
+    end
+    local class = {}
+    for column = 1, #tbl.headers do
+        local agrees = fp.all(tbl.rows, function(row)
+            return row[column] == row[index]
+        end)
+        if agrees then
+            class[#class + 1] = column
+        end
+    end
+    return class
+end
+
 function M.drop_row(tbl, index)
     if not valid_index(index, #tbl.rows) then
         return nil, "Invalid data row index: " .. tostring(index)

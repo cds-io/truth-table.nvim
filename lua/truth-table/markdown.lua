@@ -248,6 +248,22 @@ function M.heading_cell(line, index)
     return first, first + #content - 1
 end
 
+-- The display column where each cell of `line` centres a one-wide value:
+-- the centre of the span between the cell's pipes, the same arithmetic
+-- the formatter pads with, so a mark at it lands under the column's 0s
+-- and 1s. One entry per cell, from zero.
+function M.column_centres(line, display_width)
+    local width = display_width or M.display_width
+    local at = pipes(line)
+    local centres = {}
+    for index = 1, #at - 1 do
+        local start = width(line:sub(1, at[index]))
+        local cell = width(line:sub(at[index] + 1, at[index + 1] - 1))
+        centres[index] = start + math.floor(math.max(cell - 1, 0) / 2)
+    end
+    return centres
+end
+
 function M.escape_heading(header)
     return (header:gsub("\\", "\\\\"):gsub("|", "\\|"):gsub("`", "\\`"))
 end

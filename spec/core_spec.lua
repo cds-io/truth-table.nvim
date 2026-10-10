@@ -377,8 +377,28 @@ describe("pure model edits", function()
         for _, index in ipairs({ 0, -1, 3, 1.5, "1" }) do
             assert.is_nil(model.drop_row(tbl, index))
             assert.is_nil(model.drop_column(tbl, index))
+            assert.is_nil(model.equivalent_columns(tbl, index))
         end
         assert.is_nil(model.drop_column({ headers = { "A" }, rows = {}, encoding = "bits" }, 1))
+    end)
+
+    it("reads a column's equivalence class off the rows, the column among them", function()
+        -- A, A → B and ¬A ∨ B over two variables: the two spellings of the
+        -- implication agree on every row, A matches neither.
+        local tbl = {
+            headers = { "A", "B", "A → B", "¬A ∨ B" },
+            rows = { { 0, 0, 1, 1 }, { 0, 1, 1, 1 }, { 1, 0, 0, 0 }, { 1, 1, 1, 1 } },
+            encoding = "bits",
+        }
+        assert.are.same({ 3, 4 }, model.equivalent_columns(tbl, 3))
+        assert.are.same({ 3, 4 }, model.equivalent_columns(tbl, 4))
+        assert.are.same({ 1 }, model.equivalent_columns(tbl, 1))
+        assert.are.same({ 2 }, model.equivalent_columns(tbl, 2))
+    end)
+
+    it("makes every column equivalent, vacuously, when there are no data rows", function()
+        local empty = { headers = { "A", "B" }, rows = {}, encoding = "bits" }
+        assert.are.same({ 1, 2 }, model.equivalent_columns(empty, 1))
     end)
 end)
 

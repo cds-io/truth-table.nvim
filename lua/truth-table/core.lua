@@ -25,17 +25,22 @@ local trim = require("truth-table.text").trim
 -- An operation that can refuse returns one table, or nil and the reason.
 M.parse = markdown.parse_table_lines
 M.find_table = markdown.find_table
+M.is_table_line = markdown.is_table_line
 M.column_index = markdown.column_index
 M.split_expressions = predicate.split_expressions
 M.drop_row = model.drop_row
 M.drop_column = model.drop_column
 M.toggle = model.toggle
+M.equivalent_columns = model.equivalent_columns
 
 -- The codecs take the width measurer as an argument; these close over the
 -- injected one.
 M.display_width = markdown.display_width
 function M.format(tbl)
     return markdown.format(tbl, M.display_width)
+end
+function M.column_centres(line)
+    return markdown.column_centres(line, M.display_width)
 end
 
 -- Karnaugh analysis of one column (see truth-table.karnaugh for the fields)

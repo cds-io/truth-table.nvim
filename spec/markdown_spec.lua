@@ -142,6 +142,31 @@ describe("markdown.heading_cell", function()
     end)
 end)
 
+describe("markdown.column_centres", function()
+    it("centres each cell where the formatter puts a one-wide value", function()
+        -- The format of :TruthTable p -> q | not p or q, so the expected
+        -- centres sit exactly under the data cells' 0s and 1s.
+        local separator = "|:---:|:---:|:-----:|:------:|"
+        local row = "|  0  |  0  |   1   |   1    |"
+        local centres = markdown.column_centres(separator)
+        assert.are.same({ 3, 9, 16, 24 }, centres)
+        for _, centre in ipairs(centres) do
+            -- The row is ASCII, so its bytes are its display columns.
+            assert.is_truthy(row:sub(centre + 1, centre + 1):match("[01]"))
+        end
+    end)
+
+    it("measures with the injected width, as the formatter does", function()
+        -- 界 as four cells pushes the second column's span right by three.
+        local centres = markdown.column_centres("| 界 | B |", function(s)
+            local width = markdown.display_width(s)
+            local _, count = s:gsub("界", "")
+            return width + 3 * count
+        end)
+        assert.are.same({ 3, 9 }, centres)
+    end)
+end)
+
 describe("markdown.display_width (pure default)", function()
     it("counts ASCII as one column each", function()
         assert.are.equal(3, markdown.display_width("abc"))

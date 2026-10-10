@@ -66,6 +66,9 @@ Tables:
 - `:TruthTableToggle` (`<leader>Tt`): switch `0`/`1` and `F`/`T`.
 - `:TruthTableDropRow` (`<leader>Tr`): remove the row under the cursor.
 - `:TruthTableDropColumn` (`<leader>Tc`): remove the column under the cursor.
+- `:TruthTableEquivalents` (`<leader>T=`): toggle the mark line under the
+  separator, everywhere (on by default): `≡` the columns equivalent to the
+  one at the cursor, `≢` the rest.
 - `:TruthTableKarnaugh` (`<leader>Tk`): Karnaugh map and minimal formula for a
   column.
 
