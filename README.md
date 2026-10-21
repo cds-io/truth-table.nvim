@@ -24,6 +24,13 @@ tutorial introduces the workflow through short, editable exercises.
 This is a personal plugin extracted from a long-maintained Neovim configuration
 and developed with help from a coding agent.
 
+## Explainer video
+
+A short overview of the plugin: tables, rewrites, Karnaugh maps, and the
+tutor. Click the thumbnail to watch on YouTube.
+
+[![truth-table.nvim explainer video](https://img.youtube.com/vi/UtAog3sFPiQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=UtAog3sFPiQ)
+
 ## Installation
 
 With lazy.nvim:
