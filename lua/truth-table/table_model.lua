@@ -6,8 +6,8 @@
 -- input as it was; the result may share rows with the input, and nothing
 -- here changes a row. An index argument is still checked, since it comes
 -- from the cursor.
-local fp = require("truth-table.fp")
-local result = require("truth-table.result")
+local fp = require("cds.fp")
+local result = require("cds.result")
 local M = {}
 
 -- The spelling of the cells 0 and 1 under each encoding: the one place a

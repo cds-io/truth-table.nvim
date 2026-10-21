@@ -16,7 +16,7 @@
 local trees = require("truth-table.trees")
 local operators = require("truth-table.operators")
 local SYMBOLS = require("truth-table.symbols")
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 local normal = require("truth-table.normal")
 local M = {}
 

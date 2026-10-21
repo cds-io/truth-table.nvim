@@ -1,6 +1,6 @@
 -- Markdown codec for Boolean tables. Width measurement is an explicit dependency.
-local fp = require("truth-table.fp")
-local result = require("truth-table.result")
+local fp = require("cds.fp")
+local result = require("cds.result")
 local model = require("truth-table.table_model")
 local trim = require("truth-table.text").trim
 local M = {}

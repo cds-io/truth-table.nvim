@@ -4,7 +4,7 @@
 -- character, which means the plain word never expands on its own and prose
 -- like "and then" stays untouched.
 
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 local SYMBOLS = require("truth-table.symbols")
 
 local M = {}

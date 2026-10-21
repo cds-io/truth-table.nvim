@@ -9,7 +9,7 @@
 -- table is mid-edit, or it has no data rows. The buffer itself never
 -- changes.
 local core = require("truth-table.core")
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.equivalence")
 local GROUP = "truth_table_equivalence"

@@ -3,7 +3,7 @@
 -- and the whole-expression De Morgan rewrite. The parser supplies the trees
 -- and the evaluator is the oracle where one is needed.
 local predicate = require("truth-table.predicate")
-local result = require("truth-table.result")
+local result = require("cds.result")
 local trees = require("truth-table.trees")
 
 describe("tree helpers", function()
