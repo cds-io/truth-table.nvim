@@ -14,8 +14,8 @@
 -- meets are the ones listed, `binary` is where a wrong operator name is
 -- refused, and a tree transform() does not know is a programming error,
 -- which rendered() raises on.
-local fp = require("truth-table.fp")
-local result = require("truth-table.result")
+local fp = require("cds.fp")
+local result = require("cds.result")
 local operators = require("truth-table.operators")
 local BINARY, SYMBOLS = operators.BINARY, operators.SYMBOLS
 local M = {}

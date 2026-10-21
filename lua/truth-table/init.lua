@@ -4,8 +4,8 @@
 -- setup() entry point.
 
 local core = require("truth-table.core")
-local result = require("truth-table.result")
-local fp = require("truth-table.fp")
+local result = require("cds.result")
+local fp = require("cds.fp")
 local preview = require("truth-table.preview")
 
 local M = {}

@@ -4,7 +4,7 @@
 -- themselves are truth-table.operators; a tree once made is the business of
 -- truth-table.trees. No table rendering or editor dependencies. Fallible
 -- operations use value, error.
-local result = require("truth-table.result")
+local result = require("cds.result")
 local operators = require("truth-table.operators")
 local trees = require("truth-table.trees")
 local OPERATORS, KEYWORDS, BY_NAME = operators.OPERATORS, operators.KEYWORDS, operators.BY_NAME

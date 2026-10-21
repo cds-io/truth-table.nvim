@@ -1,6 +1,12 @@
 truth-table.nvim changes
 ========================
 
+- The Result convention and the list vocabulary are the house library's
+  `cds.result` and `cds.fp`, vendored under `lua/cds/` from `../cds`, the
+  one source. `make vendor` copies them in and `make check` refuses a
+  copy that differs from the source (skipped where `../cds` is absent).
+  Their specs run in cds.
+
 - Live equivalence marks, on by default: a virtual line under the
   separator of the table at the cursor, with ≡ centred below each column
   whose cells match the cursor column's on every row, the cursor's own

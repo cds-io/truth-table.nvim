@@ -13,8 +13,8 @@
 -- default, and setup() swaps in vim.fn.strdisplaywidth.
 
 local M = {}
-local fp = require("truth-table.fp")
-local result = require("truth-table.result")
+local fp = require("cds.fp")
+local result = require("cds.result")
 local model = require("truth-table.table_model")
 local predicate = require("truth-table.predicate")
 local trees = require("truth-table.trees")

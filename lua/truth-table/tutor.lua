@@ -9,7 +9,7 @@ local page = require("truth-table.tutor_page")
 local styled = require("truth-table.tutor_vellum")
 local spans = require("truth-table.tutor_spans")
 local marks = require("truth-table.marks")
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 
 local M = {}
 

@@ -12,7 +12,7 @@
 -- Terms come in the order distribution meets them, left to right, with
 -- literals as met, so the form reads against its source. Pure: a tree in,
 -- a fresh tree out; the atoms are the source's own nodes.
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 local trees = require("truth-table.trees")
 local M = {}
 

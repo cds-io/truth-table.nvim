@@ -1,3 +1,6 @@
 # The tutor lessons are content: tables of prose, templates and solution
 # rows, laid out by hand for the reader of the source.
 tutor/
+# lua/cds/ is vendored from ../cds in that repository's two-space style,
+# so it stays byte-comparable to its source.
+lua/cds/

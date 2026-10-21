@@ -2,7 +2,7 @@
 -- Pure Lua 5.1 (busted runs PUC Lua, Neovim runs LuaJIT): no bit library, so
 -- implicants are strings over "0", "1" and "-" with one character per input,
 -- first input first. A "-" means the variable does not appear in the term.
-local fp = require("truth-table.fp")
+local fp = require("cds.fp")
 local model = require("truth-table.table_model")
 local markdown = require("truth-table.markdown")
 local predicate = require("truth-table.predicate")
