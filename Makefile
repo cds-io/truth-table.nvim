@@ -7,27 +7,13 @@ LUAROCKS ?= luarocks
 SELENE ?= selene
 STYLUA ?= stylua
 
-.PHONY: check test test-nvim lint fmt fmt-check vendor vendor-check
+.PHONY: check test test-nvim lint fmt fmt-check
 
-check: vendor-check test test-nvim lint fmt-check
+check: test test-nvim lint fmt-check
 
-# The house library lives in ../cds, its one source, with its own specs;
-# these files are copies of it. `make vendor` refreshes them and
-# `vendor-check` refuses a copy that differs. A checkout without ../cds
-# (CI) skips the check.
-CDS_SRC ?= ../cds
-CDS_FILES := lua/cds/result.lua lua/cds/fp.lua
-
-vendor:
-	@for f in $(CDS_FILES); do mkdir -p "$$(dirname "$$f")" && cp "$(CDS_SRC)/$$f" "$$f"; done
-
-vendor-check:
-	@if [ -d "$(CDS_SRC)" ]; then \
-		for f in $(CDS_FILES); do \
-			cmp -s "$(CDS_SRC)/$$f" "$$f" || { echo "$$f differs from $(CDS_SRC)/$$f: run make vendor"; exit 1; }; \
-		done; \
-	else echo "vendor-check: $(CDS_SRC) absent, skipped"; fi
-
+# The house library, cds-lua, is a dependency: lazy.lua pins the commit the
+# editor loads, and .busted (and spec/startup_init.lua) find the same modules
+# in ../cds-lua, the checkout beside this one, for both spec tiers.
 test:
 	$(BUSTED)
 
