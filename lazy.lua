@@ -8,6 +8,6 @@ return {
     "cds-io/truth-table.nvim",
     lazy = false,
     dependencies = {
-        { "cds-io/cds-lua", commit = "5907eb93330dccc5a9fc0d053849793615e05c2e", lazy = true },
+        { "cds-io/cds-lua", commit = "13a84f07c1e08f070c2db74e78486852afba2a9a", lazy = true },
     },
 }
