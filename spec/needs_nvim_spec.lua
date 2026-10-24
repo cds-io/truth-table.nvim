@@ -46,10 +46,7 @@ describe("the entry's capability check", function()
         end
         vim.cmd("runtime plugin/truth-table.lua")
         assert.is_nil(vim.g.loaded_truth_table)
-        assert.are.equal(
-            "truth-table.nvim needs cds-lua with cds.needs: install cds-io/cds-lua at the commit lazy.lua pins, or update it",
-            seen[1].msg
-        )
+        assert.are.equal("truth-table.nvim needs cds-lua with cds.needs: install or update cds-io/cds-lua", seen[1].msg)
     end)
 
     it("loads once when everything declared is there", function()

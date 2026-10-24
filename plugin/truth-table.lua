@@ -13,8 +13,7 @@ local problem
 if ok then
     problem = needs.check("truth-table.nvim", require("truth-table.needs"))
 else
-    problem =
-        "truth-table.nvim needs cds-lua with cds.needs: install cds-io/cds-lua at the commit lazy.lua pins, or update it"
+    problem = "truth-table.nvim needs cds-lua with cds.needs: install or update cds-io/cds-lua"
 end
 if problem then
     vim.notify(problem, vim.log.levels.ERROR)
