@@ -3,6 +3,8 @@
 -- Once it is up it tries the plugin and writes what it found to stdout as
 -- JSON, for the spec to judge.
 vim.opt.rtp:append(vim.fn.getcwd())
+-- the house library, as lazy would put it there: the checkout beside this one
+vim.opt.rtp:append(vim.fn.fnamemodify(vim.fn.getcwd() .. "/../cds-lua", ":p"))
 vim.opt.swapfile = false
 if vim.env.TRUTH_TABLE_TEST_CUSTOM == "1" then
     require("truth-table").setup({ abbreviations = false })

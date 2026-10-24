@@ -1,6 +1,20 @@
 truth-table.nvim changes
 ========================
 
+- cds-lua, the house library, is a dependency: `lazy.lua` at the root pins
+  `cds-io/cds-lua` to a commit, which lazy.nvim merges into the plugin's
+  spec, so one `cds.fp` and one `cds.result` serve every plugin of the
+  family on the runtimepath. The specs, and the startup spec's own Neovim,
+  find the same modules in `../cds-lua`, the checkout beside this one;
+  `make check` is `test`, `test-nvim`, `lint` and `fmt-check`.
+
+- The entry checks the cds-lua present for what the plugin uses
+  (`truth-table.needs` declares eight `fp` and four `result` functions;
+  `cds.needs` checks) and refuses to load, naming the missing functions,
+  when an older cds-lua lacks one, or lacks `cds.needs` itself; the spec
+  harness puts each cds module behind `cds.needs.strict`, so an undeclared
+  use fails a spec.
+
 - `lua/truth-table/` holds no `result.lua` or `fp.lua` of its own; the
   modules under `lua/cds/` are the only copies.
 

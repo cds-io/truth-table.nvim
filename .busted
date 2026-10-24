@@ -2,8 +2,13 @@ return {
     _all = {
         verbose = true,
         ROOT = { "spec" },
-        -- Resolve require("truth-table.core") against this project's lua/ tree.
-        lpath = "./lua/?.lua;./lua/?/init.lua",
+        -- Before any spec: the cds modules behind proxies that allow only
+        -- what truth-table.needs declares.
+        helper = "spec/strict.lua",
+        -- Resolve require("truth-table.core") against this project's lua/ tree,
+        -- and require("cds.fp") against the house library's checkout beside
+        -- this one, the same source lazy.lua pins for the editor.
+        lpath = "./lua/?.lua;./lua/?/init.lua;../cds-lua/lua/?.lua;../cds-lua/lua/?/init.lua",
     },
     -- The pure specs, under plain Lua: no `vim` global to lean on.
     default = {
