@@ -1,6 +1,10 @@
 truth-table.nvim changes
 ========================
 
+- The vocabulary rock cds-lua-fp is the one dependency: `lazy.lua` declares
+  `cds-io/cds-lua-fp`, tracking its main, which carries `cds.fp`,
+  `cds.result` and `cds.needs`; the specs find it in `../cds-lua-fp`, the
+  checkout beside this one, and the entry's refusal names it.
 - cds-lua, the house library, is a dependency: `lazy.lua` at the root declares `cds-io/cds-lua` as a dependency, tracking its main, which lazy.nvim merges into the plugin's
   spec, so one `cds.fp` and one `cds.result` serve every plugin of the
   family on the runtimepath. The specs, and the startup spec's own Neovim,

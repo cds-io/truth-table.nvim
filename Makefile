@@ -11,9 +11,9 @@ STYLUA ?= stylua
 
 check: test test-nvim lint fmt-check
 
-# The house library, cds-lua, is a dependency: lazy.lua names the dependency the
+# The vocabulary rock, cds-lua-fp, is a dependency: lazy.lua names the dependency the
 # editor loads, and .busted (and spec/startup_init.lua) find the same modules
-# in ../cds-lua, the checkout beside this one, for both spec tiers.
+# in ../cds-lua-fp, the checkout beside this one, for both spec tiers.
 test:
 	$(BUSTED)
 

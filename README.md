@@ -50,10 +50,10 @@ loading makes the global insert-mode abbreviations available at startup;
 command-based lazy loading registers them when the plugin first loads.
 
 The plugin's `lazy.lua` declares its one dependency,
-[cds-lua](https://github.com/cds-io/cds-lua), the family's house library,
-tracking its main; lazy.nvim 11 and later installs it with the plugin. With
-another plugin manager, install `cds-io/cds-lua` alongside. At startup the
-plugin checks that the cds-lua present provides the functions it uses and,
+[cds-lua-fp](https://github.com/cds-io/cds-lua-fp), the family's vocabulary
+rock (`cds.fp`, `cds.result`, `cds.needs`), tracking its main; lazy.nvim 11 and later installs it with the plugin. With
+another plugin manager, install `cds-io/cds-lua-fp` alongside. At startup the
+plugin checks that the cds-lua-fp present provides the functions it uses and,
 when one is missing, says so and which commit has it instead of failing
 later.
 

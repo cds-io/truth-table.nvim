@@ -1,19 +1,19 @@
 -- truth-table.nvim entry point. Auto-sourced by Neovim on startup; registers the
--- :TruthTable* commands and keymaps via the module's setup(), once the cds-lua
+-- :TruthTable* commands and keymaps via the module's setup(), once the cds-lua-fp
 -- on the runtimepath is seen to provide what the plugin uses.
 
 if vim.g.loaded_truth_table then
     return
 end
 
--- the one check kept here: a cds-lua too old to carry cds.needs fails this
+-- the one check kept here: a cds-lua-fp too old to carry cds.needs fails this
 -- require, which is the answer
 local ok, needs = pcall(require, "cds.needs")
 local problem
 if ok then
     problem = needs.check("truth-table.nvim", require("truth-table.needs"))
 else
-    problem = "truth-table.nvim needs cds-lua with cds.needs: install or update cds-io/cds-lua"
+    problem = "truth-table.nvim needs cds-lua-fp with cds.needs: install or update cds-io/cds-lua-fp"
 end
 if problem then
     vim.notify(problem, vim.log.levels.ERROR)
