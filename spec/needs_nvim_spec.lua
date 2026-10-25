@@ -23,30 +23,33 @@ describe("the entry's capability check", function()
         vim.g.loaded_truth_table = true
     end)
 
-    it("refuses to load, in words, when the cds-lua present lacks a capability", function()
+    it("refuses to load, in words, when the cds-lua-fp present lacks a capability", function()
         needs.check = function(plugin, capabilities)
             assert.are.equal("truth-table.nvim", plugin)
             assert.are.same({ "bind", "context", "map", "traverse" }, capabilities.result)
-            return "truth-table.nvim needs cds-lua with fp.filter_map: the check's own words"
+            return "truth-table.nvim needs cds-lua-fp with fp.filter_map: the check's own words"
         end
         vim.cmd("runtime plugin/truth-table.lua")
         assert.is_nil(vim.g.loaded_truth_table)
         assert.are.same({
             {
-                msg = "truth-table.nvim needs cds-lua with fp.filter_map: the check's own words",
+                msg = "truth-table.nvim needs cds-lua-fp with fp.filter_map: the check's own words",
                 level = vim.log.levels.ERROR,
             },
         }, seen)
     end)
 
-    it("refuses to load when the cds-lua present is too old to carry cds.needs", function()
+    it("refuses to load when the cds-lua-fp present is too old to carry cds.needs", function()
         package.loaded["cds.needs"] = nil
         package.preload["cds.needs"] = function()
             error("module 'cds.needs' not found")
         end
         vim.cmd("runtime plugin/truth-table.lua")
         assert.is_nil(vim.g.loaded_truth_table)
-        assert.are.equal("truth-table.nvim needs cds-lua with cds.needs: install or update cds-io/cds-lua", seen[1].msg)
+        assert.are.equal(
+            "truth-table.nvim needs cds-lua-fp with cds.needs: install or update cds-io/cds-lua-fp",
+            seen[1].msg
+        )
     end)
 
     it("loads once when everything declared is there", function()
