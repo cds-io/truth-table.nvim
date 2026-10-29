@@ -1,7 +1,7 @@
--- Unit tests for truth-table.tutor_spans: the `[:colour ...]` markers in
+-- Unit tests for truth-table.tutor.spans: the `[:colour ...]` markers in
 -- lesson text, stripped to byte spans, and the placing of those spans on the
 -- lines vellum renders. Pure Lua, runs under busted.
-local spans = require("truth-table.tutor_spans")
+local spans = require("truth-table.tutor.spans")
 
 local function span(col, end_col, group)
     return { col = col, end_col = end_col, group = group }

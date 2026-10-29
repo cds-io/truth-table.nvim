@@ -6,16 +6,14 @@
 -- and proof serve a list of expressions given as an argument or as
 -- selected lines (equiv). The derivation's text is not touched; the marks
 -- go on the next change to the buffer, or when the check runs again.
--- check.lua judges; this paints.
+-- check.lua judges; this paints. The proof table is proof.lua's; this
+-- keeps the marks and takes them down.
 local check = require("truth-table.check")
-local core = require("truth-table.core")
 local derivation = require("truth-table.derivation")
-local fp = require("cds.fp")
-local markdown = require("truth-table.markdown")
 local marks = require("truth-table.marks")
-local model = require("truth-table.table_model")
 local write = require("truth-table.write")
 local SYMBOLS = require("truth-table.symbols")
+local proof = require("truth-table.verdict.proof")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.verdict")
 local attached, shown = {}, {}
@@ -56,64 +54,14 @@ local function remember(buf, ids)
     end
 end
 
--- The proof of `verdict`: a table over the chain's variables, in chain
--- order, with one computed column per side (a side that is a variable
--- names the column already there). Nil and the reason when a side refuses
--- to bind, which a judged chain's sides do not.
-local function proof(verdict)
-    local base = {
-        headers = verdict.variables,
-        rows = model.generate_rows(#verdict.variables),
-        encoding = "bits",
-    }
-    return core.expand(base, verdict.texts)
-end
-
-local function column_of(tbl, heading)
-    local _, index = fp.find(tbl.headers, function(header)
-        return header == heading
-    end)
-    return index
-end
-
--- The row of `tbl` (from one) on which the failing step's two columns
--- differ: the first one, as the check found it.
-local function breaking_row(tbl, verdict)
-    local premise = column_of(tbl, verdict.texts[verdict.step])
-    local conclusion = column_of(tbl, verdict.texts[verdict.step + 1])
-    local _, index = fp.find(tbl.rows, function(row)
-        return row[premise] ~= row[conclusion]
-    end)
-    if index then
-        return index, conclusion
-    end
-end
-
--- Insert the proof of `verdict` below row `last` (from one) of `buf`, at
--- `indent`, and light the failing cell. Returns the error when the table
--- cannot be built.
+-- The proof of `verdict` inserted below row `last` of `buf`, its failing
+-- cell lit; or the reason it could not be built, notified.
 local function show_proof(buf, last, indent, verdict)
-    local tbl, err = proof(verdict)
-    if not tbl then
-        return err
-    end
-    local lines = { "" }
-    for _, line in ipairs(core.format(tbl)) do
-        lines[#lines + 1] = indent .. line
-    end
-    vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
-    if verdict.ok then
+    local cell, refused = proof.show(buf, last, indent, verdict)
+    if not cell then
+        vim.notify(refused, vim.log.levels.WARN)
         return
     end
-    local row, column = breaking_row(tbl, verdict)
-    if not row then
-        return
-    end
-    -- The blank, the heading and the separator sit between the block and
-    -- the first data row.
-    local at = last + 2 + row
-    local first, final = markdown.heading_cell(lines[3 + row], column)
-    local cell = write.lit({ row = at, col = first - 1 }, { { 0, final - first + 1 } }, write.CONSUMED_GROUP)
     remember(buf, marks.paint(buf, namespace, cell))
 end
 
@@ -140,10 +88,7 @@ function M.equiv(buf, exprs, below, indent, with_proof)
     end
     watch(buf)
     if with_proof then
-        local refused = show_proof(buf, below, indent, verdict)
-        if refused then
-            vim.notify(refused, vim.log.levels.WARN)
-        end
+        show_proof(buf, below, indent, verdict)
     end
     if verdict.ok then
         vim.notify("equivalent (" .. #exprs .. " expressions)", vim.log.levels.INFO)
@@ -188,10 +133,7 @@ function M.show(buf, row, with_proof)
     end
     watch(buf)
     if with_proof then
-        local refused = show_proof(buf, last, lines[first]:match("^%s*"), verdict)
-        if refused then
-            vim.notify(refused, vim.log.levels.WARN)
-        end
+        show_proof(buf, last, lines[first]:match("^%s*"), verdict)
     end
     if verdict.ok then
         local noun = verdict.steps == 1 and " step)" or " steps)"

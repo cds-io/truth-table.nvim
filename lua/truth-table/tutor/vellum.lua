@@ -6,7 +6,7 @@
 -- tutor.lua then shows the Markdown itself. The lesson's own colour spans
 -- ride along: vellum says which rendered rows each Markdown block became,
 -- and tutor_spans.lua finds the spans' lines in there.
-local spans = require("truth-table.tutor_spans")
+local spans = require("truth-table.tutor.spans")
 local M = {}
 
 -- The widest column of text, as in vellum's own preview.

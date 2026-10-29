@@ -1103,21 +1103,28 @@ All pure modules support Lua 5.1 and have no vim dependency:
 
 - core.lua composes construction, expansion and the edits over the model; it
   provides the table pipeline used by init.lua.
-- predicate.lua is the language: the tokenizer, the parser, the evaluator,
-  and the binding of names to row positions.
+- predicate/ is the language: tokenize.lua the tokenizer, parse.lua the
+  parser, and init.lua the evaluator, the binding of names to row positions
+  and the helpers that read a :TruthTable argument, composing the first two
+  into the parse pipeline.
 - operators.lua is the one table of operators: keyword, rendered symbol,
   further spellings, binding power and Boolean meaning, read by the parser,
   the evaluator and the renderer alike.
-- trees.lua makes the nodes (var, reference, column, literal, paren,
-  negation and binary, which the parser and the rewrites call; binary
-  refuses an operator the table does not list) and works on the trees:
-  unparen, operands and fold, the copying transform, the canonical form of
-  a tree and its text as a heading, and the whole-expression De Morgan
-  rewrite.
+- trees/ makes the nodes and works on the trees. node.lua has the
+  constructors (var, reference, column, literal, paren, negation and binary,
+  which the parser and the rewrites call; binary refuses an operator the
+  table does not list), unparen, operands and fold, and the copying
+  transform; render.lua the canonical form of a tree and its text as a
+  heading; laws.lua the whole-tree rewrites, each connective's definition
+  (unfold) and De Morgan; and init.lua answers to all of their names.
 - table_model.lua owns numeric Boolean cells, the spelling of each encoding,
   the one validator (parse) and the pure edits after it.
-- markdown.lua parses/renders tables and escapes pipes, backslashes, and
-  backticks so displayed headings retain their literal reference names.
+- markdown/ parses/renders tables: line.lua is one table line (its cells
+  with escaped pipes read, the column at a byte, a heading cell's bytes, one
+  heading replaced in place), format.lua the formatter, which escapes pipes,
+  backslashes and backticks so displayed headings retain their literal
+  reference names, and init.lua finds a table in a buffer's lines and parses
+  it whole.
 - result.lua composes value, error results: bind and traverse for a step
   that can refuse, map for one that cannot, and context to prefix an error
   with where it was met.
@@ -1127,39 +1134,58 @@ All pure modules support Lua 5.1 and have no vim dependency:
   find the first item a test accepts with its index, any and all a
   boolean. Each takes its function last.
 - text.lua is trim, the one string helper the pure modules share.
-- normal.lua is the two normal forms of a tree: unfolded, negations pushed
-  to the atoms, distributed as lists of terms, tidied, and rendered back.
-- rewrite.lua finds the chain operand under a cursor byte and factors,
+- karnaugh/ finds a column's input variables and minimizes it:
+  implicants.lua holds the implicant strings and Quine-McCluskey's prime
+  implicants, cover.lua the cover (essential primes, then a smallest exact
+  cover under a search budget, greedy beyond it), map.lua renders the map
+  and the formula, and init.lua makes the analysis.
+- normal/ is the two normal forms of a tree: init.lua runs the passes
+  (unfolded, negations pushed to the atoms, distributed as lists of terms,
+  tidied, and rendered back) and terms.lua is the term arithmetic the passes
+  work on.
+- rewrite/ finds the chain operand under a cursor byte and factors,
   distributes, or commutes it, recognises ⊕/⇔ in a pair of terms, applies
   De Morgan at the nearest match, and applies the nearest collapsing law,
   returning a fresh tree and the name of the law applied. `moves` lists what
   all of them give from every place in a tree: each rewrite is written
   against an operand's path from the root, which a cursor byte or a walk of
-  the tree supplies.
+  the tree supplies. The rules are a module per family: operand.lua
+  (commute, factor, distribute), definition.lua (the recognition of ⊕/⇔ and
+  the unfolding of a connective), de_morgan.lua, and laws.lua (the
+  collapsing laws) with simplify.lua (their application at a site).
+  path.lua (the path to the cursor and the chains on it), draft.lua (a
+  draft and its record) and terms.lua (how terms compare) are what they
+  share, and init.lua composes them with the normal forms and `moves`.
 - marks.lua is the highlight mark, { row, col, end_col, group, priority },
   with paint and read over lists of it: a written rewrite's lit terms, a
   pending preview's, and the tutor's colour spans are all this record.
 - derivation.lua splits a line into sides at ≡, sets its `| by` justification
   apart, replaces one side, and builds an aligned, justified step line.
 - check.lua judges a derivation, side against the side before it over every
-  assignment, and answers the first failing step as a record; verdict.lua
-  shows it in the buffer, lit and overlaid, until the next edit.
+  assignment, and answers the first failing step as a record; verdict/
+  shows it in the buffer, lit and overlaid, until the next edit, with
+  proof.lua building and inserting the proof table.
 - source.lua resolves the expression under the cursor as a source (a side of
   a line, or a heading), with the ways to write a rewrite back.
 - write.lua writes a rewrite where its source is, in place or as a ≡ step,
   with the consumed and produced terms lit; prepare plans one write first.
-- preview.lua runs a rewrite on the source under the cursor and manages the
-  per-buffer pending preview: extmarks, invalidation, and applying in place
+- preview/ runs a rewrite on the source under the cursor and manages the
+  per-buffer pending preview: plan.lua holds the rewrites by name and
+  resolves one at the cursor into the write it would make, init.lua the
+  pending preview itself, its extmarks, invalidation, and applying in place
   or as a step; transient.lua holds the <Space> and <CR> keys meanwhile.
 - menu.lua shows the menu of every rewrite and writes the pick through the
   same two paths.
-- tutor.lua reads the lessons in tutor/truth-table/ and shows them in two
-  panes, the lesson beside a scratch buffer per step; tutor_page.lua (pure)
-  turns a step into the lesson pane's Markdown, tutor_spans.lua (pure) reads
-  the `[:colour ...]` markers out of its lines and finds the spans again on
-  rendered lines, and tutor_vellum.lua turns the Markdown into styled lines
-  when vellum.nvim is installed (nothing when it is absent or fails, and
-  tutor.lua then shows the Markdown).
+- tutor/ reads the lessons in tutor/truth-table/ and shows them in two
+  panes, the lesson beside a scratch buffer per step: init.lua holds the
+  session and moves it, course.lua reads the lessons and keeps the reader's
+  place on disk, panes.lua owns the buffers and windows, and lesson.lua
+  draws the lesson pane. text.lua and page.lua (pure) turn a step into the
+  lesson pane's Markdown, spans.lua (pure) reads the `[:colour ...]` markers
+  out of its lines and finds the spans again on rendered lines, and
+  vellum.lua turns the Markdown into styled lines when vellum.nvim is
+  installed (nothing when it is absent or fails, and lesson.lua then shows
+  the Markdown).
   spec/tutor_nvim_spec.lua replays each
   step's solution and requires the scratch buffer to end as its expectation,
   and evaluates every law a lesson states (`left ≡ right` in a fenced block)
@@ -1169,7 +1195,12 @@ All pure modules support Lua 5.1 and have no vim dependency:
 - abbreviations.lua derives the default insert-mode abbreviations from
   symbols.lua, merges the setup() option over them, and swaps the registered
   set on each call.
-- init.lua registers commands/keymaps, locates tables and applies successful semantic pipelines to buffers.
+- init.lua is setup(): it defines the commands of commands/ (table.lua the
+  table commands, each locating the table and applying a successful
+  semantic pipeline to the buffer; init.lua the catalogue of them all), maps
+  the keys of keymaps/ (init.lua the defaults under their two prefixes,
+  which_key.lua the popup of the moves legal at the cursor), and owns the
+  highlight groups.
 
 Display width is injectable through core.display_width; setup() uses
 vim.fn.strdisplaywidth. The default counts UTF-8 codepoints.

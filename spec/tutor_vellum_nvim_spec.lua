@@ -9,8 +9,8 @@ vim.opt.rtp:append(vim.fn.getcwd())
 vim.o.columns = 160
 vim.o.number = true
 require("truth-table").setup()
-local page = require("truth-table.tutor_page")
-local styled = require("truth-table.tutor_vellum")
+local page = require("truth-table.tutor.page")
+local styled = require("truth-table.tutor.vellum")
 
 -- A course of one step with a colour span in a logic block, for the vellums
 -- to place: the span's line has to come back under its mark.

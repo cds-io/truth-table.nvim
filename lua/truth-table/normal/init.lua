@@ -11,10 +11,14 @@
 --
 -- Terms come in the order distribution meets them, left to right, with
 -- literals as met, so the form reads against its source. Pure: a tree in,
--- a fresh tree out; the atoms are the source's own nodes.
+-- a fresh tree out; the atoms are the source's own nodes. The terms the
+-- passes work on, and their tidying, are normal/terms.lua.
 local fp = require("cds.fp")
 local trees = require("truth-table.trees")
+local term_data = require("truth-table.normal.terms")
 local M = {}
+
+local literal, term, tidy = term_data.literal, term_data.term, term_data.tidy
 
 -- Distributing doubles the terms per clause crossed, so a form is refused
 -- past this many before tidying.
@@ -44,33 +48,6 @@ local function nnf(node, negated)
         return negated and trees.literal(1 - node.value) or node
     end
     return negated and trees.negation(node) or node
-end
-
--- A literal of a negation normal form, as { key, negated, node }: the key
--- is the atom's text, so two spellings of one atom meet.
-local function literal(node)
-    local atom, negated = trees.unparen(node), false
-    if atom.type == "not" then
-        atom, negated = trees.unparen(atom.operand), true
-    end
-    return { key = trees.heading(atom), negated = negated, node = node }
-end
-
--- A term: its literals in order, and each key's sense.
-local function term(literals)
-    local out = { literals = {}, sense = {} }
-    for _, item in ipairs(literals) do
-        local seen = out.sense[item.key]
-        if seen == nil then
-            out.sense[item.key] = item.negated
-            out.literals[#out.literals + 1] = item
-        elseif seen ~= item.negated then
-            -- A literal and its negation: the term is the inner operator's
-            -- dominator, and goes.
-            return nil
-        end
-    end
-    return out
 end
 
 -- The terms of `node` (in negation normal form) as an `outer` chain of
@@ -129,38 +106,6 @@ local function distribute(node, outer, inner)
         return { term({}) }
     end
     return { term({ literal(node) }) }
-end
-
--- The text that identifies a term's set of literals, whatever their order.
-local function signature(item)
-    local keys = fp.map(item.literals, function(found)
-        return found.key .. (found.negated and "-" or "+")
-    end)
-    table.sort(keys)
-    return table.concat(keys, "\0")
-end
-
--- Does every literal of `small` appear in `large`, with the same sense?
-local function within(small, large)
-    return fp.all(small.literals, function(item)
-        return large.sense[item.key] == item.negated
-    end)
-end
-
--- The terms with repeats collapsed and absorbed terms gone: an empty term
--- takes the whole form, as the outer operator's dominator.
-local function tidy(terms)
-    if fp.any(terms, function(item)
-        return #item.literals == 0
-    end) then
-        return { term({}) }
-    end
-    local distinct = fp.unique(terms, signature)
-    return fp.filter(distinct, function(item, index)
-        return not fp.any(distinct, function(other, position)
-            return position ~= index and within(other, item)
-        end)
-    end)
 end
 
 -- The tree of `terms` as an `outer` chain of `inner` chains.

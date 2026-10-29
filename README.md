@@ -975,28 +975,38 @@ The logic modules are pure Lua 5.1. The editor and preview adapters use `vim.*`.
 
 - `core.lua` composes construction, expansion and the edits over the model;
 it provides the table pipeline used by `init.lua`.
-- `predicate.lua` is the language: the tokenizer, the parser, the evaluator,
-and the binding of names to row positions. Binding and variable discovery are
-written over the copying traversal in `trees.lua`.
+- `predicate/` is the language: `tokenize.lua` the tokenizer, `parse.lua` the
+parser, and `init.lua` the evaluator, the binding of names to row positions and
+the helpers that read a `:TruthTable` argument, composing the first two into the
+parse pipeline. Binding and variable discovery are written over the copying
+traversal in `trees/`.
 - `operators.lua` is the one table of operators: each one's keyword, rendered
 symbol, further spellings, binding power and Boolean meaning, read by the
 parser, the evaluator and the renderer alike.
-- `trees.lua` makes the nodes (the constructors `var`, `reference`, `column`,
-`literal`, `paren`, `negation` and `binary`, which the parser and the rewrites
-call; `binary` refuses an operator the table does not list) and works on the
-trees: the helpers that take a chain apart and put one together (`unparen`,
-`operands`, `fold`), the copying `transform`, the canonical form of a tree and
-its text as a heading, and the whole-expression De Morgan rewrite.
+- `trees/` makes the nodes and works on the trees. `node.lua` has the
+constructors (`var`, `reference`, `column`, `literal`, `paren`, `negation` and
+`binary`, which the parser and the rewrites call; `binary` refuses an operator
+the table does not list), the helpers that take a chain apart and put one
+together (`unparen`, `operands`, `fold`) and the copying `transform`;
+`render.lua` the canonical form of a tree and its text as a heading;
+`laws.lua` the whole-tree rewrites, each connective's definition (`unfold`) and
+De Morgan; and `init.lua` answers to all of their names.
 - `table_model.lua` owns numeric Boolean cells and the spelling of each encoding
 (`ENCODINGS`, the one place a cell is spelled). `parse` is the one validator,
 run by the Markdown codec on the cells it reads; the edits after it (append,
 drop, toggle) take a valid table and return one, leaving the input as it was.
 Column appending centralizes deduplication.
-- `markdown.lua` parses and renders tables. It accepts display-width measurement
-explicitly; `core.display_width` retains the existing injection API.
-- `karnaugh.lua` finds a column's input variables, minimizes it (Quine-McCluskey
-prime implicants, essential primes, then a smallest exact cover under a search
-budget, greedy beyond it) and renders the map and the formula.
+- `markdown/` parses and renders tables: `line.lua` is one table line (its
+cells with escaped pipes read, the column at a byte, a heading cell's bytes,
+one heading replaced in place), `format.lua` the formatter, which accepts
+display-width measurement explicitly, and `init.lua` finds a table in a
+buffer's lines and parses it whole; `core.display_width` retains the existing
+injection API.
+- `karnaugh/` finds a column's input variables and minimizes it:
+`implicants.lua` holds the implicant strings and Quine-McCluskey's prime
+implicants, `cover.lua` the cover (essential primes, then a smallest exact
+cover under a search budget, greedy beyond it), `map.lua` renders the map and
+the formula, and `init.lua` makes the analysis.
 - `result.lua` composes Lua's `value, error` convention: `bind` and `traverse`
 for a step that can refuse, `map` for one that cannot, and `context` to say
 where an error was met.
@@ -1010,9 +1020,11 @@ all a boolean. Each takes its function last; `map` refuses a `nil` result,
 which would leave a hole that `ipairs` stops at, and `set` and `unique` refuse
 a `nil` key, naming the item.
 - `text.lua` is `trim`, the one string helper the pure modules share.
-- `normal.lua` is the two normal forms of a tree: unfolded, negations pushed
-to the atoms, distributed as lists of terms, tidied, and rendered back.
-- `rewrite.lua` finds the chain operand under a cursor byte and factors,
+- `normal/` is the two normal forms of a tree: `init.lua` runs the passes
+(unfolded, negations pushed to the atoms, distributed as lists of terms,
+tidied, and rendered back) and `terms.lua` is the term arithmetic the passes
+work on.
+- `rewrite/` finds the chain operand under a cursor byte and factors,
 distributes, or commutes it, recognises `⊕`/`⇔` in a pair of terms, applies De
 Morgan at the nearest match, and applies the nearest collapsing law
 (simplify): trees in, `{ value, change }` out, the new tree with the record
@@ -1023,7 +1035,13 @@ input of the next rewrite without reparsing. `moves` lists what all of them
 give from every place in a tree: each rewrite is written against an operand's
 path from the root, which a cursor byte or a walk of the tree supplies, and
 drafts every result it finds in order of preference; the command takes the
-first draft and `moves` takes them all.
+first draft and `moves` takes them all. The rules are a module per family:
+`operand.lua` (commute, factor, distribute), `definition.lua` (the recognition
+of `⊕`/`⇔` and the unfolding of a connective), `de_morgan.lua`, and `laws.lua`
+(the collapsing laws) with `simplify.lua` (their application at a site).
+`path.lua` (the path to the cursor and the chains on it), `draft.lua` (a draft
+and its record) and `terms.lua` (how terms compare) are what they share, and
+`init.lua` composes them with the normal forms and `moves`.
 - `edit.lua` writes a rewrite's text and marks as one patch, and keeps the
 marks in step with Neovim's undo tree: each undo sequence number has the
 marks that went with it, so undo and redo restore them with the text,
@@ -1037,27 +1055,33 @@ line.
 - `check.lua` judges a derivation: each side against the side before it over
 every assignment of their variables, the first step that fails as a record
 (the step, the row and bytes of its conclusion, the assignment, the two
-values). `verdict.lua` shows that record in the buffer: the conclusion lit,
-its `≡` overlaid with `≢`, cleared on the next edit.
+values). `verdict/` shows that record in the buffer: the conclusion lit,
+its `≡` overlaid with `≢`, cleared on the next edit; `proof.lua` builds and
+inserts the proof table.
 - `source.lua` resolves the expression under the cursor as a source: one side
 of a derivation line, or a heading read from anywhere in its column, with the
 ways to write a rewrite back (in place, or as a step below).
 - `write.lua` writes a rewrite where its source is, in place or as a ≡ step,
 with the consumed and produced terms lit: `prepare` plans one write, which a
 preview shows first; `in_place` and `step` carry it out through `edit.lua`.
-- `preview.lua` runs a rewrite on the source under the cursor and manages the
-per-buffer pending preview: its extmarks, invalidation on edit, and applying
-in place or as a step. `transient.lua` holds the `<Space>` and `<CR>` keys
+- `preview/` runs a rewrite on the source under the cursor and manages the
+per-buffer pending preview: `plan.lua` holds the rewrites by name and resolves
+one at the cursor into the write it would make, and `init.lua` the pending
+preview itself, its extmarks, invalidation on edit, and applying in place or as
+a step. `transient.lua` holds the `<Space>` and `<CR>` keys
 while one is pending, putting back any buffer-local map they shadow.
 - `menu.lua` shows the menu of every rewrite (`vim.ui.select`) and writes the
 pick through the same two paths.
-- `tutor.lua` reads the lessons in `tutor/truth-table/` and shows them in two
-panes, the lesson beside a scratch buffer per step; `tutor_page.lua` (pure)
-turns a step into the lesson pane's Markdown, `tutor_spans.lua` (pure) reads
-the `[:colour ...]` markers out of its lines and finds the spans again on
-rendered lines, and `tutor_vellum.lua` turns the Markdown into styled lines
-when vellum.nvim is installed (and into nothing when it is absent or fails,
-which is `tutor.lua`'s cue to show the Markdown).
+- `tutor/` reads the lessons in `tutor/truth-table/` and shows them in two
+panes, the lesson beside a scratch buffer per step: `init.lua` holds the
+session and moves it, `course.lua` reads the lessons and keeps the reader's
+place on disk, `panes.lua` owns the buffers and windows, and `lesson.lua`
+draws the lesson pane. `text.lua` and `page.lua` (pure) turn a step into the
+lesson pane's Markdown, `spans.lua` (pure) reads the `[:colour ...]` markers
+out of its lines and finds the spans again on rendered lines, and `vellum.lua`
+turns the Markdown into styled lines when vellum.nvim is installed (and into
+nothing when it is absent or fails, which is `lesson.lua`'s cue to show the
+Markdown).
 `spec/tutor_nvim_spec.lua` replays every
 step's `solution` in its scratch buffer and requires the result to be the
 step's own `expect` block, so the course stays true as the plugin changes. It
@@ -1068,8 +1092,12 @@ Unicode character; `operators.lua` builds on it.
 - `abbreviations.lua` derives the default insert-mode abbreviations from
 `symbols.lua`, merges the `setup()` option over them, and swaps the
 registered set on each call.
-- `init.lua` registers commands and mappings, reads the buffer, composes parse → transform → render, and applies a
-complete result. Editor line ranges stay outside the table model.
+- `init.lua` is `setup()`: it defines the commands of `commands/`
+(`table.lua` the table commands, each reading the buffer, composing parse →
+transform → render and applying a complete result; `init.lua` the catalogue of
+them all), maps the keys of `keymaps/` (`init.lua` the defaults under their
+two prefixes, `which_key.lua` the popup of the moves legal at the cursor), and
+owns the highlight groups. Editor line ranges stay outside the table model.
 
 The API over the model is `build`, `parse`, `expand`, `drop_row`,
 `drop_column`, `toggle`, and `format`. A table carries numeric `0/1` cells and
@@ -1077,7 +1105,9 @@ The API over the model is `build`, `parse`, `expand`, `drop_row`,
 
 ## Testing
 
-Run the complete local check (requires Busted, nlua, Neovim, and Selene):
+Run the complete local check (requires Busted, nlua, Neovim, and Selene; the
+architecture check runs when the lua-spec checkout sits beside this one and is
+skipped otherwise):
 
 ```sh
 make check

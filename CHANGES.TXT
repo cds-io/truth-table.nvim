@@ -1,6 +1,30 @@
 truth-table.nvim changes
 ========================
 
+- Architecture checked through lua-spec: `make architecture-check` holds the
+  production Lua to the house rules (at most 200 lines per module, no
+  implementation import of the public facade, no dependency cycle) through
+  lua-spec, the checker kept beside this checkout and configured by
+  `lua-spec.toml`, with no module allowed past the limit. Without the
+  checkout the target says so and passes, so `make check` holds on any
+  machine. Every module fits: the larger ones are directories, each an
+  `init.lua` composing the modules beside it under the one name, so
+  `require("truth-table.rewrite")` and the rest keep their names and their
+  public functions. `rewrite/` is a module per rule family (`operand`,
+  `definition`, `de_morgan`, `laws` with `simplify`) over what they share
+  (`path`, `draft`, `terms`); `trees/` is `node`, `render` and `laws`;
+  `predicate/` is `tokenize` and `parse`; `markdown/` is `line` and
+  `format`; `karnaugh/` is `implicants`, `cover` and `map`; `normal/` keeps
+  its `terms` apart; `preview/` its `plan`; `verdict/` its `proof`;
+  `tutor/` is `course`, `panes`, `lesson`, `text`, `page`, `spans` and
+  `vellum`; and the facade's commands are `commands/` (`table`) and its
+  keymaps `keymaps/` (`which_key`), so `init.lua` is `setup()`. The public
+  surface is the facade, `require("truth-table")`: `setup(opts)` and
+  `configured`, which `plugin/truth-table.lua` reads. Beneath it the
+  modules are private and move freely; a directory's `init.lua` answers to
+  the names the specs, the tutor and the reader's own configuration reach
+  (`truth-table.predicate.tokenize` and `truth-table.core.tokenize` among
+  them), and to no other.
 - The vocabulary rock cds-lua-fp is the one dependency: `lazy.lua` declares
   `cds-io/cds-lua-fp`, tracking its main, which carries `cds.fp`,
   `cds.result` and `cds.needs`; the specs find it in `../cds-lua-fp`, the

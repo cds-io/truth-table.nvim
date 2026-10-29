@@ -10,9 +10,9 @@ vim.opt.rtp:append(vim.fn.getcwd())
 vim.o.wrap = false
 require("truth-table").setup()
 
-local page = require("truth-table.tutor_page")
+local page = require("truth-table.tutor.page")
 local predicate = require("truth-table.predicate")
-local spans = require("truth-table.tutor_spans")
+local spans = require("truth-table.tutor.spans")
 local tutor = require("truth-table.tutor")
 
 -- The place is saved to a file of this run's own, never the reader's.

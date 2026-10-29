@@ -1,4 +1,4 @@
-local page = require("truth-table.tutor_page")
+local page = require("truth-table.tutor.page")
 
 local function slice(list, first, last)
     local out = {}
