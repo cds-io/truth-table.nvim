@@ -1,0 +1,7 @@
+# Settings for lua-spec, the architecture checker beside this checkout
+# (make architecture-check): the module prefix whose lua/truth-table.lua and
+# lua/truth-table/init.lua are the public facade, and the lines a production
+# module may run to.
+[architecture]
+plugin = "truth-table"
+limit = 200

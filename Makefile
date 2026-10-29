@@ -6,10 +6,21 @@ NLUA ?= $(if $(wildcard $(HOME)/.luarocks/bin/nlua),$(HOME)/.luarocks/bin/nlua,n
 LUAROCKS ?= luarocks
 SELENE ?= selene
 STYLUA ?= stylua
+PYTHON ?= python3
 
-.PHONY: check test test-nvim lint fmt fmt-check
+.PHONY: check architecture-check test test-nvim lint fmt fmt-check
 
-check: test test-nvim lint fmt-check
+check: architecture-check test test-nvim lint fmt-check
+
+# The architecture rules (module size, facade imports, dependency cycles) are
+# checked by lua-spec, a sibling checkout the house keeps to itself, with the
+# settings in lua-spec.toml here. Without the checkout the target says so and
+# passes, so make check holds on any machine.
+LUA_SPEC ?= $(wildcard ../lua-spec)
+
+architecture-check:
+	@if [ -n "$(LUA_SPEC)" ]; then PYTHONPATH="$(LUA_SPEC)" $(PYTHON) -m lua_spec.check; \
+	else echo "architecture-check: ../lua-spec not found; skipped"; fi
 
 # The vocabulary rock, cds-lua-fp, is a dependency: lazy.lua names the dependency the
 # editor loads, and .busted (and spec/startup_init.lua) find the same modules
