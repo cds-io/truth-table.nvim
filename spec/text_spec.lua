@@ -1,0 +1,17 @@
+local text = require("truth-table.text")
+
+describe("text.trim and text.rtrim", function()
+    it("take the blanks off both ends, or the right end only", function()
+        assert.are.equal("a b", text.trim("  a b \t"))
+        assert.are.equal("  a b", text.rtrim("  a b \t"))
+        assert.are.equal("", text.trim("   "))
+        assert.are.equal("", text.rtrim("   "))
+    end)
+end)
+
+describe("text.indented", function()
+    it("puts the indent before every line with text and leaves a blank line blank", function()
+        assert.are.same({ "  | A |", "", "  | 1 |" }, text.indented({ "| A |", "", "| 1 |" }, "  "))
+        assert.are.same({ "| A |", "" }, text.indented({ "| A |", "" }, ""))
+    end)
+end)

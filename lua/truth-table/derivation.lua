@@ -3,6 +3,9 @@
 -- follows from the one above. Pure string handling. ≡ and | are outside the
 -- predicate language, so no side ever contains one and a plain search finds
 -- every separator and the bar.
+local fp = require("cds.fp")
+local list = require("truth-table.list")
+local rtrim = require("truth-table.text").rtrim
 local SYMBOLS = require("truth-table.symbols")
 local M = {}
 
@@ -16,11 +19,6 @@ local GAP = 4
 local function body(line)
     local bar = line:find(BAR, 1, true)
     return bar and line:sub(1, bar - 1) or line, bar
-end
-
--- The sides without the blanks that pad them out to the bar.
-local function trimmed(sides)
-    return (sides:gsub("%s+$", ""))
 end
 
 -- A justification as it is written after a step, and beside a preview.
@@ -102,7 +100,7 @@ function M.replace(line, side, rewritten)
     local replaced = line:sub(1, side.first - 1) .. rewritten.text .. line:sub(side.last + 1)
     local _, bar = body(line)
     if bar and rewritten.law then
-        replaced = replaced:gsub("%s+$", "") .. ", " .. rewritten.law
+        replaced = rtrim(replaced) .. ", " .. rewritten.law
     end
     return replaced
 end
@@ -125,7 +123,7 @@ function M.step(line, rewritten, display_width)
     local step = prefix .. rewritten.text
     if rewritten.law then
         local width = display_width(step)
-        local above = bar and display_width(sides) or display_width(trimmed(sides)) + GAP
+        local above = bar and display_width(sides) or display_width(rtrim(sides)) + GAP
         local column = math.max(width + GAP, above)
         step = step .. string.rep(" ", column - width) .. M.justification(rewritten.law)
     end
@@ -163,28 +161,40 @@ function M.in_derivation(lines, row)
     return first < last or is_step(lines[row] or "")
 end
 
--- The lines of a derivation with every justification bar in one column, GAP
--- columns past the widest sides in the block, where a step whose sides were
--- the widest would have put it. A line with no bar is as it was. The
--- padding before a bar is all that changes, so marks on the expressions
--- keep their places.
-function M.aligned(block, display_width)
-    local widest = 0
-    for _, line in ipairs(block) do
-        widest = math.max(widest, display_width(trimmed(body(line))))
-    end
+-- The edits that put every justification bar of a derivation in one column,
+-- GAP columns past the widest sides in the block, where a step whose sides
+-- were the widest would have put it: each { index, start, finish,
+-- replacement } is the line's index in `block`, the bytes from zero where
+-- the padding before its bar starts and ends (exclusive), and the padding
+-- that goes there. A line with no bar, or whose bar is in the column
+-- already, has no edit. The padding is all that changes, so marks on the
+-- expressions keep their places; the column is display cells, the edit bytes.
+function M.alignment(block, display_width)
+    local widest = fp.reduce(block, 0, function(width, line)
+        return math.max(width, display_width(rtrim(body(line))))
+    end)
     local column = widest + GAP
-    local out = {}
-    for i, line in ipairs(block) do
+    return fp.filter_map(block, function(line, index)
         local sides, bar = body(line)
-        if bar then
-            local kept = trimmed(sides)
-            out[i] = kept .. string.rep(" ", column - display_width(kept)) .. line:sub(bar)
-        else
-            out[i] = line
+        if not bar then
+            return nil
         end
-    end
-    return out
+        local kept = rtrim(sides)
+        local padding = string.rep(" ", column - display_width(kept))
+        if padding == sides:sub(#kept + 1) then
+            return nil
+        end
+        return { index = index, start = #kept, finish = bar - 1, replacement = padding }
+    end)
+end
+
+-- The lines of `block` with its alignment edits made.
+function M.aligned(block, display_width)
+    return fp.reduce(M.alignment(block, display_width), list.slice(block, 1), function(lines, edit)
+        local line = lines[edit.index]
+        lines[edit.index] = line:sub(1, edit.start) .. edit.replacement .. line:sub(edit.finish + 1)
+        return lines
+    end)
 end
 
 return M

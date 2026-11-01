@@ -5,6 +5,19 @@
 -- it at startup, and the spec harness holds the plugin to the same list.
 ---@type table<string, string[]>
 return {
-    fp = { "all", "any", "filter", "find", "map", "reduce", "set", "unique" },
+    fp = {
+        "all",
+        "any",
+        "each",
+        "filter",
+        "filter_map",
+        "find",
+        "find_map",
+        "flat_map",
+        "map",
+        "reduce",
+        "set",
+        "unique",
+    },
     result = { "bind", "context", "map", "traverse" },
 }

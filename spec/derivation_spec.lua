@@ -281,3 +281,42 @@ describe("derivation.aligned", function()
         assert.are.equal("    ≡ B ∨ A    | by commutativity, idempotence", aligned[2])
     end)
 end)
+
+describe("derivation.alignment", function()
+    it("is one edit per line whose padding changes, as the bytes of that padding", function()
+        local block = { "  F ≡ A ∨ B", "    ≡ B ∨ A  | by x", "    ≡ A ∨ B      | by y" }
+        local edits = derivation.alignment(block, width)
+        -- The widest sides are those of line 2 or 3 (equal), so the column
+        -- is their width plus four: line 2 gains two spaces, line 3 loses two.
+        local kept = #"    ≡ B ∨ A"
+        assert.are.same({
+            { index = 2, start = kept, finish = kept + 2, replacement = "    " },
+            { index = 3, start = kept, finish = kept + 6, replacement = "    " },
+        }, edits)
+        for _, edit in ipairs(edits) do
+            local line = block[edit.index]
+            assert.are.equal("|", line:sub(edit.finish + 1, edit.finish + 1))
+            assert.are.equal("", line:sub(edit.start + 1, edit.finish):match("^%s*$") and "" or "not blank")
+        end
+    end)
+
+    it("has no edit for a line with no bar, or one whose bar is in the column already", function()
+        -- The lines without a bar still count towards the column, so they
+        -- are kept narrower than the steps here.
+        local block = { "ab", "≡ a    | by x", "≡ b    | by y", " c" }
+        assert.are.same({}, derivation.alignment(block, width))
+    end)
+
+    it("measures the column in display cells and places the edit in bytes", function()
+        -- ¬ and ∨ are one cell each but two and three bytes: the column is
+        -- eight cells plus four, so the second line's padding is nine cells.
+        local block = { "≡ ¬a ∨ b | by x", "≡ c | by y" }
+        local edits = derivation.alignment(block, width)
+        assert.are.same({
+            { index = 1, start = #"≡ ¬a ∨ b", finish = #"≡ ¬a ∨ b ", replacement = "    " },
+            { index = 2, start = #"≡ c", finish = #"≡ c ", replacement = string.rep(" ", 9) },
+        }, edits)
+        local aligned = { "≡ ¬a ∨ b    | by x", "≡ c" .. string.rep(" ", 9) .. "| by y" }
+        assert.are.same(aligned, derivation.aligned(block, width))
+    end)
+end)
