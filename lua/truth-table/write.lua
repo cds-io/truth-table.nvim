@@ -5,6 +5,8 @@
 -- plans one write, which a preview shows before it happens; `in_place` and
 -- `step` carry a plan out through edit.lua, and tell whoever follows the
 -- TruthTableRewrite event.
+local fp = require("cds.fp")
+local list = require("truth-table.list")
 local edit = require("truth-table.edit")
 local M = {}
 
@@ -63,17 +65,15 @@ function M.lit(at, ranges, group)
     if at.col == nil then
         return {}
     end
-    local out = {}
-    for _, range in ipairs(ranges) do
-        out[#out + 1] = {
+    return fp.map(ranges, function(range)
+        return {
             row = at.row,
             col = at.col + range[1],
             end_col = at.col + range[2],
             group = group,
             priority = PRIORITY[group],
         }
-    end
-    return out
+    end)
 end
 
 -- Anything that wants to follow a written rewrite: the buffer, the row it
@@ -96,10 +96,10 @@ end
 -- cursor on it, ready for the next rewrite.
 function M.step(win, plan)
     local buf = vim.api.nvim_win_get_buf(win)
-    local additions = M.lit({ row = plan.row, col = plan.source }, plan.consumed, M.CONSUMED_GROUP)
-    for _, mark in ipairs(M.lit({ row = plan.row + 1, col = plan.step_column }, plan.changed, M.CHANGED_GROUP)) do
-        additions[#additions + 1] = mark
-    end
+    local additions = list.concat(
+        M.lit({ row = plan.row, col = plan.source }, plan.consumed, M.CONSUMED_GROUP),
+        M.lit({ row = plan.row + 1, col = plan.step_column }, plan.changed, M.CHANGED_GROUP)
+    )
     edit.apply(
         buf,
         edit.prepare(buf, { row = plan.row, replacement = plan.step, inserted = true, additions = additions })

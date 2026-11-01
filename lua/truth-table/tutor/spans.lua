@@ -5,6 +5,7 @@
 -- `[:blue A]`. Inside a span, brackets pair up, so `[:blue result[1]]` ends
 -- at the second `]`; a span inside a span is refused. Pure string handling:
 -- no `vim`, so the lesson loader is tested under plain Lua.
+local fp = require("cds.fp")
 local M = {}
 
 -- Each colour's highlight group and the standard group it links to, so every
@@ -81,14 +82,13 @@ end
 
 -- The innermost of `blocks` holding Markdown row `row` (from zero).
 local function block_of(blocks, row)
-    local found
-    for _, block in ipairs(blocks) do
+    return fp.reduce(blocks, nil, function(found, block)
         local from, count = block[1], block[2]
         if from <= row and row < from + count and (not found or count < found[2]) then
-            found = block
+            return block
         end
-    end
-    return found
+        return found
+    end)
 end
 
 -- Where vellum put the lines that carry spans. `spans` carry `row`, from one

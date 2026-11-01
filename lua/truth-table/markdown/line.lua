@@ -3,6 +3,7 @@
 -- of a heading cell, the display column each cell centres on, and one
 -- heading replaced in place. One scanner owns the escapes for all of them.
 -- Pure.
+local fp = require("cds.fp")
 local result = require("cds.result")
 local model = require("truth-table.table_model")
 local format = require("truth-table.markdown.format")
@@ -55,13 +56,10 @@ local function pipes(line)
 end
 
 function M.column_index(line, byte_column)
-    local count = 0
-    for _, pos in ipairs(pipes(line)) do
-        if pos <= byte_column + 1 then
-            count = count + 1
-        end
-    end
-    return math.max(1, count)
+    local before = fp.filter(pipes(line), function(pos)
+        return pos <= byte_column + 1
+    end)
+    return math.max(1, #before)
 end
 
 -- The cells of one Markdown table row, trimmed, with escaped pipes and

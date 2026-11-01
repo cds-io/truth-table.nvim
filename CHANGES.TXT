@@ -1,6 +1,26 @@
 truth-table.nvim changes
 ========================
 
+- One home for each shared calculation, and the loops that are a standard
+  list operation named as one. `truth-table.list` carries the list
+  arithmetic cds.fp leaves out (`slice`, `concat`, `without`, `with`), for
+  the core and the rims alike; `operators` carries `DUAL`, `IDENTITY` and
+  `DOMINATOR` beside the operator table, read by the trees, the rewrites and
+  the normal forms; `text` carries `rtrim` and `indented` beside `trim`;
+  `trees.negated` says whether a node is a negation under its parentheses.
+  Within the rewrites, `draft.replacement` is the draft that puts one node's
+  rewrite in its place, and `terms.collapse` the operands with a pair
+  collapsed to one term, which complement, reduction, the recognition of ⊕
+  and ⇔, and distributing all write with. `markdown.table_at` answers the
+  table at a row parsed with its bounds, for the equivalence marks, the
+  table commands and the heading source; `check.assignment` and
+  `check.values` are the breaking assignment and the two values as text,
+  which the verdict and the equiv messages compose. The alignment of a
+  derivation's bars is a calculation in the core: `derivation.alignment`
+  answers the edits, each the bytes of one line's padding and the padding
+  that replaces it, and `align.lua` writes them in one undo entry, joined to
+  the rewrite's when a rewrite asked for the alignment. `needs.lua` declares
+  `each`, `filter_map`, `find_map` and `flat_map` as well.
 - Architecture checked through lua-spec: `make architecture-check` holds the
   production Lua to the house rules (at most 200 lines per module, no
   implementation import of the public facade, no dependency cycle) through

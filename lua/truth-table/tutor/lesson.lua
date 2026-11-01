@@ -3,6 +3,7 @@
 -- spans painted as marks, the progress bar in the winbar, and the highlight
 -- groups all of it uses. Draws into the session init.lua holds; the
 -- session itself is changed only there.
+local fp = require("cds.fp")
 local page = require("truth-table.tutor.page")
 local styled = require("truth-table.tutor.vellum")
 local spans = require("truth-table.tutor.spans")
@@ -60,17 +61,15 @@ end
 
 -- A lesson's spans as marks on the lines they were found in.
 local function marks_of(marked)
-    local out = {}
-    for i, span in ipairs(marked) do
-        out[i] = {
+    return fp.map(marked, function(span)
+        return {
             row = span.row - 1,
             col = span.col,
             end_col = span.end_col,
             group = span.group,
             priority = spans.PRIORITY,
         }
-    end
-    return out
+    end)
 end
 
 local function paint(buf, found)

@@ -2,6 +2,7 @@
 -- cursor selects. The one picked is written at once: below, as the next
 -- step of a derivation, or over a heading, which has no steps. A pending
 -- preview in the buffer is dismissed first.
+local fp = require("cds.fp")
 local rewrite = require("truth-table.rewrite")
 local derivation = require("truth-table.derivation")
 local source = require("truth-table.source")
@@ -24,10 +25,9 @@ function M.choose()
         vim.notify("No rewrite applies to " .. selected.expression, vim.log.levels.WARN)
         return
     end
-    local widest = 0
-    for _, move in ipairs(moves) do
-        widest = math.max(widest, vim.fn.strdisplaywidth(move.text))
-    end
+    local widest = fp.reduce(moves, 0, function(width, move)
+        return math.max(width, vim.fn.strdisplaywidth(move.text))
+    end)
     local tick = vim.api.nvim_buf_get_changedtick(buf)
     vim.ui.select(moves, {
         prompt = "Rewrites of " .. selected.expression,

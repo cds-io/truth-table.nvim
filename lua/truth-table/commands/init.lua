@@ -2,6 +2,7 @@
 -- command takes. The table commands are table.lua's; the rest run a
 -- preview, a verdict, the menu or the tutor, each a line. `define` creates
 -- them all and answers the names, which the keymaps are checked against.
+local fp = require("cds.fp")
 local core = require("truth-table.core")
 local preview = require("truth-table.preview")
 local tables = require("truth-table.commands.table")
@@ -107,17 +108,17 @@ local COMMANDS = {
 
 -- Create every command; answers the set of names defined.
 function M.define()
-    local defined = {}
-    for _, command in ipairs(COMMANDS) do
+    fp.each(COMMANDS, function(command)
         vim.api.nvim_create_user_command(command.name, command.run, {
             nargs = command.nargs,
             range = command.range,
             bang = command.bang,
             desc = command.desc,
         })
-        defined[command.name] = true
-    end
-    return defined
+    end)
+    return fp.set(COMMANDS, function(command)
+        return command.name
+    end)
 end
 
 return M

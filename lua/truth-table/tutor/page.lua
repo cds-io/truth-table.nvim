@@ -10,6 +10,7 @@
 -- go to lesson.lua, which paints them. Pure string handling: init.lua owns
 -- the windows. The block strings become lines in text.lua; this lays a
 -- step's page out of them.
+local fp = require("cds.fp")
 local text = require("truth-table.tutor.text")
 local M = {}
 
@@ -106,10 +107,11 @@ function M.render(course, place)
     end
     if step.expect then
         local expected = M.lines(step.expect)
-        for _, line in ipairs(expected) do
-            if line:find("%[:%w+") then
-                return nil, "expect: a colour span in the expected result: " .. line
-            end
+        local marked = fp.find(expected, function(line)
+            return line:find("%[:%w+")
+        end)
+        if marked then
+            return nil, "expect: a colour span in the expected result: " .. marked
         end
         -- A one-line result reads as a sentence; a longer one is a panel
         -- labelled "result" (vellum shows a fence's info string, first word

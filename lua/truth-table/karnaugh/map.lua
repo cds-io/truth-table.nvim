@@ -2,6 +2,7 @@
 -- the lines that go below the table (the map when drawable, and the
 -- formula). init.lua makes the analysis; this only draws it. Pure.
 local fp = require("cds.fp")
+local list = require("truth-table.list")
 local model = require("truth-table.table_model")
 local markdown = require("truth-table.markdown")
 local SYMBOLS = require("truth-table.symbols")
@@ -28,13 +29,8 @@ function M.map_cells(analysis)
     end
     local column_count = width == 2 and 1 or 2
     local row_count = width - column_count
-    local row_names, column_names = {}, {}
-    for i = 1, row_count do
-        row_names[i] = analysis.inputs[i]
-    end
-    for i = 1, column_count do
-        column_names[i] = analysis.inputs[row_count + i]
-    end
+    local row_names = list.slice(analysis.inputs, 1, row_count)
+    local column_names = list.slice(analysis.inputs, row_count + 1, width)
     local row_codes, column_codes = GRAY[row_count], GRAY[column_count]
     local symbols = model.ENCODINGS[analysis.encoding]
 
@@ -66,13 +62,8 @@ function M.render(analysis, display_width)
     if not headers then
         return { formula }
     end
-    local lines = { "Karnaugh map for " .. analysis.target .. ":", "" }
-    for _, line in ipairs(markdown.format_cells(headers, rows, display_width)) do
-        lines[#lines + 1] = line
-    end
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = formula
-    return lines
+    local title = "Karnaugh map for " .. analysis.target .. ":"
+    return list.concat({ title, "" }, markdown.format_cells(headers, rows, display_width), { "", formula })
 end
 
 return M

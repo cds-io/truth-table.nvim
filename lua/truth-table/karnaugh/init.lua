@@ -7,6 +7,7 @@
 -- are implicants.lua, the cover search cover.lua, and the drawn map map.lua,
 -- whose `render` this also answers to.
 local fp = require("cds.fp")
+local list = require("truth-table.list")
 local predicate = require("truth-table.predicate")
 local trees = require("truth-table.trees")
 local implicants = require("truth-table.karnaugh.implicants")
@@ -110,10 +111,7 @@ function M.derive(tbl, column)
     if not width then
         return nil, width_err
     end
-    local inputs = {}
-    for i = 1, width do
-        inputs[i] = tbl.headers[i]
-    end
+    local inputs = list.slice(tbl.headers, 1, width)
     local values, minterms, terms = {}, {}, {}
     for _, row in ipairs(tbl.rows) do
         local pattern = table.concat(row, "", 1, width)

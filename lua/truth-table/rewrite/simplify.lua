@@ -112,14 +112,14 @@ end
 local function collapse(node, on_path)
     local focus
     if on_path and node.type ~= "not" then
-        for index, item in ipairs(operands(node, node.type)) do
-            if on_path[item] then
-                focus = index
-            end
-        end
-        if not focus then
+        -- The path crosses one operand of a chain at most.
+        local _, index = fp.find(operands(node, node.type), function(item)
+            return on_path[item]
+        end)
+        if not index then
             return nil
         end
+        focus = index
     end
     return collapses(node, focus, focus)[1]
 end

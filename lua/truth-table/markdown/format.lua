@@ -3,6 +3,7 @@
 -- heading, and the lines of a table whose cells are strings. The line
 -- codec is line.lua; this only writes. Pure.
 local fp = require("cds.fp")
+local list = require("truth-table.list")
 local model = require("truth-table.table_model")
 local M = {}
 
@@ -24,14 +25,11 @@ function M.center_pad(str, width, display_width)
 end
 
 local function format_valid(headers, rows, display_width)
-    local widths = fp.map(headers, function(header)
-        return math.max(3, display_width(header))
+    local widths = fp.map(headers, function(header, i)
+        return fp.reduce(rows, math.max(3, display_width(header)), function(widest, row)
+            return math.max(widest, display_width(row[i]))
+        end)
     end)
-    for _, row in ipairs(rows) do
-        for i, cell in ipairs(row) do
-            widths[i] = math.max(widths[i], display_width(cell))
-        end
-    end
 
     local function line(cells)
         return "|" .. table.concat(cells, "|") .. "|"
@@ -46,11 +44,7 @@ local function format_valid(headers, rows, display_width)
         return ":" .. string.rep("-", width) .. ":"
     end))
 
-    local lines = { padded(headers), separator }
-    for _, row in ipairs(rows) do
-        lines[#lines + 1] = padded(row)
-    end
-    return lines
+    return list.concat({ padded(headers), separator }, fp.map(rows, padded))
 end
 
 -- Format arbitrary string cells (headers may be empty). The Boolean codec

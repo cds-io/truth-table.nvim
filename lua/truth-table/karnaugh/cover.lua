@@ -3,6 +3,7 @@
 -- they leave, within a budget past which the greedy answer stands. Over
 -- the implicant strings of implicants.lua. Pure.
 local fp = require("cds.fp")
+local list = require("truth-table.list")
 local implicants = require("truth-table.karnaugh.implicants")
 local M = {}
 
@@ -148,20 +149,13 @@ local function minimal_cover(primes, minterms)
         return not covered[pattern]
     end)
     if #uncovered > 0 then
-        local candidates = {}
-        for _, prime in ipairs(primes) do
-            if not chosen[prime] then
-                for _, pattern in ipairs(uncovered) do
-                    if covers(prime, pattern) then
-                        candidates[#candidates + 1] = prime
-                        break
-                    end
-                end
-            end
-        end
-        for _, prime in ipairs(exact_cover(candidates, uncovered)) do
-            cover[#cover + 1] = prime
-        end
+        local candidates = fp.filter(primes, function(prime)
+            return not chosen[prime]
+                and fp.any(uncovered, function(pattern)
+                    return covers(prime, pattern)
+                end)
+        end)
+        cover = list.concat(cover, exact_cover(candidates, uncovered))
     end
     return sort_terms(cover)
 end

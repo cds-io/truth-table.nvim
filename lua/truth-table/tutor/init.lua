@@ -7,6 +7,8 @@
 -- (spans.lua) are painted in both panes. course.lua reads the lessons and
 -- keeps the reader's place, panes.lua owns the buffers and windows, and
 -- lesson.lua draws the lesson pane; this holds the session and moves it.
+local fp = require("cds.fp")
+local list = require("truth-table.list")
 local page = require("truth-table.tutor.page")
 local styled = require("truth-table.tutor.vellum")
 local course = require("truth-table.tutor.course")
@@ -84,9 +86,7 @@ local function show()
 end
 
 local function discard()
-    local buffers = vim.tbl_values(session.scratch)
-    buffers[#buffers + 1] = session.lesson
-    for _, buf in ipairs(buffers) do
+    for _, buf in ipairs(list.concat(vim.tbl_values(session.scratch), { session.lesson })) do
         if vim.api.nvim_buf_is_valid(buf) then
             vim.api.nvim_buf_delete(buf, { force = true })
         end
@@ -113,13 +113,9 @@ function M.open(opts)
     end
     palette()
     if opts.lesson then
-        local target
-        for index, at in ipairs(session.steps) do
-            if at.lesson == tonumber(opts.lesson) then
-                target = index
-                break
-            end
-        end
+        local _, target = fp.find(session.steps, function(at)
+            return at.lesson == tonumber(opts.lesson)
+        end)
         if not target then
             local message = "No lesson %s: the tutorial has lessons 1 to %d"
             vim.notify(message:format(opts.lesson, #session.course), vim.log.levels.WARN)

@@ -2,6 +2,8 @@
 -- step with Neovim's undo tree: each undo sequence number has the marks that
 -- went with it, so undo and redo restore them with the text, branches
 -- included. The marks are truth-table.marks records.
+local fp = require("cds.fp")
+local list = require("truth-table.list")
 local marks = require("truth-table.marks")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("truth-table.changed")
@@ -75,11 +77,10 @@ function M.prepare(buf, write)
     local history = watch(buf)
     synchronize(buf, history)
     local before = annotations(buf)
-    local after = {}
-    for _, mark in ipairs(before) do
+    local kept = fp.filter_map(before, function(mark)
         if inserted or mark.row ~= row then
             local shift = inserted and mark.row > row and 1 or 0
-            after[#after + 1] = {
+            return {
                 row = mark.row + shift,
                 col = mark.col,
                 end_col = mark.end_col,
@@ -87,10 +88,8 @@ function M.prepare(buf, write)
                 priority = mark.priority,
             }
         end
-    end
-    for _, mark in ipairs(additions) do
-        after[#after + 1] = mark
-    end
+    end)
+    local after = list.concat(kept, additions)
     return {
         row = inserted and row + 1 or row,
         before = {
