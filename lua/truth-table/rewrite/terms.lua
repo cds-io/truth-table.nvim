@@ -5,6 +5,7 @@
 -- differ in). Shared by the operand rules, the recognition of ⊕ and ⇔ and
 -- the laws, so it holds none of them. Pure.
 local trees = require("truth-table.trees")
+local list = require("truth-table.list")
 local fp = require("cds.fp")
 local M = {}
 
@@ -41,10 +42,11 @@ local function constant(node)
     return inner.type == "literal" and inner.value or nil
 end
 
-local function without(items, dropped)
-    return fp.filter(items, function(_, index)
-        return index ~= dropped
-    end)
+-- The items with the pair at `a` and `b` collapsed to `value`, standing
+-- where the first of the two stood.
+local function collapse(items, a, b, value)
+    local low, high = math.min(a, b), math.max(a, b)
+    return list.with(list.without(items, high), low, value)
 end
 
 -- A term's factors: its operands when it is a chain of `op`, else itself.
@@ -117,7 +119,7 @@ local function merge(first, second, op)
     return fold(op, shared)
 end
 
-M.shape, M.complement, M.constant, M.without = shape, complement, constant, without
+M.shape, M.complement, M.constant, M.collapse = shape, complement, constant, collapse
 M.factors, M.within, M.strip, M.merge = factors, within, strip, merge
 
 return M

@@ -62,4 +62,11 @@ M.CONSTANT_WORDS = {
     [SYMBOLS.BOTTOM.ascii] = SYMBOLS.BOTTOM.unicode,
 }
 
+-- What the laws over ∧ and ∨ turn on: the other operator of the pair
+-- (DUAL), the constant that leaves a chain as it is (IDENTITY) and the one
+-- that decides it (DOMINATOR).
+M.DUAL = { ["and"] = "or", ["or"] = "and" }
+M.IDENTITY = { ["and"] = 1, ["or"] = 0 }
+M.DOMINATOR = { ["and"] = 0, ["or"] = 1 }
+
 return M

@@ -8,6 +8,7 @@
 -- from the cursor.
 local fp = require("cds.fp")
 local result = require("cds.result")
+local list = require("truth-table.list")
 local M = {}
 
 -- The spelling of the cells 0 and 1 under each encoding: the one place a
@@ -99,11 +100,7 @@ function M.render_rows(tbl)
     end)
 end
 
-local function without(values, index)
-    return fp.filter(values, function(_, i)
-        return i ~= index
-    end)
-end
+local without = list.without
 
 local function valid_index(index, count)
     return type(index) == "number" and index == math.floor(index) and index >= 1 and index <= count
@@ -123,23 +120,18 @@ function M.append_columns(tbl, columns)
             return column.heading
         end
     )
-    local headers = fp.map(tbl.headers, function(header)
-        return header
+    local headings = fp.map(appended, function(column)
+        return column.heading
     end)
-    for _, column in ipairs(appended) do
-        headers[#headers + 1] = column.heading
-    end
     local rows = fp.map(tbl.rows, function(row, index)
-        local extended = {}
-        for i, bit in ipairs(row) do
-            extended[i] = bit
-        end
-        for _, column in ipairs(appended) do
-            extended[#extended + 1] = column.values[index]
-        end
-        return extended
+        return list.concat(
+            row,
+            fp.map(appended, function(column)
+                return column.values[index]
+            end)
+        )
     end)
-    return { headers = headers, rows = rows, encoding = tbl.encoding }
+    return { headers = list.concat(tbl.headers, headings), rows = rows, encoding = tbl.encoding }
 end
 
 -- The indices of the columns that match column `index` cell for cell on

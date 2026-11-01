@@ -11,7 +11,8 @@ local M = {}
 local unparen, operands, fold = trees.unparen, trees.operands, trees.fold
 local DUAL, path_to, paths, chain_at = walk.DUAL, walk.path_to, walk.paths, walk.chain_at
 local at_cursor, operation, substitute = drafting.at_cursor, drafting.operation, drafting.substitute
-local complement = terms.complement
+local replacement = drafting.replacement
+local complement, collapse = terms.complement, terms.collapse
 
 -- Two two-operand terms whose operands are complements pair by pair: the
 -- un-negated operands in the first term's order, and how many of the first
@@ -64,9 +65,7 @@ local function xor_at(path, index)
                     local low, high = math.min(chain.index, partner), math.max(chain.index, partner)
                     local recognised = recognise_pair(chain.operands[low], chain.operands[high], chain.op)
                     if recognised then
-                        local items = operands(path[chain.top], chain.op)
-                        items[low] = recognised
-                        table.remove(items, high)
+                        local items = collapse(operands(path[chain.top], chain.op), low, high, recognised)
                         found[#found + 1] = {
                             tree = substitute(path[1], path[chain.top], fold(chain.op, items)),
                             law = "definition of " .. operators.SYMBOLS[recognised.type],
@@ -100,12 +99,7 @@ local function unfold_at(ast, path, index)
     if not rewritten then
         return nil
     end
-    return {
-        tree = substitute(ast, node, rewritten),
-        law = "definition of " .. operators.SYMBOLS[unparen(node).type],
-        consumed = { node },
-        produced = { rewritten },
-    }
+    return replacement(ast, node, rewritten, "definition of " .. operators.SYMBOLS[unparen(node).type])
 end
 
 -- Unfold the nearest →, ⊕ or ⇔ enclosing the cursor (the node itself when

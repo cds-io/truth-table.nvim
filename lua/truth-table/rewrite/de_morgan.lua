@@ -3,20 +3,17 @@
 -- negation. The command finds the nearest site from the cursor outward;
 -- `de_morgan_at` and `runs` are what `moves` calls at every site. Pure.
 local trees = require("truth-table.trees")
+local list = require("truth-table.list")
 local walk = require("truth-table.rewrite.path")
 local drafting = require("truth-table.rewrite.draft")
 local fp = require("cds.fp")
 local M = {}
 
-local unparen, operands, fold = trees.unparen, trees.operands, trees.fold
+local unparen, negated, operands, fold = trees.unparen, trees.negated, trees.operands, trees.fold
 local DUAL, path_to, chain_internal = walk.DUAL, walk.path_to, walk.chain_internal
-local operation, substitute = drafting.operation, drafting.substitute
+local operation, substitute, replacement = drafting.operation, drafting.substitute, drafting.replacement
 
 local DE_MORGAN = "De Morgan"
-
-local function negated(item)
-    return unparen(item).type == "not"
-end
 
 -- The run of adjacent negated operands of `items` holding the one at
 -- `focus`: its first and last indices, or nil when that operand is no
@@ -49,15 +46,7 @@ local function de_morgan_at(ast, node, focus)
     local inner = unparen(node)
     if inner.type == "not" or not DUAL[inner.type] then
         local rewritten = trees.de_morgan(node)
-        if rewritten then
-            return {
-                tree = substitute(ast, node, rewritten),
-                law = DE_MORGAN,
-                consumed = { node },
-                produced = { rewritten },
-            }
-        end
-        return nil
+        return rewritten and replacement(ast, node, rewritten, DE_MORGAN) or nil
     end
     local items = operands(node, inner.type)
     local first, last = run_around(items, focus)
@@ -65,26 +54,17 @@ local function de_morgan_at(ast, node, focus)
         return nil
     end
     if first == 1 and last == #items then
-        local rewritten = trees.de_morgan(node)
-        return {
-            tree = substitute(ast, node, rewritten),
-            law = DE_MORGAN,
-            consumed = { node },
-            produced = { rewritten },
-        }
+        return replacement(ast, node, trees.de_morgan(node), DE_MORGAN)
     end
-    local run = fp.filter(items, function(_, index)
-        return index >= first and index <= last
-    end)
-    local kept = {}
+    local run = list.slice(items, first, last)
     local contracted = trees.de_morgan(fold(inner.type, run))
-    for index, item in ipairs(items) do
+    local kept = fp.filter_map(items, function(item, index)
         if index == first then
-            kept[#kept + 1] = contracted
+            return contracted
         elseif index < first or index > last then
-            kept[#kept + 1] = item
+            return item
         end
-    end
+    end)
     return {
         tree = substitute(ast, node, fold(inner.type, kept)),
         law = DE_MORGAN,

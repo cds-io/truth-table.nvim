@@ -4,20 +4,17 @@
 -- returns the operands that remain, one list per way the law applies to the
 -- focus. simplify.lua tries them at each site. Pure.
 local trees = require("truth-table.trees")
-local walk = require("truth-table.rewrite.path")
+local operators = require("truth-table.operators")
+local list = require("truth-table.list")
 local terms = require("truth-table.rewrite.terms")
 local fp = require("cds.fp")
 local M = {}
 
 local fold = trees.fold
-local DUAL = walk.DUAL
-local complement, constant, without = terms.complement, terms.constant, terms.without
+local DUAL, IDENTITY, DOMINATOR = operators.DUAL, operators.IDENTITY, operators.DOMINATOR
+local complement, constant, collapse = terms.complement, terms.constant, terms.collapse
 local factors, within, strip, merge = terms.factors, terms.within, terms.strip, terms.merge
-
--- Per chain operator: the constant that leaves the chain as it is, and the
--- one that decides it.
-local IDENTITY = { ["and"] = 1, ["or"] = 0 }
-local DOMINATOR = { ["and"] = 0, ["or"] = 1 }
+local without = list.without
 
 -- In order of preference when several apply to one focus. A pairwise law
 -- answers once per partner, in operand order.
@@ -26,15 +23,11 @@ local CHAIN_LAWS = {
     {
         name = "complement",
         apply = function(items, at, op)
-            local found = {}
-            for other, item in ipairs(items) do
+            return fp.filter_map(items, function(item, other)
                 if other ~= at and complement(items[at], item) then
-                    local kept = without(items, math.max(at, other))
-                    kept[math.min(at, other)] = trees.literal(DOMINATOR[op])
-                    found[#found + 1] = kept
+                    return collapse(items, at, other, trees.literal(DOMINATOR[op]))
                 end
-            end
-            return found
+            end)
         end,
     },
     -- A ∨ 1 is 1, and A ∧ 0 is 0. The constant stays as it was typed.
@@ -61,13 +54,11 @@ local CHAIN_LAWS = {
     {
         name = "idempotence",
         apply = function(items, at, op)
-            local found = {}
-            for other, item in ipairs(items) do
+            return fp.filter_map(items, function(item, other)
                 if other ~= at and within(items[at], item, DUAL[op]) and within(item, items[at], DUAL[op]) then
-                    found[#found + 1] = without(items, math.max(at, other))
+                    return without(items, math.max(at, other))
                 end
-            end
-            return found
+            end)
         end,
     },
     -- A ∨ A ∧ B is A: the focus absorbs every term that contains it, or is
@@ -105,37 +96,23 @@ local CHAIN_LAWS = {
             if changed then
                 return { kept }
             end
-            local found = {}
-            for other, item in ipairs(items) do
+            return fp.filter_map(items, function(item, other)
                 local stripped = other ~= at and strip(items[at], item, DUAL[op])
-                if stripped then
-                    local result = {}
-                    for index, operand in ipairs(items) do
-                        result[index] = index == at and stripped or operand
-                    end
-                    found[#found + 1] = result
-                end
-            end
-            return found
+                return stripped and list.with(items, at, stripped) or nil
+            end)
         end,
     },
     -- A ∧ B ∨ ¬A ∧ B is B.
     {
         name = "reduction",
         apply = function(items, at, op)
-            local found = {}
-            for other in ipairs(items) do
+            return fp.filter_map(items, function(_, other)
                 if other ~= at then
                     local low, high = math.min(at, other), math.max(at, other)
                     local merged = merge(items[low], items[high], DUAL[op])
-                    if merged then
-                        local kept = without(items, high)
-                        kept[low] = merged
-                        found[#found + 1] = kept
-                    end
+                    return merged and collapse(items, low, high, merged) or nil
                 end
-            end
-            return found
+            end)
         end,
     },
     -- A ∧ B ∨ ¬A ∧ C ∨ B ∧ C is A ∧ B ∨ ¬A ∧ C: the focus goes when two

@@ -3,8 +3,9 @@
 -- convention throughout. The dot-repeat of a table edit lives here too,
 -- since the edits are what it replays.
 local core = require("truth-table.core")
+local list = require("truth-table.list")
+local text = require("truth-table.text")
 local result = require("cds.result")
-local fp = require("cds.fp")
 
 local M = {}
 
@@ -15,12 +16,7 @@ local function replace_table(first, last, tbl, err, indent)
         vim.notify(format_err, vim.log.levels.WARN)
         return
     end
-    if indent and indent ~= "" then
-        lines = fp.map(lines, function(line)
-            return indent .. line
-        end)
-    end
-    vim.api.nvim_buf_set_lines(0, first, last, false, lines)
+    vim.api.nvim_buf_set_lines(0, first, last, false, text.indented(lines, indent or ""))
 end
 
 local function get_cursor_column_index()
@@ -32,19 +28,7 @@ end
 -- error. Bounds are one-based, inclusive line numbers.
 local function read_table()
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    local bounds, find_err = core.find_table(lines, vim.api.nvim_win_get_cursor(0)[1])
-    if not bounds then
-        return nil, find_err
-    end
-    local selected = {}
-    for row = bounds.start_line, bounds.end_line do
-        selected[#selected + 1] = lines[row]
-    end
-    local tbl, err = core.parse(selected)
-    if not tbl then
-        return nil, err
-    end
-    return tbl, bounds
+    return core.table_at(lines, vim.api.nvim_win_get_cursor(0)[1])
 end
 
 -- Compose parse -> transform -> format, using one Result convention throughout.
@@ -146,10 +130,7 @@ local function cmd_karnaugh()
         vim.notify(err, vim.log.levels.WARN)
         return
     end
-    local lines = { "" }
-    for _, line in ipairs(core.format_karnaugh(analysis)) do
-        lines[#lines + 1] = line == "" and "" or bounds.indent .. line
-    end
+    local lines = list.concat({ "" }, text.indented(core.format_karnaugh(analysis), bounds.indent))
     vim.api.nvim_buf_set_lines(0, bounds.end_line, bounds.end_line, false, lines)
 end
 

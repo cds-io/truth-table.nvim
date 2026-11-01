@@ -10,6 +10,7 @@
 -- keeps the marks and takes them down.
 local check = require("truth-table.check")
 local derivation = require("truth-table.derivation")
+local list = require("truth-table.list")
 local marks = require("truth-table.marks")
 local write = require("truth-table.write")
 local SYMBOLS = require("truth-table.symbols")
@@ -48,10 +49,7 @@ local function watch(buf)
 end
 
 local function remember(buf, ids)
-    shown[buf] = shown[buf] or {}
-    for _, id in ipairs(ids) do
-        shown[buf][#shown[buf] + 1] = id
-    end
+    shown[buf] = list.concat(shown[buf] or {}, ids)
 end
 
 -- The proof of `verdict` inserted below row `last` of `buf`, its failing
@@ -72,9 +70,7 @@ end
 -- lit. The expressions are an argument or plain lines, so nothing else is
 -- marked.
 function M.equiv(buf, exprs, below, indent, with_proof)
-    if buf == 0 then
-        buf = vim.api.nvim_get_current_buf()
-    end
+    buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
     if #exprs < 2 then
         vim.notify("Give two or more expressions to compare", vim.log.levels.WARN)
         return
@@ -94,16 +90,10 @@ function M.equiv(buf, exprs, below, indent, with_proof)
         vim.notify("equivalent (" .. #exprs .. " expressions)", vim.log.levels.INFO)
         return
     end
-    local parts = {}
-    for i, bound in ipairs(verdict.assignment) do
-        parts[i] = bound.name .. "=" .. bound.value
-    end
-    local values = verdict.premise .. " " .. SYMBOLS.NOT_EQUIV.unicode .. " " .. verdict.conclusion
-    local where = #parts > 0 and (" at " .. table.concat(parts, ", ")) or ""
-    vim.notify(
-        "expressions " .. verdict.step .. " and " .. (verdict.step + 1) .. " differ" .. where .. ": " .. values,
-        vim.log.levels.WARN
-    )
+    local assignment = check.assignment(verdict)
+    local where = assignment ~= "" and (" at " .. assignment) or ""
+    local pair = "expressions " .. verdict.step .. " and " .. (verdict.step + 1)
+    vim.notify(pair .. " differ" .. where .. ": " .. check.values(verdict), vim.log.levels.WARN)
 end
 
 -- Judge the derivation holding `row` (from one) in `buf` and show the
@@ -111,18 +101,12 @@ end
 function M.show(buf, row, with_proof)
     -- The watch is kept by buffer number, so 0 (the current buffer) is
     -- resolved before anything is keyed by it.
-    if buf == 0 then
-        buf = vim.api.nvim_get_current_buf()
-    end
+    buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
     vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
     shown[buf] = nil
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
     local first, last = derivation.block(lines, row)
-    local block = {}
-    for i = first, last do
-        block[#block + 1] = lines[i]
-    end
-    local verdict, err = check.check(block)
+    local verdict, err = check.check(list.slice(lines, first, last))
     if not verdict then
         vim.notify(err, vim.log.levels.WARN)
         return

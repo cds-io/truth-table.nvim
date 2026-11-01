@@ -25,6 +25,7 @@ local trim = require("truth-table.text").trim
 -- An operation that can refuse returns one table, or nil and the reason.
 M.parse = markdown.parse_table_lines
 M.find_table = markdown.find_table
+M.table_at = markdown.table_at
 M.is_table_line = markdown.is_table_line
 M.column_index = markdown.column_index
 M.split_expressions = predicate.split_expressions
@@ -133,19 +134,13 @@ local function table_from_expressions(input)
     if not asts then
         return nil, parse_err
     end
-    local vars, seen = {}, {}
     local discovered, discover_err = result.traverse(asts, predicate.variables)
     if not discovered then
         return nil, discover_err
     end
-    for _, names in ipairs(discovered) do
-        for _, name in ipairs(names) do
-            if not seen[name] then
-                seen[name] = true
-                vars[#vars + 1] = name
-            end
-        end
-    end
+    local vars = fp.unique(fp.flat_map(discovered, function(names)
+        return names
+    end))
     local compound = fp.filter(asts, function(ast)
         return ast.type ~= "var"
     end)

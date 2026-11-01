@@ -2,6 +2,8 @@
 -- parsed into the model. The line codec is line.lua and the formatter
 -- format.lua; this composes the two under one name and holds what spans
 -- lines: discovery and the parse of a whole table.
+local result = require("cds.result")
+local list = require("truth-table.list")
 local model = require("truth-table.table_model")
 local codec = require("truth-table.markdown.line")
 local format = require("truth-table.markdown.format")
@@ -29,15 +31,27 @@ function M.parse_table_lines(lines)
     if #separator ~= #headers then
         return nil, "Separator column count does not match heading"
     end
-    local rows = {}
-    for i = 3, #lines do
-        local row, row_err = M.row(lines[i])
-        if not row then
-            return nil, "Line " .. i .. ": " .. row_err
-        end
-        rows[#rows + 1] = row
+    local rows, row_err = result.traverse(list.slice(lines, 3), function(line, i)
+        local row, err_ = M.row(line)
+        return result.context(row, err_, "Line " .. (i + 2) .. ": ")
+    end)
+    return result.bind(rows, row_err, function(cells)
+        return model.parse(headers, cells)
+    end)
+end
+
+-- The table holding `row` (from one) in `lines`, parsed, and its bounds;
+-- nil and the reason when no table is there or it does not parse.
+function M.table_at(lines, row)
+    local bounds, err = M.find_table(lines, row)
+    if not bounds then
+        return nil, err
     end
-    return model.parse(headers, rows)
+    local tbl, parse_err = M.parse_table_lines(list.slice(lines, bounds.start_line, bounds.end_line))
+    if not tbl then
+        return nil, parse_err
+    end
+    return tbl, bounds
 end
 
 -- Discovery is separate from Boolean validation: malformed data must be found

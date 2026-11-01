@@ -71,6 +71,18 @@ local function substitute(node, old, new)
     end))
 end
 
-M.at_cursor, M.completed, M.operation, M.substitute = at_cursor, completed, operation, substitute
+-- The draft that puts `rewritten` in place of `node` in `ast` by `law`:
+-- the node consumed whole and the result produced whole.
+local function replacement(ast, node, rewritten, law)
+    return {
+        tree = substitute(ast, node, rewritten),
+        law = law,
+        consumed = { node },
+        produced = { rewritten },
+    }
+end
+
+M.at_cursor, M.completed, M.operation = at_cursor, completed, operation
+M.substitute, M.replacement = substitute, replacement
 
 return M

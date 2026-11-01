@@ -11,16 +11,13 @@
 local predicate = require("truth-table.predicate")
 local markdown = require("truth-table.markdown")
 local derivation = require("truth-table.derivation")
+local list = require("truth-table.list")
 local M = {}
 
 -- A heading is one expression, read from anywhere in its column. Only the
 -- heading row itself puts the cursor on a byte of the expression.
 local function heading_source(lines, bounds, at)
-    local selected = {}
-    for i = bounds.start_line, bounds.end_line do
-        selected[#selected + 1] = lines[i]
-    end
-    local tbl, err = markdown.parse_table_lines(selected)
+    local tbl, err = markdown.parse_table_lines(list.slice(lines, bounds.start_line, bounds.end_line))
     if not tbl then
         return nil, err
     end

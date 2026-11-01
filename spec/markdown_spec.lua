@@ -100,6 +100,19 @@ describe("table discovery", function()
         assert.is_nil(markdown.parse_table_lines(lines))
     end)
 
+    it("answers the table at a row parsed, with its bounds, or the reason there is none", function()
+        local lines = { "prose", "  |A|", "  |---|", "  |1|", "", "|B|", "|---|", "|x|" }
+        local tbl, bounds = markdown.table_at(lines, 4)
+        assert.are.same({ headers = { "A" }, rows = { { 1 } }, encoding = "bits" }, tbl)
+        assert.are.same({ start_line = 2, end_line = 4, indent = "  " }, bounds)
+        local none, reason = markdown.table_at(lines, 1)
+        assert.is_nil(none)
+        assert.are.equal("Cursor is not inside a truth table", reason)
+        local invalid, err = markdown.table_at(lines, 8)
+        assert.is_nil(invalid)
+        assert.are.equal("Invalid Boolean at row 1, column 1: x", err)
+    end)
+
     it("maps multibyte cursor positions and delimiters consistently", function()
         local line = "| ¬A \\| B | C |"
         local pipe = assert(line:find("\\|", 1, true))

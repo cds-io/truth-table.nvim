@@ -34,15 +34,7 @@ function M.refresh(buf)
         return
     end
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    local bounds = core.find_table(lines, cursor[1])
-    if not bounds then
-        return
-    end
-    local selected = {}
-    for row = bounds.start_line, bounds.end_line do
-        selected[#selected + 1] = lines[row]
-    end
-    local tbl = core.parse(selected)
+    local tbl, bounds = core.table_at(lines, cursor[1])
     if not tbl or #tbl.rows == 0 then
         return
     end

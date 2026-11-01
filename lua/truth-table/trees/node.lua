@@ -47,6 +47,11 @@ function M.unparen(node)
     return node
 end
 
+-- Whether a node, parentheses around it ignored, is a negation.
+function M.negated(node)
+    return M.unparen(node).type == "not"
+end
+
 -- A node's children, left to right: the one under a parenthesis or a
 -- negation, the two of a binary operator, none for a leaf.
 function M.children(node)

@@ -4,6 +4,8 @@
 -- paints the mark and keeps it; this builds and inserts the table.
 local core = require("truth-table.core")
 local fp = require("cds.fp")
+local list = require("truth-table.list")
+local text = require("truth-table.text")
 local markdown = require("truth-table.markdown")
 local model = require("truth-table.table_model")
 local write = require("truth-table.write")
@@ -50,10 +52,7 @@ function M.show(buf, last, indent, verdict)
     if not tbl then
         return nil, err
     end
-    local lines = { "" }
-    for _, line in ipairs(core.format(tbl)) do
-        lines[#lines + 1] = indent .. line
-    end
+    local lines = list.concat({ "" }, text.indented(core.format(tbl), indent))
     vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
     if verdict.ok then
         return {}

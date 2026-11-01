@@ -14,6 +14,8 @@
 -- a fresh tree out; the atoms are the source's own nodes. The terms the
 -- passes work on, and their tidying, are normal/terms.lua.
 local fp = require("cds.fp")
+local list = require("truth-table.list")
+local operators = require("truth-table.operators")
 local trees = require("truth-table.trees")
 local term_data = require("truth-table.normal.terms")
 local M = {}
@@ -24,10 +26,7 @@ local literal, term, tidy = term_data.literal, term_data.term, term_data.tidy
 -- past this many before tidying.
 local MAX_TERMS = 256
 
-local DUAL = { ["and"] = "or", ["or"] = "and" }
--- The constant each operator leaves alone, and the one that takes over.
-local IDENTITY = { ["and"] = 1, ["or"] = 0 }
-local DOMINATOR = { ["and"] = 0, ["or"] = 1 }
+local DUAL, IDENTITY, DOMINATOR = operators.DUAL, operators.IDENTITY, operators.DOMINATOR
 
 -- `node` with →, ⊕ and ⇔ unfolded and every ¬ on an atom; `negated` says
 -- whether the result is the negation of `node`.
@@ -66,10 +65,7 @@ local function distribute(node, outer, inner)
         if not right then
             return nil, err
         end
-        for _, item in ipairs(right) do
-            left[#left + 1] = item
-        end
-        return left
+        return list.concat(left, right)
     elseif node.type == inner then
         local left, err = distribute(node.left, outer, inner)
         if not left then
@@ -83,22 +79,11 @@ local function distribute(node, outer, inner)
         if #left * #right > MAX_TERMS then
             return nil, "The form would have more than " .. MAX_TERMS .. " terms"
         end
-        local crossed = {}
-        for _, first in ipairs(left) do
-            for _, second in ipairs(right) do
-                local literals = fp.map(first.literals, function(item)
-                    return item
-                end)
-                for _, item in ipairs(second.literals) do
-                    literals[#literals + 1] = item
-                end
-                local merged = term(literals)
-                if merged then
-                    crossed[#crossed + 1] = merged
-                end
-            end
-        end
-        return crossed
+        return fp.flat_map(left, function(first)
+            return fp.filter_map(right, function(second)
+                return term(list.concat(first.literals, second.literals))
+            end)
+        end)
     elseif node.type == "literal" then
         if node.value == IDENTITY[outer] then
             return {}

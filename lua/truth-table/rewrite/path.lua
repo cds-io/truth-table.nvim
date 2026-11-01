@@ -13,7 +13,7 @@ local unparen, operands, children = trees.unparen, trees.operands, trees.childre
 -- list. They are the associative, commutative ones, which is what makes the
 -- flat reading sound; implication is neither, so it is always one operand.
 local CHAIN = { ["and"] = true, ["or"] = true, xor = true, iff = true }
-local DUAL = { ["and"] = "or", ["or"] = "and" }
+local DUAL = require("truth-table.operators").DUAL
 
 local NO_TARGET = "Put the cursor on an operand"
 M.CHAIN, M.DUAL, M.NO_TARGET = CHAIN, DUAL, NO_TARGET
@@ -46,11 +46,7 @@ local function paths(root)
     local found, path = {}, {}
     local function visit(node)
         path[#path + 1] = node
-        local copy = {}
-        for depth, step in ipairs(path) do
-            copy[depth] = step
-        end
-        found[#found + 1] = copy
+        found[#found + 1] = { unpack(path) }
         for _, child in ipairs(children(node)) do
             visit(child)
         end

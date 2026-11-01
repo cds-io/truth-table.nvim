@@ -8,7 +8,7 @@ local render = require("truth-table.trees.render")
 local M = {}
 
 local binary, negate, unparen, operands, fold = node_.binary, node_.negation, node_.unparen, node_.operands, node_.fold
-local canonical = render.canonical
+local negated, canonical = node_.negated, render.canonical
 
 -- Root-only De Morgan rewrite, returning an independent tree. No automatic
 -- double-negation simplification: that is a separate refactoring operation.
@@ -35,7 +35,7 @@ function M.unfold(node)
 end
 
 -- The other operator of a De Morgan pair.
-local DUAL = { ["and"] = "or", ["or"] = "and" }
+local DUAL = require("truth-table.operators").DUAL
 
 -- De Morgan over the whole of `node`, in either direction, reading a run of
 -- one operator as a flat list whatever its parentheses: ¬ over an ∧ or ∨
@@ -51,16 +51,11 @@ function M.de_morgan(node)
             rewritten = fold(DUAL[operand.type], fp.map(operands(operand, operand.type), negate))
         end
     elseif DUAL[root.type] then
-        local inner = {}
-        for _, item in ipairs(operands(root, root.type)) do
-            local negation = unparen(item)
-            if negation.type ~= "not" then
-                inner = nil
-                break
-            end
-            inner[#inner + 1] = negation.operand
-        end
-        if inner then
+        local items = operands(root, root.type)
+        if fp.all(items, negated) then
+            local inner = fp.map(items, function(item)
+                return unparen(item).operand
+            end)
             rewritten = negate(fold(DUAL[root.type], inner))
         end
     end

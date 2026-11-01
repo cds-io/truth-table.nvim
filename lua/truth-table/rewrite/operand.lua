@@ -8,6 +8,7 @@ local trees = require("truth-table.trees")
 local walk = require("truth-table.rewrite.path")
 local drafting = require("truth-table.rewrite.draft")
 local shape = require("truth-table.rewrite.terms").shape
+local collapse = require("truth-table.rewrite.terms").collapse
 local M = {}
 
 local unparen, operands, fold = trees.unparen, trees.operands, trees.fold
@@ -116,16 +117,13 @@ local function distribute_at(path, index)
                 products[#products + 1] = fold(chain.op, group_at > at and { target, member } or { member, target })
             end
 
-            -- Each neighbour starts from a fresh list of the chain's operands.
-            local items, first = operands(path[chain.top], chain.op), math.min(at, group_at)
-            items[first] = fold(dual, products)
-            local produced = { items[first] }
-            table.remove(items, first + 1)
+            local product = fold(dual, products)
+            local items = collapse(operands(path[chain.top], chain.op), at, group_at, product)
             found[#found + 1] = {
                 tree = substitute(path[1], path[chain.top], fold(chain.op, items)),
                 law = DISTRIBUTING,
                 consumed = group_at > at and { target, group } or { group, target },
-                produced = produced,
+                produced = { product },
             }
         end
     end
