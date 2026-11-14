@@ -1,7 +1,28 @@
 # Settings for lua-spec, the architecture checker beside this checkout
 # (make architecture-check): the module prefix whose lua/truth-table.lua and
-# lua/truth-table/init.lua are the public facade, and the lines a production
-# module may run to.
+# lua/truth-table/init.lua are the public facade, the lines a production
+# module may run to, and the pure core, whose modules neither name vim nor
+# import a module outside it.
 [architecture]
 plugin = "truth-table"
 limit = 200
+pure = [
+    "lua/truth-table/check.lua",
+    "lua/truth-table/core.lua",
+    "lua/truth-table/derivation.lua",
+    "lua/truth-table/karnaugh",
+    "lua/truth-table/list.lua",
+    "lua/truth-table/markdown",
+    "lua/truth-table/needs.lua",
+    "lua/truth-table/normal",
+    "lua/truth-table/operators.lua",
+    "lua/truth-table/predicate",
+    "lua/truth-table/rewrite",
+    "lua/truth-table/symbols.lua",
+    "lua/truth-table/table_model.lua",
+    "lua/truth-table/text.lua",
+    "lua/truth-table/trees",
+    "lua/truth-table/tutor/page.lua",
+    "lua/truth-table/tutor/spans.lua",
+    "lua/truth-table/tutor/text.lua",
+]

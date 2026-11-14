@@ -27,7 +27,13 @@ truth-table.nvim changes
   lua-spec, the checker kept beside this checkout and configured by
   `lua-spec.toml`, with no module allowed past the limit. Without the
   checkout the target says so and passes, so `make check` holds on any
-  machine. Every module fits: the larger ones are directories, each an
+  machine. The settings declare the pure core too: `karnaugh/`,
+  `markdown/`, `normal/`, `predicate/`, `rewrite/` and `trees/`, the table
+  model, the operators and symbols, `check`, `core`, `derivation`, `list`
+  and `text`, and the tutor's `page`, `spans` and `text` neither name vim
+  nor import a module outside the core; the commands, keymaps, preview,
+  verdict, the edits and the tutor's course and panes are the rims. Every
+  module fits: the larger ones are directories, each an
   `init.lua` composing the modules beside it under the one name, so
   `require("truth-table.rewrite")` and the rest keep their names and their
   public functions. `rewrite/` is a module per rule family (`operand`,

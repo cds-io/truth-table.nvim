@@ -12,10 +12,10 @@ PYTHON ?= python3
 
 check: architecture-check test test-nvim lint fmt-check
 
-# The architecture rules (module size, facade imports, dependency cycles) are
-# checked by lua-spec, a sibling checkout the house keeps to itself, with the
-# settings in lua-spec.toml here. Without the checkout the target says so and
-# passes, so make check holds on any machine.
+# The architecture rules (module size, facade imports, dependency cycles, a
+# pure core) are checked by lua-spec, a sibling checkout the house keeps to
+# itself, with the settings in lua-spec.toml here. Without the checkout the
+# target says so and passes, so make check holds on any machine.
 LUA_SPEC ?= $(wildcard ../lua-spec)
 
 architecture-check:
